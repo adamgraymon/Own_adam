@@ -695,4 +695,26 @@ test("12. Catálogo Dual v0.6.0 (Institucional B2B + Retail/Indie), Paquetes Fir
   assert.equal(certMalicious.ok, false);
   assert.equal(certMalicious.certificationStatus, "REJECTED_FAILED_DETERMINISTIC_AUDIT");
   assert.equal(ledger.stores["rugpull-factory-bot"], undefined);
+
+  // 12F: Candado de Cobro Real en Base Mainnet bloquea descargas públicas sin paymentTxHash verificado
+  const lockedWithoutTx = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 126,
+      method: "tools/call",
+      params: {
+        name: "purchase_firstparty_catalog_item",
+        arguments: {
+          itemId: "inst-cme-nq-microstructure-v06",
+          _requireOnChainPaymentProof: true,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(lockedWithoutTx.ok, false);
+  assert.equal(lockedWithoutTx.status, "PAYMENT_REQUIRED_ON_BASE_MAINNET_402");
+  assert.equal(lockedWithoutTx.deliverablePayload, undefined);
+  assert.equal(lockedWithoutTx.previewTeaserOnly.fullPayloadLocked, true);
 });

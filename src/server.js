@@ -16,6 +16,10 @@ import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import { handleMcpJsonRpc, MCP_TOOLS } from "./mcpServer.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
+import {
+  CURATED_FIRST_PARTY_CATALOG,
+  verifyOnChainBaseMainnetUsdcPayment,
+} from "./premiumCatalogBroker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -377,6 +381,24 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           mcpMethod: rpcPayload?.method || "unknown",
           mcpTool: rpcPayload?.params?.name || null,
         });
+
+        // Candado en vivo en Base Mainnet para compras públicas de paquetes oficiales First-Party
+        if (
+          rpcPayload?.method === "tools/call" &&
+          rpcPayload?.params?.name === "purchase_firstparty_catalog_item"
+        ) {
+          rpcPayload.params.arguments = rpcPayload.params.arguments || {};
+          rpcPayload.params.arguments._requireOnChainPaymentProof = true;
+          const targetItem = CURATED_FIRST_PARTY_CATALOG[rpcPayload.params.arguments.itemId];
+          if (targetItem && rpcPayload.params.arguments.paymentTxHash) {
+            rpcPayload.params.arguments._onChainVerificationResult =
+              await verifyOnChainBaseMainnetUsdcPayment({
+                paymentTxHash: rpcPayload.params.arguments.paymentTxHash,
+                requiredAmountUsdc: targetItem.priceUsdc,
+              });
+          }
+        }
+
         const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger);
         if (!rpcResponse) {
           res.writeHead(202);

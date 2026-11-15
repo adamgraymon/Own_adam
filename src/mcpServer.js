@@ -228,6 +228,11 @@ export const MCP_TOOLS = [
         },
         buyerId: { type: "string", description: "Buyer agent ID (optional)." },
         paymentToken: { type: "string", enum: ["USDC", "SOL", "ETH", "VIRTUAL", "USDT"] },
+        paymentTxHash: {
+          type: "string",
+          description:
+            "Base Mainnet (Chain ID 8453) USDC transfer transaction hash (0x...) paying the exact item price to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4. If omitted on external HTTP calls, returns a 402 Payment Invoice.",
+        },
       },
       required: ["itemId"],
     },
@@ -496,6 +501,9 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             itemId: args.itemId,
             buyerId: args.buyerId || "alphaquant-agent",
             paymentToken: args.paymentToken || "USDC",
+            paymentTxHash: args.paymentTxHash || null,
+            requireOnChainPaymentProof: Boolean(args._requireOnChainPaymentProof),
+            onChainVerificationResult: args._onChainVerificationResult || null,
           });
           break;
         case "register_and_certify_store":

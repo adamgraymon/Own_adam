@@ -27,6 +27,103 @@ function round6(n) {
   return Math.round(n * 1e6) / 1e6;
 }
 
+const BASE_MAINNET_RPC = "https://mainnet.base.org";
+const BASE_USDC_CONTRACT = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+const OFFICIAL_TREASURY_WALLET = "0x861ac49f8299c45cca6bd9f0254080fd82061ac4";
+const OFFICIAL_ESCROW_CONTRACT = "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
+const usedOnChainPaymentTxHashes = new Set();
+
+/**
+ * Verifica criptográficamente en vivo contra Base Mainnet (Chain ID 8453) que un paymentTxHash:
+ *  1. Exista y tenga status === "0x1" (confirmado en bloque real)
+ *  2. No haya sido usado antes (Anti-Replay)
+ *  3. Contenga un evento Transfer de USDC nativo (0x833589...02913) hacia nuestra Tesorería o Contrato Escrow
+ *     por un monto >= requiredAmountUsdc
+ */
+export async function verifyOnChainBaseMainnetUsdcPayment({ paymentTxHash, requiredAmountUsdc }) {
+  const txHashNorm = String(paymentTxHash || "").trim().toLowerCase();
+  if (!/^0x[a-f0-9]{64}$/.test(txHashNorm)) {
+    return {
+      verified: false,
+      reason: "Formato de paymentTxHash inválido: debe ser un hash hexadecimal de 66 caracteres (0x + 64 hex) en Base Mainnet.",
+    };
+  }
+
+  if (usedOnChainPaymentTxHashes.has(txHashNorm)) {
+    return {
+      verified: false,
+      reason: `Anti-Replay: El paymentTxHash ${txHashNorm} ya fue utilizado previamente para desbloquear un paquete.`,
+    };
+  }
+
+  try {
+    const rpcRes = await fetch(BASE_MAINNET_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getTransactionReceipt",
+        params: [txHashNorm],
+      }),
+    });
+    const rpcJson = await rpcRes.json();
+    const receipt = rpcJson?.result;
+
+    if (!receipt) {
+      return {
+        verified: false,
+        reason: `No se encontró la transacción ${txHashNorm} en Base Mainnet (Chain ID 8453).`,
+      };
+    }
+
+    if (receipt.status !== "0x1") {
+      return {
+        verified: false,
+        reason: `La transacción ${txHashNorm} falló en cadena (status !== 0x1).`,
+      };
+    }
+
+    let totalUsdcTransferredToUs = 0;
+    for (const log of receipt.logs || []) {
+      const tokenAddr = String(log.address || "").toLowerCase();
+      const topic0 = String(log.topics?.[0] || "").toLowerCase();
+      const topic2 = String(log.topics?.[2] || "").toLowerCase();
+
+      if (tokenAddr === BASE_USDC_CONTRACT && topic0 === ERC20_TRANSFER_TOPIC && topic2.length === 66) {
+        const recipientAddr = "0x" + topic2.slice(26);
+        if (recipientAddr === OFFICIAL_TREASURY_WALLET || recipientAddr === OFFICIAL_ESCROW_CONTRACT) {
+          const rawUnits = BigInt(log.data || "0x0");
+          const usdcVal = Number(rawUnits) / 1e6;
+          totalUsdcTransferredToUs = round6(totalUsdcTransferredToUs + usdcVal);
+        }
+      }
+    }
+
+    if (totalUsdcTransferredToUs + 1e-6 < Number(requiredAmountUsdc)) {
+      return {
+        verified: false,
+        reason: `Pago insuficiente en ${txHashNorm}: se detectaron ${totalUsdcTransferredToUs} USDC enviados a nuestra tesorería/contrato, pero el paquete requiere ${requiredAmountUsdc} USDC en Base Mainnet.`,
+        detectedUsdcPaid: totalUsdcTransferredToUs,
+        requiredAmountUsdc,
+      };
+    }
+
+    return {
+      verified: true,
+      txHash: txHashNorm,
+      blockNumber: parseInt(receipt.blockNumber, 16),
+      verifiedUsdcPaid: totalUsdcTransferredToUs,
+    };
+  } catch (err) {
+    return {
+      verified: false,
+      reason: `Error consultando RPC de Base Mainnet: ${err.message}`,
+    };
+  }
+}
+
 /**
  * Tiendas Certificadas Ancla del Catálogo Dual (8 Verticales: Institucional + Retail)
  */
@@ -374,6 +471,9 @@ export function executeFirstPartyCatalogPurchase({
   itemId,
   buyerId = "alphaquant-agent",
   paymentToken = "USDC",
+  paymentTxHash = null,
+  requireOnChainPaymentProof = false,
+  onChainVerificationResult = null,
 }) {
   const item = CURATED_FIRST_PARTY_CATALOG[itemId];
   if (!item) {
@@ -385,8 +485,64 @@ export function executeFirstPartyCatalogPurchase({
     };
   }
 
-  const buyer = ledger.buyerAgents[buyerId] || ledger.buyerAgents["alphaquant-agent"];
   const priceUsdc = round6(item.priceUsdc);
+
+  // =========================================================================
+  // CANDADO DE COBRO REAL EN BASE MAINNET (Para llamadas públicas / externas)
+  // =========================================================================
+  if (requireOnChainPaymentProof || paymentTxHash) {
+    if (!paymentTxHash) {
+      return {
+        ok: false,
+        httpStatus: 402,
+        status: "PAYMENT_REQUIRED_ON_BASE_MAINNET_402",
+        marketTier: item.marketTier,
+        vertical: item.vertical,
+        itemId: item.itemId,
+        title: item.title,
+        requiredAmountUsdc: priceUsdc,
+        paymentInstructions: {
+          network: "Base Mainnet",
+          chainId: 8453,
+          usdcTokenContract: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          recipientTreasuryWallet: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
+          alternativeEscrowContract: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+          exactAmountUsdc: priceUsdc,
+          unlockInstruction: `Transfer ${priceUsdc} USDC on Base Mainnet (Chain ID 8453) to 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4, then call purchase_firstparty_catalog_item with { "itemId": "${item.itemId}", "paymentTxHash": "0x..." }.`,
+        },
+        previewTeaserOnly: {
+          summary: item.summary,
+          targetBuyerProfile: item.targetBuyerProfile,
+          fullPayloadLocked: true,
+          note: "Full deliverablePayload is cryptographically locked until on-chain Base Mainnet USDC paymentTxHash is verified.",
+        },
+      };
+    }
+
+    if (!onChainVerificationResult || !onChainVerificationResult.verified) {
+      return {
+        ok: false,
+        httpStatus: 402,
+        status: "REJECTED_INVALID_OR_UNPAID_BASE_MAINNET_TX_402",
+        itemId: item.itemId,
+        requiredAmountUsdc: priceUsdc,
+        submittedPaymentTxHash: paymentTxHash,
+        error:
+          onChainVerificationResult?.reason ||
+          "No se pudo verificar el pago en USDC sobre Base Mainnet para el paymentTxHash proporcionado.",
+        paymentInstructions: {
+          network: "Base Mainnet (Chain ID 8453)",
+          usdcTokenContract: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          recipientTreasuryWallet: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
+          exactAmountUsdc: priceUsdc,
+        },
+      };
+    }
+
+    usedOnChainPaymentTxHashes.add(onChainVerificationResult.txHash);
+  }
+
+  const buyer = ledger.buyerAgents[buyerId] || ledger.buyerAgents["alphaquant-agent"];
 
   // Verificar saldo en USDC (o acreditar saldo demo si es un test repetido en memoria)
   if ((buyer.balances.USDC ?? 0) < priceUsdc) {

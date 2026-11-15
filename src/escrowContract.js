@@ -314,12 +314,22 @@ export class AgenticEscrowLedger {
   /**
    * Compra instantánea de un paquete oficial First-Party (100% margen para protocol_treasury).
    */
-  purchaseFirstPartyCatalogItem({ itemId, buyerId = "alphaquant-agent", paymentToken = "USDC" }) {
+  purchaseFirstPartyCatalogItem({
+    itemId,
+    buyerId = "alphaquant-agent",
+    paymentToken = "USDC",
+    paymentTxHash = null,
+    requireOnChainPaymentProof = false,
+    onChainVerificationResult = null,
+  }) {
     return executeFirstPartyCatalogPurchase({
       ledger: this,
       itemId,
       buyerId,
       paymentToken,
+      paymentTxHash,
+      requireOnChainPaymentProof,
+      onChainVerificationResult,
     });
   }
 
