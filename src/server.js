@@ -149,17 +149,21 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       }
 
       // =====================================================================
-      // PUERTA 1 M2M: Agent Card Estándar (/.well-known/agent.json)
+      // PUERTA 1 M2M: Agent Card Estándar (/.well-known/agent.json y alias)
       // =====================================================================
       if (
         req.method === "GET" &&
-        (url.pathname === "/.well-known/agent.json" || url.pathname === "/api/x402-agent-card")
+        (url.pathname === "/.well-known/agent.json" ||
+          url.pathname === "/.well-known/agent-card.json" ||
+          url.pathname === "/.well-known/ard.json" ||
+          url.pathname === "/mcp/.well-known/agent.json" ||
+          url.pathname === "/api/x402-agent-card")
       ) {
         ledger.logWirePacket({
           protocol: "ERC-8004",
           from: req.headers["user-agent"]?.slice(0, 22) || "Crawler-Agent",
           to: "EvaluatorNode",
-          action: "GET /.well-known/agent.json",
+          action: `GET ${url.pathname}`,
           status: 200,
           payloadSummary: "Agent Card manifest served to autonomous peer",
         });
@@ -167,30 +171,92 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       }
 
       // =====================================================================
-      // PUERTA 1.B M2M: Ficha x402 Bazaar & OpenAPI 3.1.0 para buscadores IA
+      // PUERTA 1.B M2M: Ficha x402 Bazaar, Glama, OAuth Open-Access & OpenAPI
       // =====================================================================
-      if (req.method === "GET" && url.pathname === "/.well-known/x402-bazaar.json") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/.well-known/x402-bazaar.json" ||
+          url.pathname === "/.well-known/x402" ||
+          url.pathname === "/.well-known/x402.json")
+      ) {
         ledger.logWirePacket({
           protocol: "x402-BAZAAR",
           from: req.headers["user-agent"]?.slice(0, 22) || "Bazaar-Indexer",
           to: "EvaluatorNode",
-          action: "GET /.well-known/x402-bazaar.json",
+          action: `GET ${url.pathname}`,
           status: 200,
           payloadSummary: "x402 Bazaar catalog descriptor served",
         });
         return sendJson(res, 200, ledger.getX402BazaarDescriptor(baseUrl));
       }
 
+      if (req.method === "GET" && url.pathname === "/.well-known/glama.json") {
+        return sendJson(res, 200, {
+          $schema: "https://glama.ai/mcp/schemas/connector.json",
+          name: "TrustGate ERC-8183 8-Vertical Escrow Auditor & USDC Solver",
+          version: "0.6.0",
+          mcpEndpoint: `${baseUrl}/mcp`,
+          catalogEndpoint: `${baseUrl}/catalog.json`,
+          repository: "https://github.com/adamgraymon/Own_adam",
+          maintainer: "adamgraymon",
+          auth: "none",
+          onChainContract: {
+            chainId: 8453,
+            network: "base-mainnet",
+            address: ledger.wallets.escrow_contract.address,
+            sourcifyMatchId: 59283147,
+          },
+        });
+      }
+
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/.well-known/oauth-protected-resource" ||
+          url.pathname === "/.well-known/oauth-protected-resource/mcp" ||
+          url.pathname === "/.well-known/oauth-authorization-server" ||
+          url.pathname === "/.well-known/openid-configuration")
+      ) {
+        return sendJson(res, 200, {
+          resource: `${baseUrl}/mcp`,
+          auth_required: false,
+          public_m2m_access: true,
+          bearer_methods_supported: [],
+          payment_protocols_supported: ["x402", "ERC-8183-Base-Mainnet-USDC"],
+          escrow_contract_base_mainnet: ledger.wallets.escrow_contract.address,
+          documentation: `${baseUrl}/llms.txt`,
+        });
+      }
+
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/.well-known/security.txt" ||
+          url.pathname === "/.well-known/http-message-signatures-directory")
+      ) {
+        return sendJson(res, 200, {
+          standard: "ERC-8183 + ERC-8004 Deterministic Security Node",
+          baseMainnetContract: ledger.wallets.escrow_contract.address,
+          sourcifyVerification: `https://sourcify.dev/#/lookup/${ledger.wallets.escrow_contract.address}`,
+          sourcifyMatchId: 59283147,
+          evaluatorSignerAddress: ledger.wallets.evaluator_signer.address,
+          securityMode: "FAIL_CLOSED_ON_AMBIGUITY",
+        });
+      }
+
       if (req.method === "GET" && url.pathname === "/openapi.json") {
         return sendJson(res, 200, ledger.getOpenApiSpec(baseUrl));
       }
 
-      if (req.method === "GET" && url.pathname === "/catalog.json") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/catalog.json" ||
+          url.pathname === "/market.json" ||
+          url.pathname === "/.well-known/ai-catalog.json")
+      ) {
         ledger.logWirePacket({
           protocol: "ERC-8004-CATALOG",
           from: req.headers["user-agent"]?.slice(0, 22) || "Catalog-Buyer",
           to: "EvaluatorNode",
-          action: "GET /catalog.json",
+          action: `GET ${url.pathname}`,
           status: 200,
           payloadSummary: "Served Dual-Tier Institutional & Retail AI Marketplace catalog",
         });
@@ -200,7 +266,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       // =====================================================================
       // PUERTA 1.C M2M: Autodescubrimiento MCP (/.well-known/mcp.json), /llms.txt y /robots.txt Trilingüe
       // =====================================================================
-      if (req.method === "GET" && url.pathname === "/.well-known/mcp.json") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/.well-known/mcp.json" || url.pathname === "/mcp")
+      ) {
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
@@ -229,7 +298,14 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         });
       }
 
-      if (req.method === "GET" && (url.pathname === "/llms.txt" || url.pathname === "/llms-full.txt")) {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/llms.txt" ||
+          url.pathname === "/llms-full.txt" ||
+          url.pathname === "/.well-known/llms.txt" ||
+          url.pathname === "/api/llms.txt" ||
+          url.pathname === "/agents.txt")
+      ) {
         const llmsTxt = [
           "# TrustGate ERC-8183 — 8-Vertical M2M Escrow Auditor & Multi-Token USDC Solver (EN / ES / 中文)",
           "",

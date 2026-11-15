@@ -294,8 +294,72 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
       };
     }
 
-    if (method === "notifications/initialized") {
+    if (method === "notifications/initialized" || method === "notifications/cancelled") {
       return null;
+    }
+
+    if (method === "ping") {
+      return {
+        jsonrpc,
+        id,
+        result: {},
+      };
+    }
+
+    if (method === "server/discover") {
+      return {
+        jsonrpc,
+        id,
+        result: {
+          protocolVersion: "2025-06-18",
+          serverInfo: {
+            name: "trustgate-erc8183-mcp",
+            version: "0.6.0",
+            contractAddress: ledger.wallets.escrow_contract.address,
+            chainId: 8453,
+            sourcifyMatchId: 59283147,
+          },
+          capabilities: { tools: {}, resources: {}, prompts: {} },
+          tools: MCP_TOOLS,
+        },
+      };
+    }
+
+    if (method === "resources/list") {
+      return {
+        jsonrpc,
+        id,
+        result: {
+          resources: [
+            {
+              uri: "https://own-adam.onrender.com/catalog.json",
+              name: "TrustGate Dual-Tier AI Marketplace Catalog (Institutional B2B & Retail/Indie)",
+              mimeType: "application/json",
+            },
+            {
+              uri: "https://own-adam.onrender.com/.well-known/agent.json",
+              name: "ERC-8004 Agent Identity & Base Mainnet Contract Manifest",
+              mimeType: "application/json",
+            },
+          ],
+        },
+      };
+    }
+
+    if (method === "resources/templates/list") {
+      return {
+        jsonrpc,
+        id,
+        result: { resourceTemplates: [] },
+      };
+    }
+
+    if (method === "prompts/list") {
+      return {
+        jsonrpc,
+        id,
+        result: { prompts: [] },
+      };
     }
 
     if (method === "tools/list") {
