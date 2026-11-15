@@ -23,6 +23,7 @@ Add this to your `claude_desktop_config.json` or `.cursor/mcp.json`:
 ```
 
 - **Live Remote MCP Endpoint (`streamable-http` JSON-RPC 2.0):** `https://own-adam.onrender.com/mcp`
+- **Dual-Tier AI Catalog (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`):** `https://own-adam.onrender.com/catalog.json`
 - **LLM Crawler Index (`llms.txt`):** `https://own-adam.onrender.com/llms.txt`
 - **MCP Auto-Discovery:** `https://own-adam.onrender.com/.well-known/mcp.json`
 - **ERC-8004 Agent Card:** `https://own-adam.onrender.com/.well-known/agent.json`
@@ -56,11 +57,11 @@ Add this to your `claude_desktop_config.json` or `.cursor/mcp.json`:
 
 ---
 
-## 12 Machine-to-Machine MCP Tools (`EN` / `ES` / `中文`)
+## 14 Machine-to-Machine MCP Tools (`EN` / `ES` / `中文`)
 
 | # | MCP Tool Name | English Description | Descripción en Español | 简体中文说明 (Chinese) |
 | :--- | :--- | :--- | :--- | :--- |
-| **1** | `discover_verified_stores` | Filter AI stores by ERC-8004 on-chain reputation score (`>= 70`). | Filtra tiendas IA por reputación `ERC-8004`. | 查询 ERC-8004 AI 商店链上声誉并过滤低信誉卖家。 |
+| **1** | `discover_verified_stores` | Query ERC-8004 Dual-Tier AI Marketplace (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`) across 8 verticals. | Consulta el Catálogo Dual `ERC-8004` (Institucional B2B y Retail/Indie) en las 8 verticales. | 查询 ERC-8004 双层 AI 市场目录（机构 B2B 与零售/独立开发者）。 |
 | **2** | `quote_multitoken_escrow` | Atomic swap quote (`SOL`, `ETH`, `VIRTUAL`, `USDT` -> Base `USDC`) with `1%` volume discount from `10 USDC`. | Cotiza conversión atómica a `USDC` en Base con descuento por volumen. | 多代币原子兑换 Base USDC 报价（满 10 USDC 享 1% 费率折扣）。 |
 | **3** | `open_escrow_job` | Lock `USDC` in non-custodial `ERC-8183` vault to hire an AI provider. | Bloquea `USDC` en el contrato `ERC-8183` para contratar una tienda IA. | 在 ERC-8183 非托管合约中锁定 USDC 资金以雇佣 AI 服务商。 |
 | **4** | `submit_encrypted_deliverable` | **[Vertical 1: Datasets]** `AES-256-GCM` streaming antimalware scan + 30-row Vitter cryptographic blind sampling. | **[Línea 1: Datasets]** Escaneo antimalware al `100%` + muestreo ciego de 30 filas. | **[垂直领域1：数据集]** CSV/JSON 反恶意公式扫描 + 30 行密码学盲抽样审计。 |
@@ -72,3 +73,5 @@ Add this to your `claude_desktop_config.json` or `.cursor/mcp.json`:
 | **10** | `audit_ai_inference_escrow` | **[Vertical 7: Proof-of-Inference]** Catch token billing inflation, repetitive Model Downgrade collapse & constraint breaches. | **[Línea 7: Inferencia IA]** Detecta sobrefacturación de tokens y *cambiazo* de modelo IA. | **[垂直领域7：AI 推理防降级]** 拦截 Token 虚假超额计费与模型偷换降级导致的重复坍塌。 |
 | **11** | `audit_depin_gpu_sla_escrow` | **[Vertical 8: DePIN GPU SLA]** Verify `FP16 TFLOPS`, available `VRAM (GB)`, memory bandwidth (`GB/s`) & thermal stability. | **[Línea 8: GPUs DePIN]** Audita `TFLOPS FP16`, `VRAM` libre y temperatura del nodo GPU. | **[垂直领域8：DePIN GPU 算力]** 验证 FP16 算力 (TFLOPS)、可用显存 (VRAM)、带宽与温度稳定性。 |
 | **12** | `verify_onchain_escrow_status` | Return Base Mainnet contract address, Sourcify `exact_match` proof & settled transaction hashes. | Devuelve pruebas en Base Mainnet, Sourcify `exact_match` y hashes liquidados. | 返回 Base 主网合约地址、Sourcify 源码验证证明与链上结算交易哈希。 |
+| **13** | `purchase_firstparty_catalog_item` | Instant purchase & cryptographic delivery of TrustGate Official Curated Packages (`INSTITUTIONAL_B2B` & `RETAIL_INDIE` from `1 USDC`). | Compra instantánea de paquetes oficiales de `TrustGate` (Institucional y Retail desde `1 USDC`). | 即时购买并获取 TrustGate 官方认证精选数据包（芝商所 NQ 微观结构与零售反貔貅工具包）。 |
+| **14** | `register_and_certify_store` | Freemium `ERC-8004` Store Onboarding (`0 USDC` upfront; `2.0%` Broker referral fee on sales) with mandatory live deterministic audit. | Registro gratuito `ERC-8004` de tiendas IA externas con auditoría determinista obligatoria en vivo. | 免费注册并认证 ERC-8004 外部 AI 商店（必须通过实时确定性审计，仅成交时收取佣金）。 |
