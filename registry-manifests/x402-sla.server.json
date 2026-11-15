@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/x402-erc8004-api-sla-escrow",
+  "description": "Autonomous x402 Paid API SLA Oracle, ERC-8004 Reputation & ERC-8183 USDC Escrow on Base.",
+  "version": "0.5.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}

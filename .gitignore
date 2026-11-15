@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.*
+!.env.example
+artifacts/*.secret.json
+data/*.enc
+data/*.ndjson
+data/DATABENTO_*.csv
+data/composicion_bid_ask.csv
+telegram_mt5_bridge/

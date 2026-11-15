@@ -1,0 +1,43 @@
+name: Publish to Official MCP Registry
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "server.json"
+      - "registry-manifests/**"
+      - ".github/workflows/publish-mcp.yml"
+  workflow_dispatch:
+
+jobs:
+  publish-mcp-registry:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Official mcp-publisher CLI
+        run: |
+          set -e
+          LATEST_TAG=$(curl -fsSL https://api.github.com/repos/modelcontextprotocol/registry/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Using mcp-publisher version: $LATEST_TAG"
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/download/${LATEST_TAG}/mcp-publisher_linux_amd64.tar.gz" -o mcp-publisher.tar.gz
+          tar -xzf mcp-publisher.tar.gz
+          chmod +x mcp-publisher
+
+      - name: Authenticate via GitHub OIDC & Publish All 8 Verticals to Official MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish ./server.json
+          ./mcp-publisher publish ./registry-manifests/quant-backtest.server.json
+          ./mcp-publisher publish ./registry-manifests/solidity-auditor.server.json
+          ./mcp-publisher publish ./registry-manifests/x402-sla.server.json
+          ./mcp-publisher publish ./registry-manifests/skill-auditor.server.json
+          ./mcp-publisher publish ./registry-manifests/rag-poisoning.server.json
+          ./mcp-publisher publish ./registry-manifests/inference-auditor.server.json
+          ./mcp-publisher publish ./registry-manifests/depin-sla.server.json

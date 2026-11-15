@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/trustgate-erc8183-mcp",
+  "description": "ERC-8183 8-Vertical Escrow Auditor (Datasets, Quant, Solidity, x402, Skills, RAG, DePIN).",
+  "version": "0.5.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}

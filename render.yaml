@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: trustgate-erc8183-m2m-auditor
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3402
+      - key: ESCROW_CONTRACT_ADDRESS
+        value: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e"
+      - key: EVALUATOR_PRIVATE_KEY
+        sync: false
+      - key: TREASURY_ADDRESS
+        value: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4"

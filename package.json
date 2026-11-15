@@ -1,0 +1,35 @@
+{
+  "name": "trustgate-erc8183-mcp",
+  "version": "0.5.0",
+  "description": "Nodo M2M Interventor 8-Verticales (ERC-8183 + ERC-8004 + MCP + x402) para Datasets, Backtests, Solidity, APIs, Skills, RAG, Inferencia y GPUs DePIN en Base Mainnet",
+  "type": "module",
+  "bin": {
+    "trustgate-mcp": "./src/mcpServer.js"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "mcp": "node src/mcpServer.js",
+    "swarm": "node src/runAutonomousSimulation.js",
+    "verify-contract": "node src/verifyContractOnChain.js",
+    "audit-databento": "node src/auditRealDatabentoMainnet.js",
+    "verify-endpoints": "node src/verifyProtocolEndpoints.js",
+    "test": "node --test test/escrow.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "erc-8183",
+    "erc-8004",
+    "x402",
+    "base-mainnet",
+    "usdc-escrow",
+    "ai-agent-auditor"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "solc": "^0.8.38",
+    "viem": "^2.57.19"
+  }
+}

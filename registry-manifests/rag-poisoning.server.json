@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/rag-embedding-poisoning-escrow-auditor",
+  "description": "ERC-8183 RAG Knowledge Base & Vector Embedding Anti-Poisoning Auditor & Escrow on Base.",
+  "version": "0.5.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}
