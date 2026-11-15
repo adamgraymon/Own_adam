@@ -272,7 +272,13 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       // =====================================================================
       if (
         req.method === "GET" &&
-        (url.pathname === "/.well-known/mcp.json" || url.pathname === "/mcp")
+        (url.pathname === "/.well-known/mcp.json" ||
+          url.pathname === "/.well-known/mcp/server-card.json" ||
+          url.pathname === "/mcp/server-card" ||
+          url.pathname === "/mcp" ||
+          url.pathname === "/mcp/" ||
+          url.pathname === "/mcp/mcp" ||
+          url.pathname === "/mcp/sse")
       ) {
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
@@ -375,7 +381,14 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       // =====================================================================
       // PUERTA 2 M2M: Servidor MCP Real (JSON-RPC 2.0 sobre HTTP POST /mcp)
       // =====================================================================
-      if (req.method === "POST" && url.pathname === "/mcp") {
+      if (
+        req.method === "POST" &&
+        (url.pathname === "/mcp" ||
+          url.pathname === "/mcp/" ||
+          url.pathname === "/mcp/mcp" ||
+          url.pathname === "/mcp/sse" ||
+          url.pathname === "/mcp/v1/message:send")
+      ) {
         const rpcPayload = await readJsonBody(req);
         recordExternalVisit(req, "/mcp", {
           mcpMethod: rpcPayload?.method || "unknown",
