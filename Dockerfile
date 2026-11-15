@@ -8,7 +8,7 @@ COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
 COPY contracts ./contracts
-COPY artifacts ./artifacts
+RUN mkdir -p ./artifacts
 COPY public ./public
 COPY src ./src
 
