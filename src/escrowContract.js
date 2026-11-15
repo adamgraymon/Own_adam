@@ -355,7 +355,7 @@ export class AgenticEscrowLedger {
         },
       },
       curatedFirstPartyPackages: discovery.curatedFirstPartyCatalog,
-      verifiedPartnerStores: discovery.eligibleStores,
+      verifiedPartnerStores: [...discovery.verifiedCatalogPartners, ...discovery.eligibleStores],
       externalSellerOnboarding: discovery.externalStoreOnboarding,
     };
   }
