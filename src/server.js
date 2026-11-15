@@ -8,6 +8,7 @@
  */
 
 import http from "node:http";
+import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,47 @@ const ledger = new AgenticEscrowLedger();
 let swarmRunning = false;
 let swarmCycleCount = 0;
 let swarmInterval = null;
+
+// Radar Exclusivo de Visitantes e IAs Externas (nunca sobreescrito por el simulador interno)
+const externalTrafficRadar = {
+  startedAt: new Date().toISOString(),
+  keepAlivePingsCount: 0,
+  totalExternalHits: 0,
+  uniqueVisitorsSet: new Set(),
+  byEndpoint: {},
+  byMcpToolCalled: {},
+  byUserAgent: {},
+  recentExternalEvents: [],
+};
+
+function recordExternalVisit(req, pathname, extraMeta = {}) {
+  const ua = (req.headers["user-agent"] || "Unknown-Agent").slice(0, 120);
+  const rawIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "local";
+  const visitorHash = "v_" + crypto.createHash("sha256").update(`${rawIp}|${ua}`).digest("hex").slice(0, 10);
+
+  externalTrafficRadar.totalExternalHits += 1;
+  externalTrafficRadar.uniqueVisitorsSet.add(visitorHash);
+  externalTrafficRadar.byEndpoint[pathname] = (externalTrafficRadar.byEndpoint[pathname] || 0) + 1;
+  externalTrafficRadar.byUserAgent[ua] = (externalTrafficRadar.byUserAgent[ua] || 0) + 1;
+
+  if (extraMeta.mcpTool) {
+    externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] =
+      (externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] || 0) + 1;
+  }
+
+  externalTrafficRadar.recentExternalEvents.unshift({
+    timestamp: new Date().toISOString(),
+    method: req.method,
+    endpoint: pathname,
+    visitorHash,
+    userAgent: ua,
+    ...extraMeta,
+  });
+
+  if (externalTrafficRadar.recentExternalEvents.length > 300) {
+    externalTrafficRadar.recentExternalEvents.length = 300;
+  }
+}
 
 function startSwarmLoop(intervalMs = 3200) {
   if (swarmInterval) return;
@@ -75,6 +117,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       // PUERTA 0: Healthcheck Rápido (/healthz) para Keep-Alive 24/7 en Render
       // =====================================================================
       if (req.method === "GET" && url.pathname === "/healthz") {
+        externalTrafficRadar.keepAlivePingsCount += 1;
         return sendJson(res, 200, {
           ok: true,
           status: "awake",
@@ -83,6 +126,26 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           uptimeSeconds: Math.round(process.uptime()),
           timestamp: new Date().toISOString(),
         });
+      }
+
+      if (req.method === "GET" && url.pathname === "/api/external-traffic") {
+        return sendJson(res, 200, {
+          ok: true,
+          startedAt: externalTrafficRadar.startedAt,
+          uptimeSeconds: Math.round(process.uptime()),
+          keepAlivePingsCount: externalTrafficRadar.keepAlivePingsCount,
+          totalExternalHits: externalTrafficRadar.totalExternalHits,
+          uniqueExternalVisitorsCount: externalTrafficRadar.uniqueVisitorsSet.size,
+          byEndpoint: externalTrafficRadar.byEndpoint,
+          byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
+          byUserAgent: externalTrafficRadar.byUserAgent,
+          recentExternalEvents: externalTrafficRadar.recentExternalEvents,
+        });
+      }
+
+      // Registrar cualquier visita externa real (excluyendo polling interno /api/state)
+      if (!url.pathname.startsWith("/api/state") && !url.pathname.startsWith("/api/swarm") && url.pathname !== "/mcp") {
+        recordExternalVisit(req, url.pathname);
       }
 
       // =====================================================================
@@ -234,6 +297,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       // =====================================================================
       if (req.method === "POST" && url.pathname === "/mcp") {
         const rpcPayload = await readJsonBody(req);
+        recordExternalVisit(req, "/mcp", {
+          mcpMethod: rpcPayload?.method || "unknown",
+          mcpTool: rpcPayload?.params?.name || null,
+        });
         const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger);
         if (!rpcResponse) {
           res.writeHead(202);
