@@ -122,6 +122,18 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         return sendJson(res, 200, ledger.getOpenApiSpec(baseUrl));
       }
 
+      if (req.method === "GET" && url.pathname === "/catalog.json") {
+        ledger.logWirePacket({
+          protocol: "ERC-8004-CATALOG",
+          from: req.headers["user-agent"]?.slice(0, 22) || "Catalog-Buyer",
+          to: "EvaluatorNode",
+          action: "GET /catalog.json",
+          status: 200,
+          payloadSummary: "Served Dual-Tier Institutional & Retail AI Marketplace catalog",
+        });
+        return sendJson(res, 200, ledger.getFullCatalogManifest(baseUrl));
+      }
+
       // =====================================================================
       // PUERTA 1.C M2M: Autodescubrimiento MCP (/.well-known/mcp.json), /llms.txt y /robots.txt Trilingüe
       // =====================================================================
@@ -129,8 +141,9 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
-          version: "0.5.0",
+          version: "0.6.0",
           endpoint: `${baseUrl}/mcp`,
+          catalogEndpoint: `${baseUrl}/catalog.json`,
           transport: "streamable-http",
           officialRegistryNamespaces: [
             "io.github.adamgraymon/trustgate-erc8183-mcp",
@@ -173,10 +186,11 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           `- **ERC-8004 Agent Card**: \`GET ${baseUrl}/.well-known/agent.json\``,
           `- **Coinbase x402 Bazaar**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
           `- **OpenAPI 3.1.0 Spec**: \`GET ${baseUrl}/openapi.json\``,
+          `- **Dual-Tier AI Catalog (Institutional B2B & Retail/Indie)**: \`GET ${baseUrl}/catalog.json\``,
           `- **x402 Payment Handshake**: \`POST ${baseUrl}/api/m2m/escrow\``,
           "",
-          "## 8 Audited Verticals & 12 MCP Tools (EN / ES / 中文)",
-          "1. `discover_verified_stores` — ERC-8004 AI Store Reputation Filter / Filtro de reputación / AI 商店声誉过滤",
+          "## 8 Audited Verticals & 14 MCP Tools (EN / ES / 中文)",
+          "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`) / Catálogo Dual de Tiendas y Paquetes IA / ERC-8004 双层 AI 市场目录",
           "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC) / Cotizador atómico / 多代币转 Base USDC 报价",
           "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault / Bloqueo no-custodial en contrato / ERC-8183 智能合约锁定 USDC",
           "4. `submit_encrypted_deliverable` — [Vertical 1] Dataset Antimalware & 30-Row Blind Sampling / Auditoría de Datasets CSV/JSON / 数据集反恶意软件与盲抽样审计",
@@ -188,6 +202,8 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "10. `audit_ai_inference_escrow` — [Vertical 7] Proof-of-Inference & Anti-Model-Downgrade Verifier / Verificador Anti-Cambiazo de Inferencia IA / AI 推理防降级证明与 Token 计费审计",
           "11. `audit_depin_gpu_sla_escrow` — [Vertical 8] DePIN & GPU Compute Benchmark SLA Auditor (FP16 TFLOPS, VRAM, Bandwidth) / Auditor de GPUs DePIN / DePIN 去中心化 GPU 算力基准 SLA 审计",
           "12. `verify_onchain_escrow_status` — Verify Base Mainnet Contract & Sourcify Proofs / Verificación On-Chain / 链上合约与 Sourcify 验证查询",
+          "13. `purchase_firstparty_catalog_item` — Instant purchase of TrustGate Official Curated Packages (Institutional CME Globex NQ, Sourcify Vaults, Retail Anti-Rugpull from 1 USDC) / Compra instantánea de paquetes oficiales / 即时购买官方认证精选数据包",
+          "14. `register_and_certify_store` — Freemium ERC-8004 Store Onboarding with Mandatory Live Deterministic Audit (0 USDC upfront; 2.0% Broker referral fee on sales) / Registro gratuito de tiendas IA con auditoría en vivo / 免费注册并认证外部 AI 商店",
         ].join("\n");
 
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });

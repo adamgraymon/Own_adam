@@ -7,6 +7,12 @@ import crypto from "node:crypto";
 import { quoteSwapAndEscrow, ECONOMIC_RULES } from "./swapRouter.js";
 import { encryptDeliverable, auditEncryptedDataset } from "./auditorEngine.js";
 import { initOrLoadAgentWallets } from "./agentWalletManager.js";
+import {
+  PREMIUM_CATALOG_STORES,
+  CURATED_FIRST_PARTY_CATALOG,
+  executeFirstPartyCatalogPurchase,
+  registerAndCertifyExternalStore,
+} from "./premiumCatalogBroker.js";
 
 function round6(n) {
   return Math.round(n * 1e6) / 1e6;
@@ -82,7 +88,8 @@ export class AgenticEscrowLedger {
       },
     };
 
-    // Registro Público ERC-8004 de Tiendas IA Autónomas
+    // Registro Público ERC-8004 de Tiendas IA Autónomas (Base + Catálogo Dual v0.6.0)
+    const clonedPremiumStores = JSON.parse(JSON.stringify(PREMIUM_CATALOG_STORES));
     this.stores = {
       "dataforge-ai": {
         id: "dataforge-ai",
@@ -90,6 +97,13 @@ export class AgenticEscrowLedger {
         address: "0xStoreDF...11A0",
         behaviorProfile: "honest",
         endpoint: "mcp://dataforge-ai.eth/deliver",
+        vertical: "VERTICAL_1_DATASET",
+        marketTier: "INSTITUTIONAL_B2B",
+        isCoreSimStore: true,
+        isFirstParty: false,
+        brokerFeeRate: 0.0,
+        startingPriceUsdc: 10.0,
+        slaGuarantee: "AES-256-GCM Encrypted CSV + 30-Row Reservoir Sampling",
         usdcBalance: 15.0,
         reputationScore: 92,
         completedJobs: 14,
@@ -101,6 +115,13 @@ export class AgenticEscrowLedger {
         address: "0xStoreDM...55B2",
         behaviorProfile: "mostly_honest",
         endpoint: "mcp://deepmetrics.base.eth/deliver",
+        vertical: "VERTICAL_1_DATASET",
+        marketTier: "INSTITUTIONAL_B2B",
+        isCoreSimStore: true,
+        isFirstParty: false,
+        brokerFeeRate: 0.0,
+        startingPriceUsdc: 8.0,
+        slaGuarantee: "Standard B2B Dataset Delivery",
         usdcBalance: 10.0,
         reputationScore: 84,
         completedJobs: 9,
@@ -112,6 +133,13 @@ export class AgenticEscrowLedger {
         address: "0xStoreSB...72E9",
         behaviorProfile: "sneaky_filler",
         endpoint: "mcp://synthbrokers.sol/deliver",
+        vertical: "VERTICAL_1_DATASET",
+        marketTier: "RETAIL_INDIE",
+        isCoreSimStore: true,
+        isFirstParty: false,
+        brokerFeeRate: 0.0,
+        startingPriceUsdc: 5.0,
+        slaGuarantee: "Unverified Synthetic Feed",
         usdcBalance: 6.0,
         reputationScore: 72,
         completedJobs: 5,
@@ -123,11 +151,19 @@ export class AgenticEscrowLedger {
         address: "0xStoreSS...666F",
         behaviorProfile: "malicious",
         endpoint: "mcp://shadowscrape.onion/deliver",
+        vertical: "VERTICAL_1_DATASET",
+        marketTier: "RETAIL_INDIE",
+        isCoreSimStore: true,
+        isFirstParty: false,
+        brokerFeeRate: 0.0,
+        startingPriceUsdc: 5.0,
+        slaGuarantee: "None (High Risk)",
         usdcBalance: 2.0,
         reputationScore: 68,
         completedJobs: 2,
         failedJobs: 2,
       },
+      ...clonedPremiumStores,
     };
 
     this.jobs = [];
@@ -155,33 +191,172 @@ export class AgenticEscrowLedger {
   }
 
   /**
-   * Descubrimiento M2M: Otras IAs consultan ERC-8004 filtrando tiendas por reputación mínima.
+   * Descubrimiento M2M (Catálogo Dual v0.6.0):
+   * Otras IAs consultan ERC-8004 filtrando tiendas y paquetes por:
+   *  - minReputation (ej. 70)
+   *  - marketTier ("ALL" | "INSTITUTIONAL_B2B" | "RETAIL_INDIE")
+   *  - vertical ("ALL" | "VERTICAL_1_DATASET" ... "VERTICAL_8_DEPIN_GPU")
+   *  - maxPriceUsdc (opcional)
+   *  - firstPartyOnly (opcional: solo paquetes oficiales con 100% margen)
    */
-  discoverStoresErc8004({ minReputation = 0 } = {}) {
+  discoverStoresErc8004({
+    minReputation = 0,
+    marketTier = null,
+    vertical = null,
+    maxPriceUsdc = null,
+    firstPartyOnly = false,
+  } = {}) {
     const allStores = Object.values(this.stores);
+    const hasCatalogFilter =
+      (marketTier && String(marketTier).toUpperCase() !== "ALL") ||
+      (vertical && String(vertical).toUpperCase() !== "ALL") ||
+      (maxPriceUsdc !== null && maxPriceUsdc !== undefined) ||
+      Boolean(firstPartyOnly);
+
+    const tierNorm = String(marketTier || "ALL").toUpperCase();
+    const vertNorm = String(vertical || "ALL").toUpperCase();
+
+    const matchesTierAndVertical = (s) => {
+      if (!hasCatalogFilter && !s.isCoreSimStore && !s.certifiedAt) return false;
+      if (tierNorm !== "ALL" && s.marketTier && s.marketTier !== tierNorm) return false;
+      if (vertNorm !== "ALL" && s.vertical && s.vertical !== vertNorm) return false;
+      if (maxPriceUsdc !== null && maxPriceUsdc !== undefined && Number(maxPriceUsdc) > 0) {
+        if ((s.startingPriceUsdc ?? 0) > Number(maxPriceUsdc)) return false;
+      }
+      if (firstPartyOnly && !s.isFirstParty) return false;
+      return true;
+    };
+
     const eligible = allStores
-      .filter((s) => s.reputationScore >= minReputation)
+      .filter((s) => s.reputationScore >= minReputation && matchesTierAndVertical(s))
       .sort((a, b) => b.reputationScore - a.reputationScore);
-    const blacklisted = allStores.filter((s) => s.reputationScore < minReputation);
+    const blacklisted = allStores.filter(
+      (s) => (hasCatalogFilter || s.isCoreSimStore) && s.reputationScore < minReputation
+    );
+
+    const verifiedCatalogPartners = allStores
+      .filter((s) => !s.isCoreSimStore && s.reputationScore >= minReputation)
+      .sort((a, b) => b.reputationScore - a.reputationScore);
+
+    const allFirstPartyItems = Object.values(CURATED_FIRST_PARTY_CATALOG).filter((item) => {
+      if (tierNorm !== "ALL" && item.marketTier !== tierNorm) return false;
+      if (vertNorm !== "ALL" && item.vertical !== vertNorm) return false;
+      if (maxPriceUsdc !== null && maxPriceUsdc !== undefined && Number(maxPriceUsdc) > 0) {
+        if (item.priceUsdc > Number(maxPriceUsdc)) return false;
+      }
+      return true;
+    });
 
     return {
-      standard: "ERC-8004-ReputationRegistry",
+      standard: "ERC-8004-ReputationRegistry-v0.6-DualCatalog",
+      filtersApplied: {
+        minReputation,
+        marketTier: tierNorm,
+        vertical: vertNorm,
+        maxPriceUsdc: maxPriceUsdc ?? "UNLIMITED",
+        firstPartyOnly: Boolean(firstPartyOnly),
+      },
       minReputationFilter: minReputation,
       eligibleStores: eligible.map((s) => ({
         storeId: s.id,
         name: s.name,
         address: s.address,
         endpoint: s.endpoint,
+        vertical: s.vertical || "VERTICAL_1_DATASET",
+        marketTier: s.marketTier || "INSTITUTIONAL_B2B",
+        isFirstParty: Boolean(s.isFirstParty),
+        brokerFeeRatePct: `${round6((s.brokerFeeRate || 0) * 100)}%`,
+        startingPriceUsdc: s.startingPriceUsdc ?? 5.0,
+        slaGuarantee: s.slaGuarantee || "ERC-8183 Deterministic Audit",
         reputationScore: s.reputationScore,
         completedJobs: s.completedJobs,
         failedJobs: s.failedJobs,
+        nextMcpToolCall: s.isFirstParty
+          ? "purchase_firstparty_catalog_item"
+          : "open_escrow_job",
       })),
+      verifiedCatalogPartners: verifiedCatalogPartners.map((s) => ({
+        storeId: s.id,
+        name: s.name,
+        vertical: s.vertical,
+        marketTier: s.marketTier,
+        isFirstParty: Boolean(s.isFirstParty),
+        brokerFeeRatePct: `${round6((s.brokerFeeRate || 0) * 100)}%`,
+        startingPriceUsdc: s.startingPriceUsdc,
+        slaGuarantee: s.slaGuarantee,
+        reputationScore: s.reputationScore,
+      })),
+      curatedFirstPartyCatalog: allFirstPartyItems.map((item) => ({
+        itemId: item.itemId,
+        title: item.title,
+        marketTier: item.marketTier,
+        vertical: item.vertical,
+        priceUsdc: item.priceUsdc,
+        targetBuyerProfile: item.targetBuyerProfile,
+        summary: item.summary,
+        instantPurchaseMcpTool: "purchase_firstparty_catalog_item",
+      })),
+      externalStoreOnboarding: {
+        mcpTool: "register_and_certify_store",
+        upfrontFeeUsdc: 0.0,
+        requirement: "Must pass live deterministic audit for target vertical",
+        brokerReferralCommissionPct: "2.0% + Escrow Fee (1.0%-1.5%) on settled sales only",
+      },
       filteredOutCount: blacklisted.length,
       filteredOutStores: blacklisted.map((s) => ({
         storeId: s.id,
         reputationScore: s.reputationScore,
         reason: "BELOW_TRUST_THRESHOLD",
       })),
+    };
+  }
+
+  /**
+   * Compra instantánea de un paquete oficial First-Party (100% margen para protocol_treasury).
+   */
+  purchaseFirstPartyCatalogItem({ itemId, buyerId = "alphaquant-agent", paymentToken = "USDC" }) {
+    return executeFirstPartyCatalogPurchase({
+      ledger: this,
+      itemId,
+      buyerId,
+      paymentToken,
+    });
+  }
+
+  /**
+   * Registro Freemium con Auditoría Determinista en Vivo para Tiendas Externas.
+   */
+  registerAndCertifyStore(params = {}) {
+    return registerAndCertifyExternalStore({
+      ledger: this,
+      ...params,
+    });
+  }
+
+  /**
+   * Manifiesto completo del Catálogo Dual para GET /catalog.json
+   */
+  getFullCatalogManifest(baseUrl = "https://own-adam.onrender.com") {
+    const discovery = this.discoverStoresErc8004({ minReputation: 70 });
+    return {
+      schemaVersion: "0.6.0",
+      catalogName: "TrustGate ERC-8183 & ERC-8004 Dual-Tier AI Marketplace (Institutional B2B & Retail/Indie)",
+      mcpEndpoint: `${baseUrl}/mcp`,
+      escrowContractBaseMainnet: this.wallets.escrow_contract.address,
+      sourcifyMatchId: "59283147",
+      marketTiers: {
+        INSTITUTIONAL_B2B: {
+          description: "Audit-grade CME Globex microstructure datasets, Sourcify-verified Solidity blueprints, Enterprise RAG/Skill Firewalls, DePIN H100 SLA clusters.",
+          escrowFeeDiscount: "1.0% reduced fee on orders >= 10 USDC",
+        },
+        RETAIL_INDIE: {
+          description: "Fast 1.00 - 2.50 USDC Anti-Rugpull scanners, Zero-Lookahead Retail Bot verifiers, Safe Plug-and-Play SKILL.md bundles, and low-latency x402 APIs.",
+          microTicketSupport: "Instant settlement from 1.00 USDC on First-Party items",
+        },
+      },
+      curatedFirstPartyPackages: discovery.curatedFirstPartyCatalog,
+      verifiedPartnerStores: discovery.eligibleStores,
+      externalSellerOnboarding: discovery.externalStoreOnboarding,
     };
   }
 
@@ -384,18 +559,24 @@ export class AgenticEscrowLedger {
     const store = this.stores[job.storeId];
 
     if (auditResult.approved) {
-      const fee = job.financials.protocolFeeUsdc;
-      const sellerPayout = job.financials.sellerPayoutIfApprovedUsdc;
+      const escrowFee = job.financials.protocolFeeUsdc;
+      const brokerFeeUsdc = round6(lockedUsdc * (store.brokerFeeRate || 0));
+      const totalProtocolFee = round6(escrowFee + brokerFeeUsdc);
+      const sellerPayout = round6(job.financials.sellerPayoutIfApprovedUsdc - brokerFeeUsdc);
+
+      job.financials.brokerFeeUsdc = brokerFeeUsdc;
+      job.financials.totalProtocolRevenueUsdc = totalProtocolFee;
+      job.financials.sellerNetPayoutUsdc = sellerPayout;
 
       this.wallets.escrow_contract.balances.USDC = round6(
         this.wallets.escrow_contract.balances.USDC - lockedUsdc
       );
       store.usdcBalance = round6(store.usdcBalance + sellerPayout);
       this.wallets.protocol_treasury.balances.USDC = round6(
-        this.wallets.protocol_treasury.balances.USDC + fee
+        this.wallets.protocol_treasury.balances.USDC + totalProtocolFee
       );
 
-      treasuryStats.grossFeesEarnedUsdc = round6(treasuryStats.grossFeesEarnedUsdc + fee);
+      treasuryStats.grossFeesEarnedUsdc = round6(treasuryStats.grossFeesEarnedUsdc + totalProtocolFee);
       job.status = "SETTLED_APPROVED";
       job.releasedDecryptionKey = encryptedPkg.decryptionKeyHex;
 

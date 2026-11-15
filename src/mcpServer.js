@@ -24,13 +24,30 @@ export const MCP_TOOLS = [
   {
     name: "discover_verified_stores",
     description:
-      "[EN] Query ERC-8004 AI store reputation registry and filter out low-trust sellers. | [ES] Consulta el registro ERC-8004 de tiendas IA y filtra por reputación mínima. | [中文] 查询 ERC-8004 AI 商店声誉注册表并过滤低信誉卖家。",
+      "[EN] Query ERC-8004 Dual-Tier AI Marketplace (INSTITUTIONAL_B2B & RETAIL_INDIE) across 8 verticals, including Official First-Party curated packages. | [ES] Consulta el Catálogo Dual ERC-8004 (Institucional B2B y Retail/Indie) en las 8 verticales y paquetes oficiales. | [中文] 查询 ERC-8004 双层 AI 市场目录（机构 B2B 与零售/独立开发者，覆盖 8 大垂直领域）。",
     inputSchema: {
       type: "object",
       properties: {
         minReputation: {
           type: "number",
           description: "Minimum ERC-8004 reputation score (0-100). Recommended >= 70.",
+        },
+        marketTier: {
+          type: "string",
+          enum: ["ALL", "INSTITUTIONAL_B2B", "RETAIL_INDIE"],
+          description: "Filter by INSTITUTIONAL_B2B (non-retail enterprise/funds), RETAIL_INDIE (traders/indie bots), or ALL.",
+        },
+        vertical: {
+          type: "string",
+          description: "Filter by vertical (e.g. VERTICAL_1_DATASET, VERTICAL_2_QUANT_ALPHA, VERTICAL_3_SOLIDITY_SECURITY, etc. or ALL).",
+        },
+        maxPriceUsdc: {
+          type: "number",
+          description: "Optional maximum starting price in USDC.",
+        },
+        firstPartyOnly: {
+          type: "boolean",
+          description: "If true, returns only TrustGate Official First-Party stores & instant-delivery bundles.",
         },
       },
     },
@@ -190,6 +207,68 @@ export const MCP_TOOLS = [
       properties: {},
     },
   },
+  {
+    name: "purchase_firstparty_catalog_item",
+    description:
+      "[EN] Instant purchase & cryptographic delivery of TrustGate Official First-Party curated packages (Institutional CME Globex NQ microstructure, Sourcify Solidity blueprints, Enterprise RAG/Skill Firewall, Retail Anti-Rugpull & Zero-Lookahead Starter Packs from 1 USDC). | [ES] Compra y entrega instantánea de paquetes oficiales de TrustGate (Institucional y Retail desde 1 USDC). | [中文] 即时购买并获取 TrustGate 官方认证精选数据包（芝商所 NQ 微观结构、Sourcify 智能合约蓝图、企业级 RAG 防毒包及 1 USDC 起的零售反貔貅工具包）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        itemId: {
+          type: "string",
+          enum: [
+            "inst-cme-nq-microstructure-v06",
+            "inst-sourcify-erc8183-vault-v06",
+            "inst-enterprise-rag-skill-firewall-v06",
+            "retail-anti-rugpull-scanner-pack-v06",
+            "retail-nq-quant-starter-backtest-v06",
+            "retail-safe-mcp-skill-starter-v06",
+          ],
+          description: "ID of the curated First-Party package to purchase.",
+        },
+        buyerId: { type: "string", description: "Buyer agent ID (optional)." },
+        paymentToken: { type: "string", enum: ["USDC", "SOL", "ETH", "VIRTUAL", "USDT"] },
+      },
+      required: ["itemId"],
+    },
+  },
+  {
+    name: "register_and_certify_store",
+    description:
+      "[EN] Freemium ERC-8004 Store Onboarding (0 USDC upfront; 2.0% Broker referral fee + 1.0%-1.5% Escrow fee on sales). Requires passing a live deterministic audit of sampleDeliverable for the target vertical. | [ES] Registro y certificación gratuita ERC-8004 para tiendas IA externas (auditoría determinista obligatoria en vivo; comisión solo por venta exitosa). | [中文] 免费注册并认证 ERC-8004 外部 AI 商店（0 预付费用，必须通过实时确定性安全审计，仅在成交时收取 2% 经纪佣金 + 托管费）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        storeId: { type: "string" },
+        storeName: { type: "string" },
+        walletAddress: { type: "string" },
+        endpointUrl: { type: "string" },
+        vertical: {
+          type: "string",
+          enum: [
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU",
+          ],
+        },
+        marketTier: {
+          type: "string",
+          enum: ["INSTITUTIONAL_B2B", "RETAIL_INDIE"],
+        },
+        startingPriceUsdc: { type: "number" },
+        sampleDeliverable: {
+          type: "object",
+          description: "Sample deliverable payload to be audited live before listing.",
+        },
+      },
+      required: ["storeId", "storeName", "walletAddress", "vertical", "sampleDeliverable"],
+    },
+  },
 ];
 
 /**
@@ -209,7 +288,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           capabilities: { tools: {} },
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.5.0",
+            version: "0.6.0",
           },
         },
       };
@@ -251,7 +330,13 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
       let output;
       switch (toolName) {
         case "discover_verified_stores":
-          output = ledger.discoverStoresErc8004({ minReputation: args.minReputation ?? 70 });
+          output = ledger.discoverStoresErc8004({
+            minReputation: args.minReputation ?? 70,
+            marketTier: args.marketTier || "ALL",
+            vertical: args.vertical || "ALL",
+            maxPriceUsdc: args.maxPriceUsdc ?? null,
+            firstPartyOnly: Boolean(args.firstPartyOnly),
+          });
           break;
         case "quote_multitoken_escrow":
           output = quoteSwapAndEscrow({
@@ -341,6 +426,25 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             ...ledger.getAgentCardManifest().identity,
             paymentTerms: ledger.getAgentCardManifest().paymentTerms,
           };
+          break;
+        case "purchase_firstparty_catalog_item":
+          output = ledger.purchaseFirstPartyCatalogItem({
+            itemId: args.itemId,
+            buyerId: args.buyerId || "alphaquant-agent",
+            paymentToken: args.paymentToken || "USDC",
+          });
+          break;
+        case "register_and_certify_store":
+          output = ledger.registerAndCertifyStore({
+            storeId: args.storeId,
+            storeName: args.storeName,
+            walletAddress: args.walletAddress,
+            endpointUrl: args.endpointUrl,
+            vertical: args.vertical,
+            marketTier: args.marketTier,
+            startingPriceUsdc: args.startingPriceUsdc,
+            sampleDeliverable: args.sampleDeliverable || {},
+          });
           break;
         default:
           return {

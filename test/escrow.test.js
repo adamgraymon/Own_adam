@@ -179,7 +179,7 @@ test("6. Reloj de Seguridad (Timeout) devuelve el 100% al comprador y cifrado AE
 test("7. Interfaz M2M: Servidor MCP JSON-RPC lista herramientas y filtra tiendas ERC-8004", () => {
   const ledger = new AgenticEscrowLedger();
   const toolsList = handleMcpJsonRpc({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ledger);
-  assert.equal(toolsList.result.tools.length, 12);
+  assert.equal(toolsList.result.tools.length, 14);
 
   const onChainCheck = handleMcpJsonRpc(
     {
@@ -559,4 +559,140 @@ test("11. Líneas 5, 6, 7 y 8: Skills Troyanos, Memorias RAG Envenenadas, Cambia
   );
   assert.equal(depinFake.result.structuredContent.approved, false);
   assert.equal(depinFake.result.structuredContent.stageFailed, "GPU_TFLOPS_BELOW_SLA");
+});
+
+test("12. Catálogo Dual v0.6.0 (Institucional B2B + Retail/Indie), Paquetes First-Party (100% Margen) y Certificación Freemium ERC-8004", () => {
+  const ledger = new AgenticEscrowLedger();
+
+  // 12A: Descubrimiento filtrado por carril INSTITUTIONAL_B2B vs RETAIL_INDIE
+  const instCatalog = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 120,
+      method: "tools/call",
+      params: {
+        name: "discover_verified_stores",
+        arguments: { minReputation: 85, marketTier: "INSTITUTIONAL_B2B" },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.ok(instCatalog.eligibleStores.length >= 5);
+  assert.equal(instCatalog.curatedFirstPartyCatalog.length, 3);
+  assert.ok(instCatalog.curatedFirstPartyCatalog.every((i) => i.marketTier === "INSTITUTIONAL_B2B"));
+
+  const retailCatalog = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 121,
+      method: "tools/call",
+      params: {
+        name: "discover_verified_stores",
+        arguments: { minReputation: 85, marketTier: "RETAIL_INDIE", maxPriceUsdc: 3.0 },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(retailCatalog.curatedFirstPartyCatalog.length, 3);
+  assert.ok(retailCatalog.curatedFirstPartyCatalog.every((i) => i.marketTier === "RETAIL_INDIE"));
+
+  // 12B: Compra First-Party Institucional (CME Globex NQ Microstructure 15 USDC -> 100% a Tesorería)
+  const treasuryBefore = ledger.wallets.protocol_treasury.balances.USDC;
+  const buyInst = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 122,
+      method: "tools/call",
+      params: {
+        name: "purchase_firstparty_catalog_item",
+        arguments: { itemId: "inst-cme-nq-microstructure-v06" },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(buyInst.ok, true);
+  assert.equal(buyInst.financialSettlement.protocolTreasuryRevenueUsdc, 15.0);
+  assert.equal(buyInst.financialSettlement.protocolTreasuryMarginPct, "100%");
+  assert.equal(buyInst.deliverablePayload.microstructureMetrics.primaryRootSymbol, "NQ");
+
+  // 12C: Compra First-Party Retail (Anti-Rugpull Quick Scanner 1.00 USDC -> 100% a Tesorería)
+  const buyRetail = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 123,
+      method: "tools/call",
+      params: {
+        name: "purchase_firstparty_catalog_item",
+        arguments: { itemId: "retail-anti-rugpull-scanner-pack-v06" },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(buyRetail.ok, true);
+  assert.equal(buyRetail.financialSettlement.protocolTreasuryRevenueUsdc, 1.0);
+  assert.equal(ledger.wallets.protocol_treasury.balances.USDC, treasuryBefore + 16.0);
+
+  // 12D: Certificación Freemium ERC-8004 de Tienda Externa Honesta (0 USDC entrada + Auditoría Determinista en vivo)
+  const certHonest = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 124,
+      method: "tools/call",
+      params: {
+        name: "register_and_certify_store",
+        arguments: {
+          storeId: "indie-safe-solidity-lab",
+          storeName: "Indie Safe Solidity Lab",
+          walletAddress: "0x111122223333444455556666777788889999AAAa",
+          vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+          marketTier: "RETAIL_INDIE",
+          startingPriceUsdc: 5.0,
+          sampleDeliverable: {
+            contractName: "SafeVaultSample",
+            soliditySourceCode:
+              "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\ncontract SafeVaultSample { uint256 public totalDeposits; function deposit(uint256 a) external { totalDeposits += a; } }",
+          },
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(certHonest.ok, true);
+  assert.equal(certHonest.certificationStatus, "APPROVED_ERC8004_VERIFIED_PARTNER");
+  assert.equal(certHonest.commercialTerms.upfrontListingFeeUsdc, 0);
+  assert.ok(ledger.stores["indie-safe-solidity-lab"]);
+
+  // 12E: Tienda Externa Maliciosa intenta registrarse con puerta trasera selfdestruct -> Bloqueada (422)
+  const certMalicious = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 125,
+      method: "tools/call",
+      params: {
+        name: "register_and_certify_store",
+        arguments: {
+          storeId: "rugpull-factory-bot",
+          storeName: "Rugpull Factory Bot",
+          walletAddress: "0xDEAD00000000000000000000000000000000BEEF",
+          vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+          marketTier: "RETAIL_INDIE",
+          sampleDeliverable: {
+            contractName: "Drainer",
+            soliditySourceCode:
+              "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\ncontract Drainer { function drain(address payable to) external { selfdestruct(to); } }",
+          },
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(certMalicious.ok, false);
+  assert.equal(certMalicious.certificationStatus, "REJECTED_FAILED_DETERMINISTIC_AUDIT");
+  assert.equal(ledger.stores["rugpull-factory-bot"], undefined);
 });
