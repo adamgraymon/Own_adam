@@ -595,7 +595,7 @@ test("12. Catálogo Dual v0.6.0 (Institucional B2B + Retail/Indie), Paquetes Fir
     ledger
   ).result.structuredContent;
 
-  assert.equal(retailCatalog.curatedFirstPartyCatalog.length, 3);
+  assert.equal(retailCatalog.curatedFirstPartyCatalog.length, 4);
   assert.ok(retailCatalog.curatedFirstPartyCatalog.every((i) => i.marketTier === "RETAIL_INDIE"));
 
   // 12B: Compra First-Party Institucional (CME Globex NQ Microstructure 15 USDC -> 100% a Tesorería)
@@ -796,6 +796,10 @@ test("13. VERITAS-8183: Notaría Pública M2M, Sello 3 Estrellas con Prueba de R
 
   assert.equal(exam2Stars.ok, true);
   assert.equal(exam2Stars.starLevelAwarded, 2);
+  assert.equal(
+    exam2Stars.officialLevel3MasteryTutorialOffer.unlockOptions.fullBlueprintCatalogItem.itemId,
+    "retail-veritas-level3-mastery-tutorial-v07"
+  );
 
   // 13D: Pasaporte FinOps del Comprador: aplica descuento VIP Gold (10% OFF en catálogo y 15% en comisiones) y bloquea excesos de presupuesto
   const finopsOk = handleMcpJsonRpc(

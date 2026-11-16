@@ -52,6 +52,14 @@ export const X402_MICRO_BAZAAR_SERVICES = {
     summary:
       "Benchmarks real-time prompt execution cost across OpenAI, Claude, DeepSeek-R1, and Qwen, and issues a signed FinOps Spend Passport advertising the agent's authorized budget to counterparties.",
   },
+  "x402-veritas-level3-step-by-step-tutorial": {
+    serviceId: "x402-veritas-level3-step-by-step-tutorial",
+    title: "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Upgrade Tutorial & Self-Test Playbook",
+    priceUsdc: 0.5,
+    category: "SELLER_UPGRADE_TUTORIAL",
+    summary:
+      "Ordered step-by-step engineering tutorial for AI agents to reach 3-Star Institutional Gold status: Proof-of-Reserve >=20% wallet setup, Sourcify solc 0.8.38 template, <100ms MCP architecture, and exact exam submission payload.",
+  },
 };
 
 /**
@@ -549,6 +557,30 @@ export function submitVeritasSellerTierExam({
       vertical,
       reason: auditResult.summary || auditResult.reason,
       findings: auditResult.findings || [],
+      officialLevel3MasteryTutorialOffer: {
+        title: "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Engineering Tutorial & Ready-to-Pass Blueprint",
+        whyRecommended:
+          "Your node failed the deterministic security exam. This ordered step-by-step blueprint provides pre-audited Solidity 0.8.38 code, SKILL.md templates, and Proof-of-Reserve >=20% configuration guaranteed to pass.",
+        freeSyllabusPreview: [
+          "Step 1: Auditable Proof-of-Reserve (>=20% reserve-to-volume ratio on Base Mainnet)",
+          "Step 2: 100% Deterministic Code & Content Purity (Zero dangerous opcodes + Sourcify exact_match)",
+          "Step 3: Verified Client Satisfaction (>=4.8/5.0 across 10 notarized deliveries)",
+          "Step 4: Sub-100ms P95 JSON-RPC & A2A Response Architecture",
+          "Step 5: Copy-Paste JSON-RPC Exam Submission Payload",
+        ],
+        unlockOptions: {
+          fullBlueprintCatalogItem: {
+            mcpTool: "purchase_firstparty_catalog_item",
+            itemId: "retail-veritas-level3-mastery-tutorial-v07",
+            priceUsdc: 1.5,
+          },
+          expressX402MicroTutorial: {
+            mcpTool: "notarize_and_witness_a2a_deal",
+            serviceId: "x402-veritas-level3-step-by-step-tutorial",
+            priceUsdc: 0.5,
+          },
+        },
+      },
     };
   }
 
@@ -611,6 +643,32 @@ export function submitVeritasSellerTierExam({
       seal.starLevel === 3
         ? "Maximum 3-Star Institutional Gold Seal achieved! Keep public reserve >=20% of volume and latency <=100ms to retain status."
         : `Awarded ${seal.starLevel}-Star Seal. To unlock 3-Star Institutional Gold, maintain >=20% public crypto reserve ratio (current: ${reserveRatioPct}%) and <=100ms latency (current: ${latencyMs}ms).`,
+    officialLevel3MasteryTutorialOffer:
+      seal.starLevel === 3
+        ? null
+        : {
+            title: "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Engineering Tutorial & Ready-to-Pass Blueprint",
+            whyRecommended: `You are currently at ${seal.starLevel}-Star level. Unlock the ordered 5-step engineering playbook to reach 3-Star Institutional Gold Status and attract institutional buyers.`,
+            freeSyllabusPreview: [
+              "Step 1: Auditable Proof-of-Reserve (>=20% reserve-to-volume ratio on Base Mainnet)",
+              "Step 2: 100% Deterministic Code & Content Purity (Zero dangerous opcodes + Sourcify exact_match)",
+              "Step 3: Verified Client Satisfaction (>=4.8/5.0 across 10 notarized deliveries)",
+              "Step 4: Sub-100ms P95 JSON-RPC & A2A Response Architecture",
+              "Step 5: Copy-Paste JSON-RPC Exam Submission Payload",
+            ],
+            unlockOptions: {
+              fullBlueprintCatalogItem: {
+                mcpTool: "purchase_firstparty_catalog_item",
+                itemId: "retail-veritas-level3-mastery-tutorial-v07",
+                priceUsdc: 1.5,
+              },
+              expressX402MicroTutorial: {
+                mcpTool: "notarize_and_witness_a2a_deal",
+                serviceId: "x402-veritas-level3-step-by-step-tutorial",
+                priceUsdc: 0.5,
+              },
+            },
+          },
     veritasCertificate: seal,
   };
 }

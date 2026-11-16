@@ -460,6 +460,72 @@ export const CURATED_FIRST_PARTY_CATALOG = {
       recommendedMcpToolForLiveScan: "audit_agent_skill_escrow",
     },
   },
+
+  "retail-veritas-level3-mastery-tutorial-v07": {
+    itemId: "retail-veritas-level3-mastery-tutorial-v07",
+    title: "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Engineering Tutorial & Ready-to-Pass Blueprint",
+    marketTier: "RETAIL_INDIE",
+    vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+    priceUsdc: 1.5,
+    marginToTreasuryPct: 100,
+    storeId: "trustgate-official-retail",
+    targetBuyerProfile: "AI Agent Developers, MCP Server Authors, Smart Contract Builders seeking 3-Star Institutional Status",
+    summary:
+      "Official step-by-step engineering manual and copy-paste blueprints to pass all 5 VERITAS-8183 Level 3 Exam Pillars (Proof-of-Reserve >=20% wallet setup, Sourcify solc 0.8.38 template, <100ms JSON-RPC architecture, and exam submission script).",
+    deliverablePayload: {
+      tutorialVersion: "VERITAS_8183_LEVEL3_MASTERY_V07",
+      referenceGoldSealContract: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+      stepByStepPlaybook: [
+        {
+          step: 1,
+          pillar: "Pillar 1 — Auditable Proof-of-Reserve (>=20% Ratio)",
+          instruction:
+            "Designate a dedicated public Base Mainnet wallet (Chain ID 8453) holding liquid USDC/ETH equal to at least 20% of your declared monthly operational volume. Never co-mingle with unverified hot wallets.",
+          formula: "proofOfReserveRatioPct = (lockedOrPublicReserveUsdc / activeOperationalVolumeUsdc) * 100 >= 20.0",
+        },
+        {
+          step: 2,
+          pillar: "Pillar 2 — 100% Deterministic Code & Content Purity (SHA-256 + Sourcify)",
+          instruction:
+            "Compile with solc 0.8.38, strip all selfdestruct/delegatecall/tx.origin opcodes, enforce CEI reentrancy guards, and verify exact_match on Sourcify v2.",
+          readyToCompileSolidityTemplate:
+            "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\ncontract VeritasLevel3CompliantVault {\n  uint256 private _locked = 1;\n  mapping(address => uint256) public reserves;\n  modifier nonReentrant() { require(_locked == 1, 'REENTRANCY'); _locked = 2; _; _locked = 1; }\n  function depositReserve() external payable nonReentrant { reserves[msg.sender] += msg.value; }\n}",
+        },
+        {
+          step: 3,
+          pillar: "Pillar 3 — Verified Client Satisfaction (>=4.8/5.0 & Zero Disputes)",
+          instruction:
+            "Route your first 10 deliveries through notarize_and_witness_a2a_deal so each delivery is SHA-256 timestamped and records a verified post-settlement client rating.",
+        },
+        {
+          step: 4,
+          pillar: "Pillar 4 — Sub-100ms P95 Response Latency & 99.9% Uptime",
+          instruction:
+            "Pre-compute static JSON-RPC schemas in memory, use streaming 64KB chunks for dataset audits, and expose a zero-allocation /healthz keep-alive endpoint.",
+        },
+        {
+          step: 5,
+          pillar: "Pillar 5 — Exact JSON-RPC Payload to Pass submit_veritas_tier_upgrade_exam",
+          copyPasteExamCall: {
+            method: "tools/call",
+            params: {
+              name: "submit_veritas_tier_upgrade_exam",
+              arguments: {
+                storeId: "your-agent-store-id",
+                storeName: "Your Verified AI Node",
+                walletAddress: "0xYourMainnetWallet",
+                publicReserveWallet: "0xYourAuditableReserveWallet",
+                declaredPublicReserveUsdc: 120.0,
+                declaredMonthlyVolumeUsdc: 500.0,
+                vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+                observedLatencyMs: 25,
+              },
+            },
+          },
+        },
+      ],
+    },
+  },
 };
 
 /**

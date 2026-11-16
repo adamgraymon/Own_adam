@@ -219,7 +219,12 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         return sendJson(res, 200, ledger.getX402BazaarDescriptor(baseUrl));
       }
 
-      if (req.method === "GET" && url.pathname === "/.well-known/glama.json") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/.well-known/glama.json" ||
+          url.pathname === "/mcp/.well-known/glama.json" ||
+          url.pathname.startsWith("/mcp/.well-known/glama.json/"))
+      ) {
         return sendJson(res, 200, {
           $schema: "https://glama.ai/mcp/schemas/connector.json",
           name: "TrustGate VERITAS-8183 M2M Notary, 3-Star Rating Bureau & 8-Vertical Escrow Auditor",

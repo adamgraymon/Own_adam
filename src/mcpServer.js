@@ -380,6 +380,7 @@ export const MCP_TOOLS = [
             "x402-veritas-level3-star-exam",
             "x402-micro-antirug-token-scan",
             "x402-finops-llm-cost-optimizer",
+            "x402-veritas-level3-step-by-step-tutorial",
           ],
         },
         buyerId: { type: "string" },
