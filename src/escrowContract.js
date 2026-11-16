@@ -19,6 +19,7 @@ import {
   submitVeritasSellerTierExam,
   manageBuyerFinopsSpendPassport,
   notarizeAndWitnessA2ADealOrBazaarCall,
+  matchAndConnectVerifiedBuyers,
 } from "./veritas8183NotaryEngine.js";
 
 function round6(n) {
@@ -385,6 +386,16 @@ export class AgenticEscrowLedger {
    */
   notarizeA2ADeal(params = {}) {
     return notarizeAndWitnessA2ADealOrBazaarCall({
+      ledger: this,
+      ...params,
+    });
+  }
+
+  /**
+   * VERITAS-8183: Radar de Intención de Compra y Emparejamiento Directo de Clientes (Exclusivo 2★ y 3★, Freemium 3 clientes + 0.5%).
+   */
+  matchVerifiedBuyers(params = {}) {
+    return matchAndConnectVerifiedBuyers({
       ledger: this,
       ...params,
     });

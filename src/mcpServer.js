@@ -397,6 +397,46 @@ export const MCP_TOOLS = [
       },
     },
   },
+  {
+    name: "match_verified_buyers_by_intent",
+    description:
+      "[EN] VERITAS-8183 Exclusive Buyer Intent & Solvency Matchmaker (2-Star & 3-Star Sellers Only). Lets certified sellers discover which AI buyers are actively looking to buy their vertical right now, filtered by verified available USDC budget and payment reliability. 3-Star (⭐⭐⭐) sellers unlock exclusive First-Look access to VIP Gold Institutional Buyers. Freemium model: first 3 matched clients (or 30 days) at 0.0% extra fee, then +0.5% success fee per matched client. | [ES] Radar exclusivo de compradores calificados (solo para vendedores 2★ y 3★): filtra clientes por capital disponible y qué buscan comprar. Vendedores 3★ tienen acceso prioritario directo a los mejores clientes. Freemium: primeros 3 clientes sin recargo extra, luego +0.5% por cliente conectado. | [中文] VERITAS-8183 认证买家意向与资金匹配雷达（仅限 2 星与 3 星卖家，3 星卖家独享 VIP 机构大买家优先直连；前 3 名成交客户免费，之后每单仅加收 0.5% 撮合费）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sellerStoreId: {
+          type: "string",
+          description: "Your registered seller Store ID (must hold 2-Star or 3-Star VERITAS-8183 Seal).",
+        },
+        minAvailableBudgetUsdc: {
+          type: "number",
+          description: "Filter buyers by minimum verified daily USDC budget available right now.",
+        },
+        targetVertical: {
+          type: "string",
+          enum: [
+            "ALL",
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU",
+          ],
+        },
+        minPaymentReliabilityPct: { type: "number" },
+        connectAndCloseDealWithBuyerId: {
+          type: "string",
+          description: "Optional Buyer ID to send a direct verified offer and close a matched deal.",
+        },
+        dealAmountUsdc: { type: "number" },
+        directOfferPitch: { type: "string" },
+      },
+      required: ["sellerStoreId"],
+    },
+  },
 ];
 
 /**
@@ -691,6 +731,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             paymentTxHash: args.paymentTxHash || null,
             requireOnChainPaymentProof: Boolean(args._requireOnChainPaymentProof),
             onChainVerificationResult: args._onChainVerificationResult || null,
+          });
+          break;
+        case "match_verified_buyers_by_intent":
+          output = ledger.matchVerifiedBuyers({
+            sellerStoreId: args.sellerStoreId,
+            minAvailableBudgetUsdc: args.minAvailableBudgetUsdc ?? 0,
+            targetVertical: args.targetVertical || "ALL",
+            minPaymentReliabilityPct: args.minPaymentReliabilityPct ?? 80,
+            connectAndCloseDealWithBuyerId: args.connectAndCloseDealWithBuyerId || null,
+            dealAmountUsdc: args.dealAmountUsdc ?? null,
+            directOfferPitch: args.directOfferPitch || null,
           });
           break;
         default:

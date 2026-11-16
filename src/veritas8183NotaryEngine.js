@@ -295,6 +295,46 @@ export function computeSellerVeritasSeal(store, ledger) {
   };
 }
 
+const BUYER_INTENT_DEFAULTS = {
+  "alphaquant-agent": {
+    maxSpendPerTxUsdc: 25.0,
+    dailySpendCapUsdc: 100.0,
+    spentTodayUsdc: 12.5,
+    paidOrdersCount: 16,
+    verifiedReviewsSubmitted: 14,
+    lookingToBuyVerticals: ["VERTICAL_1_DATASET", "VERTICAL_2_QUANT_ALPHA", "VERTICAL_8_DEPIN_GPU"],
+    activeRfqDescription:
+      "Actively purchasing CME Globex NQ institutional microstructure datasets, zero-lookahead quant alpha backtests, and verified H100 GPU compute.",
+    exclusiveTo3StarSellersFirstLook: true,
+  },
+  "secaudit-agent": {
+    maxSpendPerTxUsdc: 50.0,
+    dailySpendCapUsdc: 160.0,
+    spentTodayUsdc: 20.0,
+    paidOrdersCount: 19,
+    verifiedReviewsSubmitted: 17,
+    lookingToBuyVerticals: [
+      "VERTICAL_3_SOLIDITY_SECURITY",
+      "VERTICAL_5_CERTIFIED_SKILLS",
+      "VERTICAL_6_RAG_KNOWLEDGE",
+    ],
+    activeRfqDescription:
+      "Purchasing Sourcify-verified Solidity 0.8.38 vault audits, anti-trojan SKILL.md security bundles, and clean enterprise RAG embeddings.",
+    exclusiveTo3StarSellersFirstLook: true,
+  },
+  "growthscout-bot": {
+    maxSpendPerTxUsdc: 10.0,
+    dailySpendCapUsdc: 25.0,
+    spentTodayUsdc: 7.0,
+    paidOrdersCount: 5,
+    verifiedReviewsSubmitted: 3,
+    lookingToBuyVerticals: ["VERTICAL_4_X402_ORACLES", "VERTICAL_7_VERIFIED_INFERENCE", "VERTICAL_1_DATASET"],
+    activeRfqDescription:
+      "Looking for sub-200ms x402 API oracle feeds, verified DeepSeek-R1/Claude inference, and indie lead datasets.",
+    exclusiveTo3StarSellersFirstLook: false,
+  },
+};
+
 /**
  * Calcula el Pasaporte de Solvencia, Techo de Gasto Determinista (FinOps) y Nivel de Descuento VIP
  * para una IA Compradora / Operadora (que no necesariamente vende, sino que contrata servicios).
@@ -303,16 +343,32 @@ export function computeBuyerVeritasPassport(buyerId, ledger, customConfig = {}) 
   const existingBuyer = ledger?.buyerAgents?.[buyerId];
   const customPassports = ledger?.veritasBuyerPassports || {};
   const saved = customPassports[buyerId] || {};
+  const defaults = BUYER_INTENT_DEFAULTS[buyerId] || {};
 
-  const maxSpendPerTxUsdc = round6(customConfig.maxSpendPerTxUsdc ?? saved.maxSpendPerTxUsdc ?? 25.0);
-  const dailySpendCapUsdc = round6(customConfig.dailySpendCapUsdc ?? saved.dailySpendCapUsdc ?? 100.0);
-  const spentTodayUsdc = round6(saved.spentTodayUsdc ?? 12.5);
+  const maxSpendPerTxUsdc = round6(
+    customConfig.maxSpendPerTxUsdc ?? saved.maxSpendPerTxUsdc ?? defaults.maxSpendPerTxUsdc ?? 25.0
+  );
+  const dailySpendCapUsdc = round6(
+    customConfig.dailySpendCapUsdc ?? saved.dailySpendCapUsdc ?? defaults.dailySpendCapUsdc ?? 100.0
+  );
+  const spentTodayUsdc = round6(saved.spentTodayUsdc ?? defaults.spentTodayUsdc ?? 12.5);
   const remainingDailyBudgetUsdc = round6(Math.max(0, dailySpendCapUsdc - spentTodayUsdc));
 
-  const paidOrdersCount = saved.paidOrdersCount ?? (existingBuyer ? 14 : 6);
+  const paidOrdersCount = saved.paidOrdersCount ?? defaults.paidOrdersCount ?? (existingBuyer ? 14 : 6);
   const abandonedQuotesCount = saved.abandonedQuotesCount ?? 0;
-  const verifiedReviewsSubmitted = saved.verifiedReviewsSubmitted ?? (existingBuyer ? 12 : 4);
+  const verifiedReviewsSubmitted =
+    saved.verifiedReviewsSubmitted ?? defaults.verifiedReviewsSubmitted ?? (existingBuyer ? 12 : 4);
   const zeroExploitAttempts = saved.zeroExploitAttempts ?? true;
+
+  const lookingToBuyVerticals =
+    customConfig.lookingToBuyVerticals ||
+    saved.lookingToBuyVerticals ||
+    defaults.lookingToBuyVerticals || ["VERTICAL_1_DATASET", "VERTICAL_3_SOLIDITY_SECURITY"];
+  const activeRfqDescription =
+    customConfig.activeRfqDescription ||
+    saved.activeRfqDescription ||
+    defaults.activeRfqDescription ||
+    "Looking for verified deterministic datasets and audited smart contract modules.";
 
   const totalInteractions = Math.max(1, paidOrdersCount + abandonedQuotesCount);
   const paymentReliabilityPct = round6((paidOrdersCount / totalInteractions) * 100);
@@ -386,6 +442,11 @@ export function computeBuyerVeritasPassport(buyerId, ledger, customConfig = {}) 
       firstPartyCatalogDiscountPct: `${catalogDiscountPct}%`,
       howToUpgradeDiscount:
         "Maintain >=95% payment completion, 0% quote spam, and submit verified post-settlement reviews to unlock 15% Fee Discount + 10% Catalog Discount.",
+    },
+    activeBuyingIntent: {
+      lookingToBuyVerticals,
+      activeRfqDescription,
+      exclusiveFirstLookFor3StarSellers: buyerTier === "VIP_GOLD_PRIME_BUYER",
     },
     passportCryptographicHash: passportHash,
     issuedAtMs: Date.now(),
@@ -951,5 +1012,242 @@ export function notarizeAndWitnessA2ADealOrBazaarCall({
       "2. Real-time verification of Buyer FinOps deterministic spend cap & VIP loyalty discount",
       "3. Cryptographic SHA-256 deliverable timestamping & verified client review registration",
     ]),
+  };
+}
+
+/**
+ * Herramienta 5: Radar de Intención de Compra y Emparejamiento Directo de Clientes (Exclusivo 2★ y 3★)
+ * - Bloquea a vendedores < 2 Estrellas (ofreciéndoles el Examen y el Tutorial de Nivel 3).
+ * - Vendedores ⭐⭐ (2 Estrellas): Ven compradores comerciales/retail, pero las Ballenas Institucionales (VIP_GOLD_PRIME_BUYER)
+ *   están reservadas en prioridad directa (First-Look) para los vendedores ⭐⭐⭐ (3 Estrellas).
+ * - Vendedores ⭐⭐⭐ (3 Estrellas): Tienen el máximo de beneficios: Top #1 en búsquedas entrantes + acceso directo y primero
+ *   a todos los mejores clientes (filtrados por capital disponible y qué están buscando comprar).
+ * - Modelo Comercial Freemium: Primeros 3 clientes cerrados (o 30 días) con 0.0% de recargo extra;
+ *   a partir del 4º cliente cerrado se cobra automáticamente +0.5% adicional para la tesorería del protocolo.
+ */
+export function matchAndConnectVerifiedBuyers({
+  ledger,
+  sellerStoreId,
+  minAvailableBudgetUsdc = 0,
+  targetVertical = "ALL",
+  minPaymentReliabilityPct = 80,
+  connectAndCloseDealWithBuyerId = null,
+  dealAmountUsdc = null,
+  directOfferPitch = null,
+}) {
+  const store = ledger.stores[sellerStoreId];
+  if (!store) {
+    return {
+      ok: false,
+      status: 404,
+      error: `La tienda o nodo vendedor '${sellerStoreId}' no está registrado. Usa register_and_certify_store o submit_veritas_tier_upgrade_exam primero.`,
+    };
+  }
+
+  const sellerSeal = computeSellerVeritasSeal(store, ledger);
+
+  // Candado de Exclusividad: Solo vendedores de 2 Estrellas (⭐⭐) y 3 Estrellas (⭐⭐⭐) pueden usar el Radar de Compradores
+  if (sellerSeal.starLevel < 2) {
+    return {
+      ok: false,
+      status: 403,
+      accessStatus: "LOCKED_REQUIRES_2_OR_3_STAR_VERITAS_SEAL",
+      currentSellerStarLevel: sellerSeal.starLevel,
+      currentSealBadge: sellerSeal.sealBadge,
+      reason:
+        "El Radar de Compradores con Capital Verificado es un beneficio exclusivo para vendedores de 2 Estrellas (⭐⭐) y 3 Estrellas (⭐⭐⭐).",
+      howToUnlockBuyerRadar: {
+        step1_takeUpgradeExam: "Call submit_veritas_tier_upgrade_exam to reach 2-Star or 3-Star level.",
+        step2_getOfficialLevel3MasteryTutorial: {
+          mcpTool: "purchase_firstparty_catalog_item",
+          itemId: "retail-veritas-level3-mastery-tutorial-v07",
+          priceUsdc: 1.5,
+          expressX402Option: {
+            mcpTool: "notarize_and_witness_a2a_deal",
+            serviceId: "x402-veritas-level3-step-by-step-tutorial",
+            priceUsdc: 0.5,
+          },
+        },
+      },
+    };
+  }
+
+  // Inicializar contador Freemium de emparejamiento por tienda (3 clientes gratis / 30 días, luego +0.5% por cliente)
+  if (!ledger.sellerMatchmakerSubscriptions) {
+    ledger.sellerMatchmakerSubscriptions = {};
+  }
+  if (!ledger.sellerMatchmakerSubscriptions[sellerStoreId]) {
+    ledger.sellerMatchmakerSubscriptions[sellerStoreId] = {
+      freemiumStartedAtIso: new Date().toISOString(),
+      freemiumValidDays: 30,
+      freeMatchedClientsQuota: 3,
+      matchedClientsClosedCount: 0,
+      totalExtraMatchmakingFeesPaidUsdc: 0.0,
+    };
+  }
+
+  const sub = ledger.sellerMatchmakerSubscriptions[sellerStoreId];
+
+  // Obtener todos los pasaportes de compradores registrados y aplicar filtros de capital e intención
+  const buyerIds = Object.keys(ledger.buyerAgents || {});
+  const allPassports = buyerIds.map((id) => computeBuyerVeritasPassport(id, ledger));
+
+  const filteredByCriteria = allPassports.filter((bp) => {
+    const budgetOk =
+      bp.finopsDeterministicSpendGuard.remainingDailyBudgetUsdc >= Number(minAvailableBudgetUsdc || 0);
+    const reliabilityOk =
+      bp.buyerReputationAndBehavior.paymentReliabilityPct >= Number(minPaymentReliabilityPct || 0);
+    const verticalOk =
+      !targetVertical ||
+      targetVertical === "ALL" ||
+      bp.activeBuyingIntent.lookingToBuyVerticals.includes(targetVertical);
+    return budgetOk && reliabilityOk && verticalOk;
+  });
+
+  // Diferenciación de beneficios Nivel 2 (⭐⭐) vs Nivel 3 (⭐⭐⭐)
+  const isThreeStarGoldSeller = sellerSeal.starLevel === 3;
+  const visibleBuyers = [];
+  const lockedInstitutionalWhalesFor3StarsOnly = [];
+
+  for (const bp of filteredByCriteria) {
+    if (!isThreeStarGoldSeller && bp.buyerTier === "VIP_GOLD_PRIME_BUYER") {
+      lockedInstitutionalWhalesFor3StarsOnly.push({
+        buyerId: bp.buyerId,
+        buyerTier: bp.buyerTier,
+        availableDailyBudgetUsdc: bp.finopsDeterministicSpendGuard.remainingDailyBudgetUsdc,
+        maxSpendPerTxUsdc: bp.finopsDeterministicSpendGuard.maxSpendPerTxUsdc,
+        lookingToBuyVerticals: bp.activeBuyingIntent.lookingToBuyVerticals,
+        status: "RESERVED_FIRST_LOOK_FOR_3_STAR_GOLD_SELLERS",
+        unlockHint:
+          "Upgrade from 2-Star to 3-Star Institutional Gold (Proof-of-Reserve >=20% & <=100ms SLA) to pitch this VIP Gold buyer directly.",
+      });
+    } else {
+      visibleBuyers.push({
+        buyerId: bp.buyerId,
+        buyerName: bp.buyerName,
+        buyerTier: bp.buyerTier,
+        buyerBadge: bp.buyerBadge,
+        verifiedDailyBudgetAvailableUsdc: bp.finopsDeterministicSpendGuard.remainingDailyBudgetUsdc,
+        maxSpendPerTxUsdc: bp.finopsDeterministicSpendGuard.maxSpendPerTxUsdc,
+        paymentReliabilityPct: bp.buyerReputationAndBehavior.paymentReliabilityPct,
+        zeroExploitRecord: bp.buyerReputationAndBehavior.zeroExploitAttempts,
+        lookingToBuyVerticals: bp.activeBuyingIntent.lookingToBuyVerticals,
+        activeRfqDescription: bp.activeBuyingIntent.activeRfqDescription,
+        directPitchPriority: isThreeStarGoldSeller
+          ? "PRIORITY_1_INSTANT_DIRECT_CONNECTION (3-Star Gold Privilege)"
+          : "STANDARD_2_STAR_QUEUE",
+      });
+    }
+  }
+
+  // Si el vendedor envía una oferta directa y cierra un acuerdo con un comprador emparejado:
+  let closedMatchDealReceipt = null;
+  if (connectAndCloseDealWithBuyerId) {
+    const targetBuyer = visibleBuyers.find((b) => b.buyerId === connectAndCloseDealWithBuyerId);
+    if (!targetBuyer) {
+      return {
+        ok: false,
+        status: 403,
+        error: `El comprador '${connectAndCloseDealWithBuyerId}' no está disponible en tu nivel actual (${sellerSeal.starLevel}★) o requiere el Sello Nivel 3 (⭐⭐⭐) para conexión directa.`,
+        lockedInstitutionalWhalesFor3StarsOnly,
+      };
+    }
+
+    const amountUsdc = round6(Number(dealAmountUsdc) || store.startingPriceUsdc || 10.0);
+    if (amountUsdc > targetBuyer.maxSpendPerTxUsdc || amountUsdc > targetBuyer.verifiedDailyBudgetAvailableUsdc) {
+      return {
+        ok: false,
+        status: 422,
+        error: `El monto ofertado (${amountUsdc} USDC) supera el presupuesto autorizado del comprador (${targetBuyer.maxSpendPerTxUsdc} USDC por tx).`,
+      };
+    }
+
+    // Calcular comisión Freemium (primeros 3 clientes cerrados: +0.0% extra; cliente #4 en adelante: +0.5% extra)
+    const nextClientNumber = sub.matchedClientsClosedCount + 1;
+    const isWithinFreemiumQuota = nextClientNumber <= sub.freeMatchedClientsQuota;
+    const baseBrokerFeeRate = store.isFirstParty ? 0.0 : store.brokerFeeRate || 0.02;
+    const extraMatchmakingFeeRate = isWithinFreemiumQuota ? 0.0 : 0.005; // +0.5% después de los 3 primeros clientes
+    const totalBrokerAndMatchFeeRate = round6(baseBrokerFeeRate + extraMatchmakingFeeRate);
+
+    const baseBrokerFeeUsdc = round6(amountUsdc * baseBrokerFeeRate);
+    const extraMatchmakingFeeUsdc = round6(amountUsdc * extraMatchmakingFeeRate);
+    const totalProtocolFeeCollectedUsdc = round6(baseBrokerFeeUsdc + extraMatchmakingFeeUsdc);
+
+    sub.matchedClientsClosedCount = nextClientNumber;
+    sub.totalExtraMatchmakingFeesPaidUsdc = round6(
+      sub.totalExtraMatchmakingFeesPaidUsdc + extraMatchmakingFeeUsdc
+    );
+
+    // Acreditar la comisión a la tesorería del protocolo
+    ledger.wallets.protocol_treasury.balances.USDC = round6(
+      ledger.wallets.protocol_treasury.balances.USDC + totalProtocolFeeCollectedUsdc
+    );
+    ledger.wallets.protocol_treasury.stats.grossFeesEarnedUsdc = round6(
+      ledger.wallets.protocol_treasury.stats.grossFeesEarnedUsdc + totalProtocolFeeCollectedUsdc
+    );
+    ledger.wallets.protocol_treasury.stats.netProfitUsdc = round6(
+      ledger.wallets.protocol_treasury.stats.netProfitUsdc + totalProtocolFeeCollectedUsdc
+    );
+
+    closedMatchDealReceipt = {
+      matchDealId: `MATCH-VERITAS-${Date.now()}-${nextClientNumber}`,
+      sellerStoreId,
+      sellerStarLevel: sellerSeal.starLevel,
+      matchedBuyerId: targetBuyer.buyerId,
+      matchedBuyerTier: targetBuyer.buyerTier,
+      directOfferPitchSent:
+        directOfferPitch || `Direct verified offer from ${store.name} (${sellerSeal.sealBadge})`,
+      dealAmountUsdc: amountUsdc,
+      freemiumAndFeeBreakdown: {
+        matchedClientSequenceNumber: nextClientNumber,
+        freemiumStatus: isWithinFreemiumQuota
+          ? `FREEMIUM_ACTIVE_CLIENT_${nextClientNumber}_OF_3 (0.0% Extra Matchmaking Fee)`
+          : `POST_FREEMIUM_PERFORMANCE_MODE (+0.5% Matchmaking Surcharge Active on Client #${nextClientNumber})`,
+        normalBrokerFeePct: `${round6(baseBrokerFeeRate * 100)}%`,
+        extraMatchmakingFeePct: `${round6(extraMatchmakingFeeRate * 100)}%`,
+        totalEffectiveFeePct: `${round6(totalBrokerAndMatchFeeRate * 100)}%`,
+        baseBrokerFeeUsdc,
+        extraMatchmakingFeeUsdc,
+        totalTreasuryRevenueFromMatchUsdc: totalProtocolFeeCollectedUsdc,
+        sellerNetPayoutUsdc: round6(amountUsdc - totalProtocolFeeCollectedUsdc),
+      },
+    };
+  }
+
+  const remainingFreeClients = Math.max(0, sub.freeMatchedClientsQuota - sub.matchedClientsClosedCount);
+
+  return {
+    ok: true,
+    standard: "VERITAS-8183-BUYER-INTENT-MATCHMAKER",
+    sellerProfile: {
+      storeId: store.id,
+      storeName: store.name,
+      starLevel: sellerSeal.starLevel,
+      sealBadge: sellerSeal.sealBadge,
+      privilegesUnlocked: isThreeStarGoldSeller
+        ? [
+            "1. TOP #1 INBOUND RANKING when AI agents search for providers",
+            "2. FIRST-LOOK DIRECT ACCESS to VIP Gold Institutional Buyers with highest budgets",
+            "3. INSTANT DIRECT PITCH & MATCHMAKING closure",
+          ]
+        : [
+            "1. Access to Standard & Silver Commercial Buyers",
+            "2. Upgrade to 3 Stars (⭐⭐⭐) to unlock VIP Gold Institutional Whales & Top #1 Inbound Ranking",
+          ],
+    },
+    freemiumMatchmakingPlan: {
+      planModel: "30-Day / First 3 Matched Clients at 0.0% Extra Fee -> Then +0.5% Success Fee per Matched Client",
+      freeMatchedClientsQuota: sub.freeMatchedClientsQuota,
+      matchedClientsClosedSoFar: sub.matchedClientsClosedCount,
+      remainingFreeMatchedClients: remainingFreeClients,
+      currentExtraMatchmakingSurchargePct: remainingFreeClients > 0 ? "0.0% (Freemium Active)" : "+0.5% (Post-Freemium)",
+      totalExtraMatchmakingFeesPaidUsdc: sub.totalExtraMatchmakingFeesPaidUsdc,
+    },
+    qualifiedBuyersReadyToPurchase: visibleBuyers,
+    lockedInstitutionalWhalesFor3StarsOnly:
+      lockedInstitutionalWhalesFor3StarsOnly.length > 0
+        ? lockedInstitutionalWhalesFor3StarsOnly
+        : undefined,
+    closedMatchDealReceipt,
   };
 }

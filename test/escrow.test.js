@@ -179,7 +179,7 @@ test("6. Reloj de Seguridad (Timeout) devuelve el 100% al comprador y cifrado AE
 test("7. Interfaz M2M: Servidor MCP JSON-RPC lista herramientas y filtra tiendas ERC-8004", () => {
   const ledger = new AgenticEscrowLedger();
   const toolsList = handleMcpJsonRpc({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ledger);
-  assert.equal(toolsList.result.tools.length, 18);
+  assert.equal(toolsList.result.tools.length, 19);
 
   const onChainCheck = handleMcpJsonRpc(
     {
@@ -850,4 +850,99 @@ test("13. VERITAS-8183: Notaría Pública M2M, Sello 3 Estrellas con Prueba de R
   assert.equal(witnessActa.status, "WITNESSED_AND_NOTARIZED_IN_MILLISECONDS");
   assert.equal(witnessActa.notaryActa.seller.starLevel, 3);
   assert.equal(witnessActa.notaryActa.buyer.vipDiscountAppliedPct, "15%");
+});
+
+test("14. Radar de Intención de Compra (Exclusivo 2★ y 3★): Prioridad Nivel 3 a Ballenas VIP y Freemium 3 Clientes + 0.5%", () => {
+  const ledger = new AgenticEscrowLedger();
+
+  // 14A: Vendedor de 1 Estrella o bloqueado intenta ver compradores -> Bloqueado (403) y se le recomienda el Examen + Tutorial
+  const blockedSeller = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 140,
+      method: "tools/call",
+      params: {
+        name: "match_verified_buyers_by_intent",
+        arguments: { sellerStoreId: "deepmetrics-node" },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(blockedSeller.ok, false);
+  assert.equal(blockedSeller.accessStatus, "LOCKED_REQUIRES_2_OR_3_STAR_VERITAS_SEAL");
+  assert.equal(
+    blockedSeller.howToUnlockBuyerRadar.step2_getOfficialLevel3MasteryTutorial.itemId,
+    "retail-veritas-level3-mastery-tutorial-v07"
+  );
+
+  // 14B: Vendedor de 2 Estrellas (⭐⭐) ve compradores estándar/plata pero las Ballenas VIP Gold quedan reservadas para 3 Estrellas (⭐⭐⭐)
+  const twoStarRadar = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 141,
+      method: "tools/call",
+      params: {
+        name: "match_verified_buyers_by_intent",
+        arguments: { sellerStoreId: "aegis-solidity-auditor-pro" },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(twoStarRadar.ok, true);
+  assert.equal(twoStarRadar.sellerProfile.starLevel, 2);
+  assert.ok(twoStarRadar.lockedInstitutionalWhalesFor3StarsOnly.length >= 2);
+
+  // 14C: Vendedor de 3 Estrellas (⭐⭐⭐) desbloquea acceso directo a las Ballenas VIP Gold y cierra 3 clientes en Freemium (0.0% extra) + 4º cliente con +0.5%
+  for (let clientNum = 1; clientNum <= 3; clientNum++) {
+    const freeDeal = handleMcpJsonRpc(
+      {
+        jsonrpc: "2.0",
+        id: 141 + clientNum,
+        method: "tools/call",
+        params: {
+          name: "match_verified_buyers_by_intent",
+          arguments: {
+            sellerStoreId: "quantalpha-institutional-node",
+            targetVertical: "VERTICAL_2_QUANT_ALPHA",
+            minAvailableBudgetUsdc: 20,
+            connectAndCloseDealWithBuyerId: "alphaquant-agent",
+            dealAmountUsdc: 20.0,
+          },
+        },
+      },
+      ledger
+    ).result.structuredContent;
+
+    assert.equal(freeDeal.ok, true);
+    assert.equal(freeDeal.sellerProfile.starLevel, 3);
+    assert.equal(freeDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.extraMatchmakingFeePct, "0%");
+    assert.equal(freeDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.extraMatchmakingFeeUsdc, 0);
+  }
+
+  // 14D: Al 4º cliente cerrado, termina el Freemium de 3 clientes y se activa automáticamente el +0.5% adicional (0.10 USDC extra sobre 20 USDC)
+  const fourthDeal = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 145,
+      method: "tools/call",
+      params: {
+        name: "match_verified_buyers_by_intent",
+        arguments: {
+          sellerStoreId: "quantalpha-institutional-node",
+          targetVertical: "VERTICAL_2_QUANT_ALPHA",
+          connectAndCloseDealWithBuyerId: "alphaquant-agent",
+          dealAmountUsdc: 20.0,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(fourthDeal.ok, true);
+  assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.matchedClientSequenceNumber, 4);
+  assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.extraMatchmakingFeePct, "0.5%");
+  assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.extraMatchmakingFeeUsdc, 0.1);
+  assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.totalEffectiveFeePct, "2.5%");
 });
