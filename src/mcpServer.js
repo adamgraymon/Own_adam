@@ -49,6 +49,11 @@ export const MCP_TOOLS = [
           type: "boolean",
           description: "If true, returns only TrustGate Official First-Party stores & instant-delivery bundles.",
         },
+        callerSectorOrTrend: {
+          type: "string",
+          description:
+            "Optional: specify your project's industry sector or your user's shopping/search trend to personalize recommendations and VIP discounts.",
+        },
       },
     },
   },
@@ -298,6 +303,11 @@ export const MCP_TOOLS = [
         buyerIdForSimulation: {
           type: "string",
           description: "Optional buyer agent ID for bilateral pre-check.",
+        },
+        callerSectorOrTrend: {
+          type: "string",
+          description:
+            "Optional: specify your industry sector or your user's shopping/search trend to personalize VERITAS-8183 telemetry.",
         },
       },
     },

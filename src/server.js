@@ -21,12 +21,14 @@ import {
   verifyOnChainBaseMainnetUsdcPayment,
 } from "./premiumCatalogBroker.js";
 import { X402_MICRO_BAZAAR_SERVICES } from "./veritas8183NotaryEngine.js";
+import { MarketIntelligenceTracker } from "./marketIntelligenceEngine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const PORT = Number(process.env.PORT) || 3402;
 
 const ledger = new AgenticEscrowLedger();
+const marketIntelTracker = new MarketIntelligenceTracker();
 let swarmRunning = false;
 let swarmCycleCount = 0;
 let swarmInterval = null;
@@ -49,26 +51,42 @@ function recordExternalVisit(req, pathname, extraMeta = {}) {
   const visitorHash = "v_" + crypto.createHash("sha256").update(`${rawIp}|${ua}`).digest("hex").slice(0, 10);
 
   externalTrafficRadar.totalExternalHits += 1;
-  externalTrafficRadar.uniqueVisitorsSet.add(visitorHash);
+  if (externalTrafficRadar.uniqueVisitorsSet.size < 500) {
+    externalTrafficRadar.uniqueVisitorsSet.add(visitorHash);
+  }
   externalTrafficRadar.byEndpoint[pathname] = (externalTrafficRadar.byEndpoint[pathname] || 0) + 1;
-  externalTrafficRadar.byUserAgent[ua] = (externalTrafficRadar.byUserAgent[ua] || 0) + 1;
+  if (
+    externalTrafficRadar.byUserAgent[ua] !== undefined ||
+    Object.keys(externalTrafficRadar.byUserAgent).length < 350
+  ) {
+    externalTrafficRadar.byUserAgent[ua] = (externalTrafficRadar.byUserAgent[ua] || 0) + 1;
+  }
 
   if (extraMeta.mcpTool) {
     externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] =
       (externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] || 0) + 1;
   }
 
+  // Registrar en el clasificador de los 7 Rubros e Intención de Compra (< 40 KB RAM fija)
+  marketIntelTracker.recordVisit({
+    userAgent: ua,
+    endpoint: pathname,
+    mcpTool: extraMeta.mcpTool || null,
+    rpcArgs: extraMeta.rpcArgs || null,
+  });
+
+  const { rpcArgs, ...cleanExtra } = extraMeta;
   externalTrafficRadar.recentExternalEvents.unshift({
     timestamp: new Date().toISOString(),
     method: req.method,
     endpoint: pathname,
     visitorHash,
     userAgent: ua,
-    ...extraMeta,
+    ...cleanExtra,
   });
 
-  if (externalTrafficRadar.recentExternalEvents.length > 300) {
-    externalTrafficRadar.recentExternalEvents.length = 300;
+  if (externalTrafficRadar.recentExternalEvents.length > 40) {
+    externalTrafficRadar.recentExternalEvents.length = 40;
   }
 }
 
@@ -133,14 +151,26 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         });
       }
 
-      if (req.method === "GET" && url.pathname === "/api/external-traffic") {
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/api/external-traffic" || url.pathname === "/api/market-intelligence")
+      ) {
+        const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits);
         return sendJson(res, 200, {
           ok: true,
           startedAt: externalTrafficRadar.startedAt,
           uptimeSeconds: Math.round(process.uptime()),
           keepAlivePingsCount: externalTrafficRadar.keepAlivePingsCount,
+          allTimeTotalExternalHits: intelSummary.allTimeTotalExternalHits,
+          historicalSeedBaselineHits: intelSummary.historicalSeedBaselineHits,
           totalExternalHits: externalTrafficRadar.totalExternalHits,
           uniqueExternalVisitorsCount: externalTrafficRadar.uniqueVisitorsSet.size,
+          marketIntelligenceBySector: {
+            uniqueClassifiedAgentsCount: intelSummary.uniqueClassifiedAgentsCount,
+            memorySafetyGuardrail: intelSummary.memorySafetyGuardrail,
+            byIndustrySector: intelSummary.byIndustrySector,
+            searchAndBuyingIntentTrends: intelSummary.searchAndBuyingIntentTrends,
+          },
           byEndpoint: externalTrafficRadar.byEndpoint,
           byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
           byUserAgent: externalTrafficRadar.byUserAgent,
@@ -476,6 +506,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         recordExternalVisit(req, "/mcp", {
           mcpMethod: rpcPayload?.method || "unknown",
           mcpTool: rpcPayload?.params?.name || null,
+          rpcArgs: rpcPayload?.params?.arguments || null,
         });
 
         // Candado en vivo en Base Mainnet para compras públicas de paquetes oficiales First-Party
