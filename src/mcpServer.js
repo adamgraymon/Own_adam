@@ -274,6 +274,128 @@ export const MCP_TOOLS = [
       required: ["storeId", "storeName", "walletAddress", "vertical", "sampleDeliverable"],
     },
   },
+  {
+    name: "inspect_veritas_8183_seal",
+    description:
+      "[EN] FREE (<5ms) VERITAS-8183 Bilateral Quick-Glance Seal & Client Telemetry Inspector. Checks any Seller or Smart Contract's 1-to-3 Star Seal (Proof-of-Reserve >=20% crypto ratio, Content Quality, Verified Client Rating, Response Latency) AND any Buyer Agent's FinOps Spend Passport & VIP Discounts (5%-15% OFF). | [ES] Consulta gratuita en milisegundos del Sello VERITAS-8183 (1 a 3 Estrellas, Reserva Cripto Pública, Estadísticas de Clientes y Pasaporte de Solvencia/Descuentos del Comprador). | [中文] 免费毫秒级查询 VERITAS-8183 双向认证印章（卖家 1-3 星评级、>=20% 链上加密储备金证明、客户评价与延迟统计，以及买家 FinOps 预算护照与 VIP 折扣）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        targetId: {
+          type: "string",
+          description:
+            "Store ID, Smart Contract ID, or Buyer Agent ID to inspect (or 'ALL' for the complete VERITAS-8183 directory).",
+        },
+        roleFilter: {
+          type: "string",
+          enum: ["ALL", "SELLER", "BUYER"],
+          description: "Filter directory by SELLER (1-3 Star Seals) or BUYER (FinOps Spend Passports).",
+        },
+        proposedTransactionAmountUsdc: {
+          type: "number",
+          description: "Optional transaction amount in USDC to pre-check bilateral compatibility.",
+        },
+        buyerIdForSimulation: {
+          type: "string",
+          description: "Optional buyer agent ID for bilateral pre-check.",
+        },
+      },
+    },
+  },
+  {
+    name: "submit_veritas_tier_upgrade_exam",
+    description:
+      "[EN] VERITAS-8183 Seller & Smart Contract Tier Upgrade Exam (1-Star to 3-Star Institutional Gold Seal). Evaluates 5 hard pillars: Auditable Public Crypto Reserve Ratio (>=20% of operational volume for 3 Stars), Deterministic Code/Content Purity (>=98%), Verified Client Rating (>=4.8/5), Latency SLA (<=100ms), and Zero Slashing History. | [ES] Examen oficial de ascenso de nivel VERITAS-8183 (1 a 3 Estrellas) para vendedores y contratos inteligentes con verificación de Reserva Cripto Pública (>=20% del volumen) y calidad determinista. | [中文] VERITAS-8183 卖家与智能合约星级晋升考试（评估公开链上储备金比例 >=20%、内容质量、客户评分与响应时间以授予 1 至 3 星印章）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        storeId: { type: "string" },
+        storeName: { type: "string" },
+        walletAddress: { type: "string" },
+        publicReserveWallet: {
+          type: "string",
+          description: "Public auditable wallet holding the crypto reserve backing operations.",
+        },
+        declaredPublicReserveUsdc: {
+          type: "number",
+          description: "Auditable liquid/locked crypto reserve in USDC equivalent.",
+        },
+        declaredMonthlyVolumeUsdc: {
+          type: "number",
+          description: "Active operational volume in USDC (3-Star Level 3 requires >=20% reserve-to-volume ratio).",
+        },
+        vertical: {
+          type: "string",
+          enum: [
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU",
+          ],
+        },
+        observedLatencyMs: { type: "number" },
+        sampleDeliverable: { type: "object" },
+      },
+      required: ["storeId"],
+    },
+  },
+  {
+    name: "manage_buyer_finops_spend_passport",
+    description:
+      "[EN] VERITAS-8183 Buyer FinOps Spend Guard, Solvency Passport & LLM Token Cost Optimizer. Sets deterministic per-tx and daily USDC spend caps (advertised to sellers in real time), benchmarks LLM token costs (OpenAI vs Claude vs DeepSeek-R1 vs Qwen), and calculates VIP Good-Buyer Discounts (up to 15% Fee OFF & 10% Catalog OFF for reliable payers with zero spam). | [ES] Pasaporte de Solvencia y Presupuesto Determinista (FinOps) para IAs compradoras: frena sobregiros, anuncia cupo disponible a vendedores y desbloquea descuentos VIP (5%-15%) por buen pago y reseñas. | [中文] VERITAS-8183 买家 FinOps 预算护栏与信用护照（设定单笔及每日支出上限、实时向卖家广播可用额度、对比大模型 Token 成本并解锁高达 15% 的优质买家折扣）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        buyerId: { type: "string" },
+        buyerName: { type: "string" },
+        walletAddress: { type: "string" },
+        maxSpendPerTxUsdc: { type: "number" },
+        dailySpendCapUsdc: { type: "number" },
+        proposedPurchaseUsdc: {
+          type: "number",
+          description: "Optional purchase amount in USDC to test against spend caps and apply VIP buyer discounts.",
+        },
+        estimatedPromptTokens: {
+          type: "number",
+          description: "Optional token count to benchmark LLM inference cost savings.",
+        },
+      },
+    },
+  },
+  {
+    name: "notarize_and_witness_a2a_deal",
+    description:
+      "[EN] VERITAS-8183 Millisecond A2A & Smart Contract Deal Witness + x402 Micro-Bazaar Executor (0.10 to 1.00 USDC on Base Mainnet). Verifies Seller Star Seal + Buyer FinOps Spend Cap, applies VIP Buyer Discounts, records verified post-delivery client ratings, and issues an ECDSA-signed Notary Acta. | [ES] Notario y Testigo en milisegundos para acuerdos A2A y Contratos Inteligentes + Bazar x402 (0.10 a 1.00 USDC en Base Mainnet). | [中文] VERITAS-8183 毫秒级 A2A 与智能合约交易公证见证人及 x402 微支付集市执行器（0.10-1.00 USDC Base 主网结算）。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        serviceId: {
+          type: "string",
+          enum: [
+            "x402-veritas-deal-witness-acta",
+            "x402-veritas-level3-star-exam",
+            "x402-micro-antirug-token-scan",
+            "x402-finops-llm-cost-optimizer",
+          ],
+        },
+        buyerId: { type: "string" },
+        sellerStoreId: { type: "string" },
+        dealAmountUsdc: { type: "number" },
+        deliverableSha256: { type: "string" },
+        clientRatingOutOf5: { type: "number" },
+        clientReviewComment: { type: "string" },
+        paymentTxHash: {
+          type: "string",
+          description:
+            "Base Mainnet (Chain ID 8453) USDC transfer tx hash (0x...) to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4.",
+        },
+      },
+    },
+  },
 ];
 
 /**
@@ -293,7 +415,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           capabilities: { tools: {} },
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.6.0",
+            version: "0.7.0",
           },
         },
       };
@@ -319,7 +441,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           protocolVersion: "2025-06-18",
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.6.0",
+            version: "0.7.0",
+            standard: "VERITAS-8183 & ERC-8183",
             contractAddress: ledger.wallets.escrow_contract.address,
             chainId: 8453,
             sourcifyMatchId: 59283147,
@@ -337,8 +460,13 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
         result: {
           resources: [
             {
+              uri: "https://own-adam.onrender.com/notary.json",
+              name: "VERITAS-8183 Public M2M Notary Registry, 3-Star Seller Seals & Buyer FinOps Passports",
+              mimeType: "application/json",
+            },
+            {
               uri: "https://own-adam.onrender.com/catalog.json",
-              name: "TrustGate Dual-Tier AI Marketplace Catalog (Institutional B2B & Retail/Indie)",
+              name: "TrustGate Dual-Tier AI Marketplace Catalog (Institutional B2B, Retail/Indie & x402 Bazaar)",
               mimeType: "application/json",
             },
             {
@@ -516,6 +644,52 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             marketTier: args.marketTier,
             startingPriceUsdc: args.startingPriceUsdc,
             sampleDeliverable: args.sampleDeliverable || {},
+          });
+          break;
+        case "inspect_veritas_8183_seal":
+          output = ledger.inspectVeritasSeal({
+            targetId: args.targetId || "ALL",
+            roleFilter: args.roleFilter || "ALL",
+            proposedTransactionAmountUsdc: args.proposedTransactionAmountUsdc ?? null,
+            buyerIdForSimulation: args.buyerIdForSimulation || "alphaquant-agent",
+          });
+          break;
+        case "submit_veritas_tier_upgrade_exam":
+          output = ledger.submitVeritasTierExam({
+            storeId: args.storeId,
+            storeName: args.storeName,
+            walletAddress: args.walletAddress,
+            publicReserveWallet: args.publicReserveWallet,
+            declaredPublicReserveUsdc: args.declaredPublicReserveUsdc,
+            declaredMonthlyVolumeUsdc: args.declaredMonthlyVolumeUsdc,
+            vertical: args.vertical,
+            observedLatencyMs: args.observedLatencyMs,
+            sampleDeliverable: args.sampleDeliverable || {},
+          });
+          break;
+        case "manage_buyer_finops_spend_passport":
+          output = ledger.manageBuyerSpendPassport({
+            buyerId: args.buyerId || "alphaquant-agent",
+            buyerName: args.buyerName,
+            walletAddress: args.walletAddress,
+            maxSpendPerTxUsdc: args.maxSpendPerTxUsdc,
+            dailySpendCapUsdc: args.dailySpendCapUsdc,
+            proposedPurchaseUsdc: args.proposedPurchaseUsdc,
+            estimatedPromptTokens: args.estimatedPromptTokens,
+          });
+          break;
+        case "notarize_and_witness_a2a_deal":
+          output = ledger.notarizeA2ADeal({
+            serviceId: args.serviceId || "x402-veritas-deal-witness-acta",
+            buyerId: args.buyerId || "alphaquant-agent",
+            sellerStoreId: args.sellerStoreId || "trustgate-official-institutional",
+            dealAmountUsdc: args.dealAmountUsdc ?? 5.0,
+            deliverableSha256: args.deliverableSha256 || null,
+            clientRatingOutOf5: args.clientRatingOutOf5 ?? 5.0,
+            clientReviewComment: args.clientReviewComment,
+            paymentTxHash: args.paymentTxHash || null,
+            requireOnChainPaymentProof: Boolean(args._requireOnChainPaymentProof),
+            onChainVerificationResult: args._onChainVerificationResult || null,
           });
           break;
         default:

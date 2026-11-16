@@ -179,7 +179,7 @@ test("6. Reloj de Seguridad (Timeout) devuelve el 100% al comprador y cifrado AE
 test("7. Interfaz M2M: Servidor MCP JSON-RPC lista herramientas y filtra tiendas ERC-8004", () => {
   const ledger = new AgenticEscrowLedger();
   const toolsList = handleMcpJsonRpc({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ledger);
-  assert.equal(toolsList.result.tools.length, 14);
+  assert.equal(toolsList.result.tools.length, 18);
 
   const onChainCheck = handleMcpJsonRpc(
     {
@@ -717,4 +717,133 @@ test("12. Catálogo Dual v0.6.0 (Institucional B2B + Retail/Indie), Paquetes Fir
   assert.equal(lockedWithoutTx.status, "PAYMENT_REQUIRED_ON_BASE_MAINNET_402");
   assert.equal(lockedWithoutTx.deliverablePayload, undefined);
   assert.equal(lockedWithoutTx.previewTeaserOnly.fullPayloadLocked, true);
+});
+
+test("13. VERITAS-8183: Notaría Pública M2M, Sello 3 Estrellas con Prueba de Reserva (>=20%), FinOps Spend Cap y Descuentos VIP", () => {
+  const ledger = new AgenticEscrowLedger();
+
+  // 13A: Panorama Rápido Bilateral (Gratis <5ms) verifica Sello Nivel 3 de tienda oficial y Pasaporte del Comprador
+  const panorama = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 130,
+      method: "tools/call",
+      params: {
+        name: "inspect_veritas_8183_seal",
+        arguments: {
+          targetId: "trustgate-official-institutional",
+          proposedTransactionAmountUsdc: 15.0,
+          buyerIdForSimulation: "alphaquant-agent",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(panorama.ok, true);
+  assert.equal(panorama.sellerSeal.starLevel, 3);
+  assert.ok(panorama.sellerSeal.fivePillarAuditBreakdown.pillar1_proofOfReserve.proofOfReserveRatioPct >= 20.0);
+  assert.equal(panorama.bilateralCompatibilityCheck.recommendedAction, "PROCEED_WITH_VERITAS_8183_NOTARY_WITNESS");
+
+  // 13B: Examen Nivel 3 con Reserva Cripto Pública >= 25% (125 USDC sobre 500 USDC de volumen) -> Otorga 3 Estrellas (⭐⭐⭐)
+  const exam3Stars = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 131,
+      method: "tools/call",
+      params: {
+        name: "submit_veritas_tier_upgrade_exam",
+        arguments: {
+          storeId: "prime-solidity-vault-node",
+          storeName: "Prime Solidity Vault Node",
+          walletAddress: "0x9999888877776666555544443333222211110000",
+          publicReserveWallet: "0x9999888877776666555544443333222211110000",
+          declaredPublicReserveUsdc: 125.0,
+          declaredMonthlyVolumeUsdc: 500.0,
+          vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+          observedLatencyMs: 28,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(exam3Stars.ok, true);
+  assert.equal(exam3Stars.starLevelAwarded, 3);
+  assert.equal(exam3Stars.proofOfReserveRatioVerifiedPct, 25.0);
+
+  // 13C: Examen con Reserva Baja (10% < 20% mínimo para 3 Estrellas) -> Se queda en 2 Estrellas (⭐⭐)
+  const exam2Stars = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 132,
+      method: "tools/call",
+      params: {
+        name: "submit_veritas_tier_upgrade_exam",
+        arguments: {
+          storeId: "low-reserve-indie-node",
+          storeName: "Low Reserve Indie Node",
+          walletAddress: "0xAAAA88887777666655554444333322221111BBBB",
+          declaredPublicReserveUsdc: 40.0,
+          declaredMonthlyVolumeUsdc: 400.0, // 10% ratio
+          vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+          observedLatencyMs: 45,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(exam2Stars.ok, true);
+  assert.equal(exam2Stars.starLevelAwarded, 2);
+
+  // 13D: Pasaporte FinOps del Comprador: aplica descuento VIP Gold (10% OFF en catálogo y 15% en comisiones) y bloquea excesos de presupuesto
+  const finopsOk = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 133,
+      method: "tools/call",
+      params: {
+        name: "manage_buyer_finops_spend_passport",
+        arguments: {
+          buyerId: "alphaquant-agent",
+          maxSpendPerTxUsdc: 20.0,
+          dailySpendCapUsdc: 100.0,
+          proposedPurchaseUsdc: 10.0,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(finopsOk.ok, true);
+  assert.equal(finopsOk.buyerPassport.buyerTier, "VIP_GOLD_PRIME_BUYER");
+  assert.equal(finopsOk.deterministicSpendAuthorization.netPayableUsdc, 9.0);
+  assert.equal(finopsOk.deterministicSpendAuthorization.authorizedByDeterministicSpendGuard, true);
+
+  // 13E: Notario y Testigo en Vivo A2A emite Acta Criptográfica firmada en milisegundos
+  const witnessActa = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 134,
+      method: "tools/call",
+      params: {
+        name: "notarize_and_witness_a2a_deal",
+        arguments: {
+          serviceId: "x402-veritas-deal-witness-acta",
+          buyerId: "alphaquant-agent",
+          sellerStoreId: "prime-solidity-vault-node",
+          dealAmountUsdc: 12.0,
+          clientRatingOutOf5: 5.0,
+          clientReviewComment: "Instant verified delivery under VERITAS-8183 3-Star Seal.",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(witnessActa.ok, true);
+  assert.equal(witnessActa.status, "WITNESSED_AND_NOTARIZED_IN_MILLISECONDS");
+  assert.equal(witnessActa.notaryActa.seller.starLevel, 3);
+  assert.equal(witnessActa.notaryActa.buyer.vipDiscountAppliedPct, "15%");
 });

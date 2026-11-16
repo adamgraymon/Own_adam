@@ -20,6 +20,7 @@ import {
   CURATED_FIRST_PARTY_CATALOG,
   verifyOnChainBaseMainnetUsdcPayment,
 } from "./premiumCatalogBroker.js";
+import { X402_MICRO_BAZAAR_SERVICES } from "./veritas8183NotaryEngine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -159,6 +160,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/.well-known/agent.json" ||
           url.pathname === "/.well-known/agent-card.json" ||
+          url.pathname === "/.well-known/agents.json" ||
+          url.pathname === "/.well-known/ai-plugin.json" ||
+          url.pathname === "/.well-known/did.json" ||
+          url.pathname === "/.well-known/brick-blue.json" ||
           url.pathname === "/.well-known/ard.json" ||
           url.pathname === "/mcp/.well-known/agent.json" ||
           url.pathname === "/api/x402-agent-card")
@@ -172,6 +177,26 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           payloadSummary: "Agent Card manifest served to autonomous peer",
         });
         return sendJson(res, 200, ledger.getAgentCardManifest(baseUrl));
+      }
+
+      // =====================================================================
+      // PUERTA 1.A M2M: Registro Público Notarial VERITAS-8183 (/notary.json)
+      // =====================================================================
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/notary.json" ||
+          url.pathname === "/.well-known/veritas-8183.json" ||
+          url.pathname === "/.well-known/agent-notary.json")
+      ) {
+        ledger.logWirePacket({
+          protocol: "VERITAS-8183",
+          from: req.headers["user-agent"]?.slice(0, 22) || "Notary-Auditor",
+          to: "EvaluatorNode",
+          action: `GET ${url.pathname}`,
+          status: 200,
+          payloadSummary: "Served VERITAS-8183 Public M2M Notary & 3-Star Seal Registry",
+        });
+        return sendJson(res, 200, ledger.getVeritasNotaryManifest(baseUrl));
       }
 
       // =====================================================================
@@ -197,10 +222,11 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
       if (req.method === "GET" && url.pathname === "/.well-known/glama.json") {
         return sendJson(res, 200, {
           $schema: "https://glama.ai/mcp/schemas/connector.json",
-          name: "TrustGate ERC-8183 8-Vertical Escrow Auditor & USDC Solver",
-          version: "0.6.0",
+          name: "TrustGate VERITAS-8183 M2M Notary, 3-Star Rating Bureau & 8-Vertical Escrow Auditor",
+          version: "0.7.0",
           mcpEndpoint: `${baseUrl}/mcp`,
           catalogEndpoint: `${baseUrl}/catalog.json`,
+          notaryEndpoint: `${baseUrl}/notary.json`,
           repository: "https://github.com/adamgraymon/Own_adam",
           maintainer: "adamgraymon",
           auth: "none",
@@ -218,6 +244,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         (url.pathname === "/.well-known/oauth-protected-resource" ||
           url.pathname === "/.well-known/oauth-protected-resource/mcp" ||
           url.pathname === "/.well-known/oauth-authorization-server" ||
+          url.pathname === "/.well-known/oauth-authorization-server/mcp" ||
           url.pathname === "/.well-known/openid-configuration")
       ) {
         return sendJson(res, 200, {
@@ -225,7 +252,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           auth_required: false,
           public_m2m_access: true,
           bearer_methods_supported: [],
-          payment_protocols_supported: ["x402", "ERC-8183-Base-Mainnet-USDC"],
+          payment_protocols_supported: ["x402", "ERC-8183-Base-Mainnet-USDC", "VERITAS-8183"],
           escrow_contract_base_mainnet: ledger.wallets.escrow_contract.address,
           documentation: `${baseUrl}/llms.txt`,
         });
@@ -237,7 +264,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           url.pathname === "/.well-known/http-message-signatures-directory")
       ) {
         return sendJson(res, 200, {
-          standard: "ERC-8183 + ERC-8004 Deterministic Security Node",
+          standard: "VERITAS-8183 + ERC-8183 + ERC-8004 Deterministic Security & Notary Node",
           baseMainnetContract: ledger.wallets.escrow_contract.address,
           sourcifyVerification: `https://sourcify.dev/#/lookup/${ledger.wallets.escrow_contract.address}`,
           sourcifyMatchId: 59283147,
@@ -254,7 +281,8 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/catalog.json" ||
           url.pathname === "/market.json" ||
-          url.pathname === "/.well-known/ai-catalog.json")
+          url.pathname === "/.well-known/ai-catalog.json" ||
+          url.pathname === "/discovery/resources")
       ) {
         ledger.logWirePacket({
           protocol: "ERC-8004-CATALOG",
@@ -274,18 +302,24 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/.well-known/mcp.json" ||
           url.pathname === "/.well-known/mcp/server-card.json" ||
+          url.pathname === "/.well-known/sd-card/mcp" ||
           url.pathname === "/mcp/server-card" ||
           url.pathname === "/mcp" ||
           url.pathname === "/mcp/" ||
           url.pathname === "/mcp/mcp" ||
-          url.pathname === "/mcp/sse")
+          url.pathname === "/mcp/sse" ||
+          url.pathname === "/sse" ||
+          url.pathname === "/api/mcp" ||
+          url.pathname === "/mcp/v1")
       ) {
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
-          version: "0.6.0",
+          version: "0.7.0",
+          standard: "VERITAS-8183",
           endpoint: `${baseUrl}/mcp`,
           catalogEndpoint: `${baseUrl}/catalog.json`,
+          notaryEndpoint: `${baseUrl}/notary.json`,
           transport: "streamable-http",
           officialRegistryNamespaces: [
             "io.github.adamgraymon/trustgate-erc8183-mcp",
@@ -296,6 +330,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
             "io.github.adamgraymon/rag-embedding-poisoning-escrow-auditor",
             "io.github.adamgraymon/ai-inference-proof-escrow-auditor",
             "io.github.adamgraymon/depin-gpu-compute-sla-escrow",
+            "io.github.adamgraymon/veritas-8183-agent-notary-witness",
+            "io.github.adamgraymon/veritas-8183-3star-rating-seal",
+            "io.github.adamgraymon/agent-finops-budget-spend-guard",
+            "io.github.adamgraymon/x402-bazaar-micro-auditor",
           ],
           onChainContract: {
             network: "base-mainnet",
@@ -317,42 +355,46 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           url.pathname === "/agents.txt")
       ) {
         const llmsTxt = [
-          "# TrustGate ERC-8183 — 8-Vertical M2M Escrow Auditor & Multi-Token USDC Solver (EN / ES / 中文)",
+          "# TrustGate VERITAS-8183 — Public M2M Notary, 3-Star Proof-of-Reserve Rating Bureau, FinOps Spend Guard & 8-Vertical Escrow Auditor (EN / ES / 中文)",
           "",
-          "> [EN] Official #1 Machine-to-Machine (M2M) Non-Custodial USDC Escrow & Deterministic Auditor on Base Mainnet (Chain ID 8453). Published in The Official MCP Registry (`io.github.adamgraymon/*`).",
-          "> [ES] Nodo M2M #1 Oficial de Interventoría Determinista y Fideicomiso No-Custodial en USDC sobre Base Mainnet (Chain ID 8453).",
-          "> [中文] Base 主网 (Chain ID 8453) 官方排名第一的机器对机器 (M2M) ERC-8183 非托管 USDC 托管与 8 大垂直领域确定性审计节点。",
+          "> [EN] Official #1 Machine-to-Machine (M2M) Public Notary (`VERITAS-8183`), 3-Star Proof-of-Reserve Rating Seal, Buyer FinOps Spend Passport & Non-Custodial USDC Escrow on Base Mainnet (Chain ID 8453). Published across 12 Official Categories in The Official MCP Registry (`io.github.adamgraymon/*`).",
+          "> [ES] Notaría Pública M2M #1 (`VERITAS-8183`), Sello de Calidad de 1 a 3 Estrellas (con Prueba de Reserva Cripto >=20%), Pasaporte de Solvencia y Descuentos VIP para Compradores, Bazar x402 y Fideicomiso No-Custodial en USDC sobre Base Mainnet.",
+          "> [中文] Base 主网 (Chain ID 8453) 官方排名第一的 VERITAS-8183 机器对机器 (M2M) 公共公证处、1-3 星链上储备金评级印章、买家 FinOps 预算护照、x402 微支付集市与 8 大垂直领域确定性托管审计节点。",
           "",
           "## Verified On-Chain Identity / Identidad en Cadena / 链上验证身份",
           "- **Base Mainnet Smart Contract (`TrustGateEscrow8183.sol`)**: `0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`",
           "- **Sourcify v2 Full Source Verification**: `exact_match` (Match ID `#59283147`) — https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
-          "- **Evaluator ECDSA Signer**: `0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4`",
+          "- **Evaluator & Notary ECDSA Signer**: `0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4`",
           "- **Liability Cap / Tope de Responsabilidad / 责任上限**: `STRICT_CAP_100PCT_OF_PROTOCOL_FEE` (1.0% - 1.5% fee only; Fail-Closed mode)",
           "",
           "## Connection Endpoints / Puntos de Conexión / 接入端点",
           `- **MCP Streamable HTTP (JSON-RPC 2.0)**: \`POST ${baseUrl}/mcp\``,
+          `- **VERITAS-8183 Public Notary & 3-Star Seal Registry**: \`GET ${baseUrl}/notary.json\``,
+          `- **Dual-Tier AI Catalog & x402 Micro-Bazaar**: \`GET ${baseUrl}/catalog.json\``,
           `- **MCP Auto-Discovery**: \`GET ${baseUrl}/.well-known/mcp.json\``,
           `- **ERC-8004 Agent Card**: \`GET ${baseUrl}/.well-known/agent.json\``,
           `- **Coinbase x402 Bazaar**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
           `- **OpenAPI 3.1.0 Spec**: \`GET ${baseUrl}/openapi.json\``,
-          `- **Dual-Tier AI Catalog (Institutional B2B & Retail/Indie)**: \`GET ${baseUrl}/catalog.json\``,
-          `- **x402 Payment Handshake**: \`POST ${baseUrl}/api/m2m/escrow\``,
           "",
-          "## 8 Audited Verticals & 14 MCP Tools (EN / ES / 中文)",
-          "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`) / Catálogo Dual de Tiendas y Paquetes IA / ERC-8004 双层 AI 市场目录",
-          "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC) / Cotizador atómico / 多代币转 Base USDC 报价",
-          "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault / Bloqueo no-custodial en contrato / ERC-8183 智能合约锁定 USDC",
-          "4. `submit_encrypted_deliverable` — [Vertical 1] Dataset Antimalware & 30-Row Blind Sampling / Auditoría de Datasets CSV/JSON / 数据集反恶意软件与盲抽样审计",
-          "5. `audit_quant_backtest_escrow` — [Vertical 2] Quant Trading Backtest Auditor (Look-Ahead Bias, PnL, Sharpe, MaxDD) / Auditor de Estrategias Cuantitativas / 量化交易回测防未来函数审计",
-          "6. `audit_smart_contract_escrow` — [Vertical 3] Solidity Smart Contract Compiler (`solc 0.8.38`) & Anti-Rugpull Scanner / Auditor de Contratos Solidity / Solidity 智能合约编译与反跑路后门审计",
-          "7. `audit_api_sla_escrow` — [Vertical 4] x402 Paid API & Oracle SLA Verifier (Latency, Schema, Freshness) / Oráculo de SLA de APIs / x402 付费 API 与预言机延迟 SLA 审计",
-          "8. `audit_agent_skill_escrow` — [Vertical 5] Agent Skill (`SKILL.md`), Prompt & MCP Plugin Anti-Trojan Scanner / Escáner Anti-Troyanos de Skills / AI 技能与 MCP 插件防私钥窃取木马审计",
-          "9. `audit_rag_embeddings_escrow` — [Vertical 6] RAG Knowledge Base & Vector Embedding Anti-Poisoning Auditor / Auditor de Memorias RAG y Vectores / RAG 向量知识库防投毒与范数审计",
-          "10. `audit_ai_inference_escrow` — [Vertical 7] Proof-of-Inference & Anti-Model-Downgrade Verifier / Verificador Anti-Cambiazo de Inferencia IA / AI 推理防降级证明与 Token 计费审计",
-          "11. `audit_depin_gpu_sla_escrow` — [Vertical 8] DePIN & GPU Compute Benchmark SLA Auditor (FP16 TFLOPS, VRAM, Bandwidth) / Auditor de GPUs DePIN / DePIN 去中心化 GPU 算力基准 SLA 审计",
-          "12. `verify_onchain_escrow_status` — Verify Base Mainnet Contract & Sourcify Proofs / Verificación On-Chain / 链上合约与 Sourcify 验证查询",
-          "13. `purchase_firstparty_catalog_item` — Instant purchase of TrustGate Official Curated Packages (Institutional CME Globex NQ, Sourcify Vaults, Retail Anti-Rugpull from 1 USDC) / Compra instantánea de paquetes oficiales / 即时购买官方认证精选数据包",
-          "14. `register_and_certify_store` — Freemium ERC-8004 Store Onboarding with Mandatory Live Deterministic Audit (0 USDC upfront; 2.0% Broker referral fee on sales) / Registro gratuito de tiendas IA con auditoría en vivo / 免费注册并认证外部 AI 商店",
+          "## 18 MCP Tools: 8 Audited Verticals + VERITAS-8183 Notary, 3-Star Seal, FinOps & x402 Bazaar (EN / ES / 中文)",
+          "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`)",
+          "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC)",
+          "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault",
+          "4. `submit_encrypted_deliverable` — [Vertical 1] Dataset Antimalware & 30-Row Blind Sampling",
+          "5. `audit_quant_backtest_escrow` — [Vertical 2] Quant Trading Backtest Auditor (Look-Ahead Bias, PnL, Sharpe, MaxDD)",
+          "6. `audit_smart_contract_escrow` — [Vertical 3] Solidity Smart Contract Compiler (`solc 0.8.38`) & Anti-Rugpull Scanner",
+          "7. `audit_api_sla_escrow` — [Vertical 4] x402 Paid API & Oracle SLA Verifier (Latency, Schema, Freshness)",
+          "8. `audit_agent_skill_escrow` — [Vertical 5] Agent Skill (`SKILL.md`), Prompt & MCP Plugin Anti-Trojan Scanner",
+          "9. `audit_rag_embeddings_escrow` — [Vertical 6] RAG Knowledge Base & Vector Embedding Anti-Poisoning Auditor",
+          "10. `audit_ai_inference_escrow` — [Vertical 7] Proof-of-Inference & Anti-Model-Downgrade Verifier",
+          "11. `audit_depin_gpu_sla_escrow` — [Vertical 8] DePIN & GPU Compute Benchmark SLA Auditor (FP16 TFLOPS, VRAM, Bandwidth)",
+          "12. `verify_onchain_escrow_status` — Verify Base Mainnet Contract & Sourcify Proofs",
+          "13. `purchase_firstparty_catalog_item` — Instant purchase of TrustGate Official Curated Packages (from 1.00 USDC)",
+          "14. `register_and_certify_store` — Freemium ERC-8004 Store Onboarding with Mandatory Live Deterministic Audit (0 USDC upfront)",
+          "15. `inspect_veritas_8183_seal` — [FREE <5ms] VERITAS-8183 Bilateral Quick-Glance Inspector (Seller 1-3 Star Seal, Proof-of-Reserve >=20% crypto ratio, Client Telemetry & Buyer FinOps Spend Passport)",
+          "16. `submit_veritas_tier_upgrade_exam` — VERITAS-8183 Seller & Smart Contract Tier Upgrade Exam (1 to 3 Stars with Proof-of-Reserve & Deterministic Code/Content Audit)",
+          "17. `manage_buyer_finops_spend_passport` — Buyer FinOps Spend Guard, Deterministic Spend Cap, LLM Token Cost Optimizer & VIP Loyalty Discounts (up to 15% OFF)",
+          "18. `notarize_and_witness_a2a_deal` — Millisecond A2A & Smart Contract Deal Witness + x402 Micro-Bazaar Executor (0.10 to 1.00 USDC on Base Mainnet)",
         ].join("\n");
 
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
@@ -372,6 +414,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "Allow: /",
           `Sitemap: ${baseUrl}/openapi.json`,
           `# LLMs Index: ${baseUrl}/llms.txt`,
+          `# VERITAS-8183 Notary Registry: ${baseUrl}/notary.json`,
           `# MCP Endpoint: ${baseUrl}/mcp`,
         ].join("\n");
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
@@ -387,6 +430,9 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           url.pathname === "/mcp/" ||
           url.pathname === "/mcp/mcp" ||
           url.pathname === "/mcp/sse" ||
+          url.pathname === "/sse" ||
+          url.pathname === "/api/mcp" ||
+          url.pathname === "/mcp/v1" ||
           url.pathname === "/mcp/v1/message:send")
       ) {
         const rpcPayload = await readJsonBody(req);
@@ -408,6 +454,27 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
               await verifyOnChainBaseMainnetUsdcPayment({
                 paymentTxHash: rpcPayload.params.arguments.paymentTxHash,
                 requiredAmountUsdc: targetItem.priceUsdc,
+              });
+          }
+        }
+
+        // Candado en vivo en Base Mainnet para servicios de pago del Bazar x402 / Acta Notarial Oficial
+        if (
+          rpcPayload?.method === "tools/call" &&
+          rpcPayload?.params?.name === "notarize_and_witness_a2a_deal"
+        ) {
+          rpcPayload.params.arguments = rpcPayload.params.arguments || {};
+          rpcPayload.params.arguments._requireOnChainPaymentProof = true;
+          const svcId = rpcPayload.params.arguments.serviceId || "x402-veritas-deal-witness-acta";
+          const targetBazaarSvc =
+            X402_MICRO_BAZAAR_SERVICES[svcId] || X402_MICRO_BAZAAR_SERVICES["x402-veritas-deal-witness-acta"];
+          if (targetBazaarSvc && rpcPayload.params.arguments.paymentTxHash) {
+            // Permitir el descuento VIP de hasta 15% en la verificación on-chain
+            const minRequiredWithMaxVipDiscount = Number((targetBazaarSvc.priceUsdc * 0.85).toFixed(6));
+            rpcPayload.params.arguments._onChainVerificationResult =
+              await verifyOnChainBaseMainnetUsdcPayment({
+                paymentTxHash: rpcPayload.params.arguments.paymentTxHash,
+                requiredAmountUsdc: minRequiredWithMaxVipDiscount,
               });
           }
         }
