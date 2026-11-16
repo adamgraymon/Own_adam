@@ -288,245 +288,158 @@ export const PREMIUM_CATALOG_STORES = {
  * 3 Institucionales (No-Retail B2B) + 3 Retail / Indie Builders
  */
 export const CURATED_FIRST_PARTY_CATALOG = {
-  // =========================================================================
-  // CARRIL 1: INSTITUTIONAL_B2B (Empresas, Fondos Quant, Equipos Ingeniería)
-  // =========================================================================
   "inst-cme-nq-microstructure-v06": {
-    itemId: "inst-cme-nq-microstructure-v06",
-    title: "CME Globex NQ Institutional Microstructure & Liquidity Pack (Base Mainnet Audited)",
-    marketTier: "INSTITUTIONAL_B2B",
-    vertical: "VERTICAL_1_DATASET",
-    priceUsdc: 15.0,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-institutional",
-    targetBuyerProfile: "Quant Funds, Prop Desks, Institutional Execution Bots",
-    summary:
-      "Institutional microstructure bundle from CME Globex NQ futures audited on Base Mainnet (1,420 instrument mappings + 496 bid/ask liquidity snapshots + on-chain settlement proofs).",
-    deliverablePayload: {
-      datasetStandard: "DATABENTO_CME_GLOBEX_M2M_V06",
-      onChainAuditProofs: [
-        {
-          cycle: 1,
-          dataset: "DATABENTO_INSTRUMENT_MAPPING_V05.csv",
-          rowsVerified: 1420,
-          baseMainnetTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-        },
-        {
-          cycle: 2,
-          dataset: "composicion_bid_ask.csv",
-          rowsVerified: 496,
-          baseMainnetTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-        },
-      ],
-      microstructureMetrics: {
-        exchange: "XCME_GLOBEX",
-        primaryRootSymbol: "NQ",
-        activeContractsMapped: ["NQH6", "NQM6", "NQU6", "NQZ6"],
-        medianBidAskSpreadTicks: 1.0,
-        tickValueUsd: 5.0,
-        topOfBookImbalanceThresholds: {
-          institutionalAccumulationRatio: 1.85,
-          institutionalDistributionRatio: 0.54,
-          liquiditySweepAlertMs: 12.5,
-        },
-      },
-      sampleCuratedRows: [
-        { instrument_id: 4200891, raw_symbol: "NQM6", spread_ticks: 1, bid_size_avg: 18.4, ask_size_avg: 17.9, venue: "GLBX.MDP3" },
-        { instrument_id: 4200892, raw_symbol: "NQU6", spread_ticks: 1, bid_size_avg: 14.2, ask_size_avg: 15.1, venue: "GLBX.MDP3" },
-        { instrument_id: 4200895, raw_symbol: "NQZ6", spread_ticks: 2, bid_size_avg: 9.8, ask_size_avg: 10.3, venue: "GLBX.MDP3" },
-      ],
-    },
+    "itemId": "inst-cme-nq-microstructure-v06",
+    "title": "CME Globex NQ Institutional Microstructure & Liquidity Pack (Base Mainnet Audited)",
+    "marketTier": "INSTITUTIONAL_B2B",
+    "vertical": "VERTICAL_1_DATASET",
+    "priceUsdc": 15,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-institutional",
+    "targetBuyerProfile": "Quant Funds, Prop Desks, Institutional Execution Bots",
+    "summary": "Institutional microstructure bundle from CME Globex NQ futures audited on Base Mainnet (1,420 instrument mappings + 496 bid/ask liquidity snapshots + on-chain settlement proofs).",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "6ccf8f1b7f763b300f6aedf7",
+      "authTagHex": "e74330bd1e4c9cd7477f35ee7ce90fdc",
+      "ciphertextHex": "d5555b47e4163e8cd3c963e4770dcd1a7eeb42701978e25956e2c2f708a87dd74b4bd941140f33f836b9972178ec2d3bc49f811967d562ab464c6f3ab63a4b0a98e1e5bc10ccb65736c02704b6445305808cf617bc9cdcb0209d0b7c41528c3c5372da545906ad66fcce3afc037a3fd53a6d2f102e476e079dca011025b391fc4d5dc7fda988e564ef94c69e0ce02268294778e7f7a19eeb5799e260cae1f6cc006514480b3f345f4cccfbebfb090ddda50f54b87790137ef2d6288cb0bb4c5cf8482ff013949ac5e321ccc63414abaa67e9bbc46d1f61fdaa07d50a5a7b1e9f8335bca3cf854222bfe6896044c1b33233fbcae7880873a7a2799ed4b3ea759995b8979c57ef9b943bf5e1467704de48212ec07365400bb58cbe1043ee5f9916b6cf529fb9ed0b2282c6672dd77511f9f2fdc21dfe93cab9c4e7ac300263f86e9c28fe3d43ec79f6fe1b7be6ef2ba5be834e707ded7e3e7042a7536be1e66f2650c8ce8b37b95b63bd0830ef4e3fc0df41a8510708aee48d3c9f8302d2c52994cc083cfb2c777f1fa2aed424cea980ea4551dcbbd7ca9770f0d52342d60861ad8c78508c73079fba4114e08900a1e519e6d3467ce9c2d2fe4a1b79a463604f50ed3bf090c73607b4e7682812f3b50ce505faf6c2e76069ecd23fa329a848d00908c557e2bec35077b483f101cb816fce98a81e6775cbb5442a99ac82273affbac92def6911566abfac08fcb39050f336ef123a644579b01b4867f0810421e57a10bd69b440d0cca9b9e98e6422dc9a4ff627cd6d7f1bb977315f143e8844138feb05a1bc57ba39bdba8378b186f1302a211df0233e9b780982a1a3828bf0442d4f1d8b073aebf0090579e5a327efa5baab90cab714df814c30a56f43550d56177438f6ea346a276090b95ab1d615e955e5e52530fa072a19ab51cbf92377b1f3d81bae7dea1be26a19efc509e01d6bf27687a82be12ed41c8f123b3d51201e4d7faefb3181a63a0abe6c3cb9557885ce693e2a028eaa386e90426b83eb9fd1b7613601ff738feed02a19701d93182f8650e201e58f5a77e0bf0ab6d0f0161a2d605f7a9bf56a6c6a7470df70102755bf4c7a334419fcf747432a25fdbde89d50cf35a5fe988cb259ec71fd771032381c39fd7a8caf895ab45b7c3ccae89fdd7c4166af2e59bccf83bc896f4cab3f0e95a58879d528732ea5c6d0f0bb53740be5683dbb162b0868e263b51d98cce91b7433b513d59306b8e91dc72fd9a2e9f5b3c2dc69317ff021bf394129517fb45b6026d13f08289d7b1b3e5464697286164c16860f01442c103fce7d20b585ef66dc59885b80898a331fbb6cb87d4aa526cbd4c6ceb3cda906bb2c7f9f2898acb87fffd060818fb53c5cc1f0f6a64e962364d7aa32b2e4e126d6c431063da3b0a3a9f00eadff82141c16248883c20e404e8e6205e806bc39a60ce9c910713ecd93a14cdeee4481228e08989190f81c3dc8bc75fcb3fbe479521f1117f05da7a03958b0ace9845764601f5dfd919f22b373ed1f5c45316c6a4aae6a7eb578b943"
+    }
   },
-
   "inst-sourcify-erc8183-vault-v06": {
-    itemId: "inst-sourcify-erc8183-vault-v06",
-    title: "Sourcify-Verified ERC-8183 & ERC-8004 Institutional Escrow Vault Blueprint (solc 0.8.38)",
-    marketTier: "INSTITUTIONAL_B2B",
-    vertical: "VERTICAL_3_SOLIDITY_SECURITY",
-    priceUsdc: 25.0,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-institutional",
-    targetBuyerProfile: "Web3 Protocols, B2B Treasury Engineers, Autonomous Agent Swarms",
-    summary:
-      "Production-grade Solidity 0.8.38 smart contract blueprint with Pull-Over-Push accounting, CEI reentrancy lock, zero dangerous opcodes, and Sourcify Exact Match #59283147 deployment config.",
-    deliverablePayload: {
-      compilerVersion: "v0.8.38+commit.1835d247",
-      verifiedReferenceContract: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
-      sourcifyMatchId: "59283147",
-      securityInvariantsGuaranteed: [
-        "ZERO_SELFDESTRUCT",
-        "ZERO_DELEGATECALL",
-        "ZERO_TX_ORIGIN_AUTH",
-        "CEI_REENTRANCY_GUARD_ENABLED",
-        "PULL_OVER_PUSH_FALLBACK_VAULT",
-        "IMMUTABLE_10PCT_MAX_FEE_CEILING",
-      ],
-      solidityBlueprintSnippet:
-        "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\n// Verified Institutional ERC-8183 Escrow Core Pattern\nmodifier nonReentrant() { require(_locked == 1, 'REENTRANCY'); _locked = 2; _; _locked = 1; }",
-    },
+    "itemId": "inst-sourcify-erc8183-vault-v06",
+    "title": "Sourcify-Verified ERC-8183 & ERC-8004 Institutional Escrow Vault Blueprint (solc 0.8.38)",
+    "marketTier": "INSTITUTIONAL_B2B",
+    "vertical": "VERTICAL_3_SOLIDITY_SECURITY",
+    "priceUsdc": 25,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-institutional",
+    "targetBuyerProfile": "Web3 Protocols, B2B Treasury Engineers, Autonomous Agent Swarms",
+    "summary": "Production-grade Solidity 0.8.38 smart contract blueprint with Pull-Over-Push accounting, CEI reentrancy lock, zero dangerous opcodes, and Sourcify Exact Match #59283147 deployment config.",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "5c83fa09e59d7e60cb79cbd6",
+      "authTagHex": "28de5de9dee903e64b1486c919dcc3a0",
+      "ciphertextHex": "643e4066555cf899ebac5dc1ee16e309d65513e44f42cce6e2ccc218d250d7e8e98d83fb8cc1eb5b0efc5a00f36ce41f0338b9da4f9f1412269f57036a3a5b66690246e6ec5d9ea8f23ad6e69f4c304012a954b053dcec7cd3f1d02dd3f9245290d4549235489affe9349dd79e796a682e3e884db94fe1a895910c2e78b432143f48d83eeada757fc3fe2f860176bc9376f0d6754b8eb9f13d58d005678f08ce8e997077c097b2466ddb43fe57e267a481bbdbffb602bc395bb65d2ba41c424564d54747972d6bf3e0a8e0681efa28bf0f1ffa916d0870b9cb4424d721ba32c789f00695f4377c33e50fa3fefdf7d3e498d47aaadc30443ecff0d49f40877521878e93fb5fa6cb98d02123fa33ac4f122e03b213b1e46f8ffa8f747579f685258ade8196efdc09f2fb577b4fe5b79ecf28cb89c34a8e0c5ea98ab3ce30cab1c2e763c52950450fb8d80f82723a6bcb21e8b5db533fd3edc36526d213d5afbbae07af16c56b96d42826157aa9a1266fc8434277d7783b46fb564d5b76a2d8057d0cef2d21f0b5638efa12a3a27e199922349884326c6928e4cea6ff1e449a15aa42fbd49393fefc6dcc94c76dde6a078d189ff56ac516ed24a5fc21f4dd5d99a368b264026f0354794273d055256d77c47e522d961572e1973a6f843b4e8d7a1dc3f375997d1c6830920cf4897d2149aaaa63dc88ac4d9e6a611cc11d8b66ad6141a07c541c6971f6b5e66261499b92d116e6d7dccf3531bf6e57aa90afbc88bcd88b880ed28e36b173608aa8ff529f35b13c4e320c040e24263238bb893b9046"
+    }
   },
-
   "inst-enterprise-rag-skill-firewall-v06": {
-    itemId: "inst-enterprise-rag-skill-firewall-v06",
-    title: "Enterprise AI Red-Team Corpus: RAG Anti-Poisoning & Skill Trojan Firewall Suite",
-    marketTier: "INSTITUTIONAL_B2B",
-    vertical: "VERTICAL_6_RAG_KNOWLEDGE",
-    priceUsdc: 12.0,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-institutional",
-    targetBuyerProfile: "Enterprise CISO Teams, AI Platform Engineers, Corporate RAG Pipelines",
-    summary:
-      "Deterministic Red-Team benchmark corpus to test corporate AI pipelines against CSV malware, RAG prompt-override injections, L2 embedding norm drift, and SKILL.md credential exfiltration.",
-    deliverablePayload: {
-      corpusVersion: "REDTEAM_CORPUS_V06_ENTERPRISE",
-      realMainnetBlockedReferenceTx: "0x4437d5eec9dc4da1faa0312ccf59904890611dca358a500751b3e3d4b6fe7f09",
-      firewallRulesIncluded: [
-        { ruleId: "FW-CSV-01", blocks: "DDE/Formula Injection (=CMD|, +IMPORTXML, @SUM) & SQLi DROP TABLE" },
-        { ruleId: "FW-RAG-02", blocks: "Indirect Prompt Injection (Ignore previous instructions / system prompt override)" },
-        { ruleId: "FW-VEC-03", blocks: "L2 Vector Norm Drift outside [0.85, 1.15] & NaN/Zero-Vector Collapse" },
-        { ruleId: "FW-SKL-04", blocks: "SKILL.md Secret Exfiltration (.env, ~/.ssh/id_rsa, AWS_SECRET_ACCESS_KEY, curl -X POST)" },
-      ],
-    },
+    "itemId": "inst-enterprise-rag-skill-firewall-v06",
+    "title": "Enterprise AI Red-Team Corpus: RAG Anti-Poisoning & Skill Trojan Firewall Suite",
+    "marketTier": "INSTITUTIONAL_B2B",
+    "vertical": "VERTICAL_6_RAG_KNOWLEDGE",
+    "priceUsdc": 12,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-institutional",
+    "targetBuyerProfile": "Enterprise CISO Teams, AI Platform Engineers, Corporate RAG Pipelines",
+    "summary": "Deterministic Red-Team benchmark corpus to test corporate AI pipelines against CSV malware, RAG prompt-override injections, L2 embedding norm drift, and SKILL.md credential exfiltration.",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "85492b5ec09b78ee9118c385",
+      "authTagHex": "158323d9454ad64d2867be01d5cfaf65",
+      "ciphertextHex": "6108b02ccf4aafc95fb50dafabde04696ff75e7412dc6ece980651e5365dd6d4b215ae98a6c97578e867fa18a2a5aa04e234664f4b2e2dd50286a1bde4b7de1d4eb39a571ddc3a5c41e8af0dc4762a7a30d010bfffe6f09db421b8f2f09764afe206fa9612256c20499f2ed275b050c876aa0570e3a3fa7bee23dedb8bbb54bc64cabae11d3522fee0dab40080af43c5243464de11554230c92e105bed6c60d436af249d8677fec24c01016bf62b2e4fd15162eee81913ff803944751415e2be5d9e9307f992806c9c3942e25e415c1ffd531d691abc964ff91c93e05420ad3e73abf89065e88cc8b5de266527e1c021e6c7f5e3723ea0bb7319f8139e8cdd293dc7ae23d5ffcb51583f80efa5b6410b38477ce5a20a8559f17f9be509ccd4af5ce4ce621c18b26bb4d7adb91793f01d67d3f45a304db411ef869ea049f453abec8e952905530dbe660a006a7473bc1dde4085264f0ffa2cf110fc9ca01d633d56ad3249888d3eaa6393d84041a09f444905cb78a4f34457e8cbbd01e431f7c210ef8e8b3923db80d6824b6fa034a73632bce50d42ecea49cbf530fbc0f37c08ab0f5b1497bf96082f0d217b881cafeb85934cd99b802813c5d1d5136caf1db9baf85e3bd69258d69b4d2a1ecc2250b6d231cbff67e574f4833f37bac920efa76b35c5ecca5774953b20be5275ef970bad7e1af66ea57d3e427aa480a53e6aa4accb7e5c112d452f38de81a1fd8ce2299c5c71959b88654e38d7cc4c6f8969896e3d2f5c0978f7fbb3d60308de364ad533bda71321345424bb9ccb1f088b11ede66d686f590419bc01eee3a94733bf9bc89f5ad892b455e5146cc72530131a146671b45ac9bd014508"
+    }
   },
-
-  // =========================================================================
-  // CARRIL 2: RETAIL_INDIE (Traders Independientes, Indie Builders, Bots)
-  // =========================================================================
   "retail-anti-rugpull-scanner-pack-v06": {
-    itemId: "retail-anti-rugpull-scanner-pack-v06",
-    title: "Retail DeFi Anti-Rugpull & Honeypot Quick-Scanner Ruleset",
-    marketTier: "RETAIL_INDIE",
-    vertical: "VERTICAL_3_SOLIDITY_SECURITY",
-    priceUsdc: 1.0,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-retail",
-    targetBuyerProfile: "Independent Crypto Traders, Sniper Bots, DeFi Retail Users",
-    summary:
-      "Fast 1-second detection patterns for token rugpulls, hidden mint backdoors, transfer tax traps, and selfdestruct/delegatecall drains before buying on Base or EVM chains.",
-    deliverablePayload: {
-      scannerPackVersion: "RETAIL_ANTIRUG_V06",
-      redFlagsChecked: [
-        { pattern: "delegatecall(", severity: "CRITICAL", risk: "Owner can swap token logic to steal balances" },
-        { pattern: "selfdestruct(", severity: "CRITICAL", risk: "Contract can be destroyed and liquidity drained" },
-        { pattern: "tx.origin", severity: "HIGH", risk: "Phishing vulnerability when trader interacts with router" },
-        { pattern: "setTax(uint256) without cap", severity: "HIGH", risk: "Honeypot: sell tax can be set to 99%" },
-      ],
-      recommendedMcpToolForLiveScan: "audit_smart_contract_escrow",
-    },
+    "itemId": "retail-anti-rugpull-scanner-pack-v06",
+    "title": "Retail DeFi Anti-Rugpull & Honeypot Quick-Scanner Ruleset",
+    "marketTier": "RETAIL_INDIE",
+    "vertical": "VERTICAL_3_SOLIDITY_SECURITY",
+    "priceUsdc": 1,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-retail",
+    "targetBuyerProfile": "Independent Crypto Traders, Sniper Bots, DeFi Retail Users",
+    "summary": "Fast 1-second detection patterns for token rugpulls, hidden mint backdoors, transfer tax traps, and selfdestruct/delegatecall drains before buying on Base or EVM chains.",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "355e168d90cdfb31543d84cf",
+      "authTagHex": "03109e0ccb65708ebe26ea698f01ada9",
+      "ciphertextHex": "7cf475ca07fbd8306eb21b3992a39118ff3c77d1f6b6f39b5507ce6a26d5b570683b3f0eb9a8c99f17eff7e2e4b386dbb3a9f61c2cd6191e3fe18f73935053eb8c36af7cab4cb386dcc6b98f67c51f9852ee26bcbf42daaca30f93110962df314309c7ab849aa51a22be8c508e3bfa1a1e78af8b0ca15d0e22f0943a67f05fc1abbacef75e9b87dae443d25edaca6204db5f18737f641f708dc0dac9bbc57da761fb5622f6902eb8caf2e81d5e267c7936d6328c1a635e5f7e7a363a0cad84ac69f9184089d1cf70963ff909136d3316a9e585cf4ce768a082c37825b1c4ae9c4160e2a33e2b83cc71279dc9d63c974be9ee3cd69dc76023c59ad6beb50b244c1182e94aec5acfa793240aefa32527a1ab5a3ade47d58797ba0f9cd0a0ab74027ce92435c1abe82bcb9c8ad014dad7d4e5e06ca531eb64f5879da8877d4df804850dff3c944b09e97701f81f66ca5a7177ff94bc140e843bd77846c9bc7f4f1515c1227dc7d25d679c26d076c2694337799991f79e70a2b7958e8073ab7ce169ac0bbdc1974a4870fbf0c5e3e8a205807e5fb1c22a91f225f8cc50dceba522c2e0a7af6d415833a5b793f3318aa8872979e8bf1cb4d57113e60d1214a432f1f1f2272098f9344dbe1a73a668d46b5c38b315bcc75c8c96e4e7174125025918ee6430821567949c8bb42677080a8e6ea81bd6455c395ea2f069a5dce1ec98782539560d03a7c8ce8616d6054d855ebf580b0cd4f5c7f7fbf5087514303ba82d161039c78f9eeb"
+    }
   },
-
   "retail-nq-quant-starter-backtest-v06": {
-    itemId: "retail-nq-quant-starter-backtest-v06",
-    title: "Retail Quant Strategy Starter & Zero-Lookahead Bot Verifier",
-    marketTier: "RETAIL_INDIE",
-    vertical: "VERTICAL_2_QUANT_ALPHA",
-    priceUsdc: 2.5,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-retail",
-    targetBuyerProfile: "Retail Futures/Crypto Traders, TradingView/Python Bot Buyers",
-    summary:
-      "Stop buying fake repainting trading bots. Includes a verified zero-lookahead NQ trade log template and mathematical audit checklist (Sharpe, Profit Factor, Max Drawdown).",
-    deliverablePayload: {
-      templateVersion: "QUANT_STARTER_V06",
-      antiScamChecklist: [
-        "Verify entryTimestampMs < exitTimestampMs on every single trade (Zero Look-Ahead Bias)",
-        "Recompute Net PnL from raw trades (reject seller-inflated summary equity curves)",
-        "Require minimum 5–30 out-of-sample trades with Max Drawdown <= 25%",
-      ],
-      sampleVerifiedTrades: [
-        { tradeId: "T-01", symbol: "NQ", side: "LONG", entryTimestampMs: 1710000000000, exitTimestampMs: 1710003600000, pnlUsd: 380.0 },
-        { tradeId: "T-02", symbol: "NQ", side: "SHORT", entryTimestampMs: 1710007200000, exitTimestampMs: 1710010800000, pnlUsd: -110.0 },
-        { tradeId: "T-03", symbol: "NQ", side: "LONG", entryTimestampMs: 1710014400000, exitTimestampMs: 1710018000000, pnlUsd: 495.0 },
-      ],
-      recommendedMcpToolForLiveScan: "audit_quant_backtest_escrow",
-    },
+    "itemId": "retail-nq-quant-starter-backtest-v06",
+    "title": "Retail Quant Strategy Starter & Zero-Lookahead Bot Verifier",
+    "marketTier": "RETAIL_INDIE",
+    "vertical": "VERTICAL_2_QUANT_ALPHA",
+    "priceUsdc": 2.5,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-retail",
+    "targetBuyerProfile": "Retail Futures/Crypto Traders, TradingView/Python Bot Buyers",
+    "summary": "Stop buying fake repainting trading bots. Includes a verified zero-lookahead NQ trade log template and mathematical audit checklist (Sharpe, Profit Factor, Max Drawdown).",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "714df649f3436165a985412b",
+      "authTagHex": "2f7cf6f10029cb5d05fd61472e29fbfb",
+      "ciphertextHex": "875c9bc57d4f7798c091eae9e18fb34f4874bb2020949a7c23282f6aad98f4ea21f7932046c99c1ea01972f6399ee3e7804fcf4478039ee84ce62a17d371d3ae087039bd15dc9adc93edff1c2f06c657da50978d945bfa1c59ebfe80b847026b90c0550718cf0550d796214a90741cc46abf2049e5cb9d3afdec7dda07be37c7b2383c5d60505288ae93303abba5bc0a0bd6f2ddf567b2bc20c71087b283eb5d876743eecad59c9d4584ff8d6634d03a18968eb5b13076f90eeeda1f7953f60e727ec90f485789fef31bf2e0d1655fb43e2f97ed94deacd21776f9cee0c0a92bca9474c0f9ee8fb3eecf33a2bb69bd046712afdb81a1281bc5df1faf2bfc4eeb9c7eed040b4050526e10945b3ff81bd9dad75f91a62a7933231e242cedc6725530758db343b464e06972debcb92fa3185aa6705025dd16060e34889abe633be526653d9faad38f44d2c5e2f309a53b998595cb87cdaebd9d16db106ae56eb89a02da12a53cd382c5a4cbeba970acb8ead451615b6d53c5d8de926dec3c6406b06fd929c3ea43c6398b4b643f3aed22ee4a5f15df18dfc767f9810e54dccc929dfbb6f801ec80aa83f8078da6aeca1a3bab25054ec9324cd487e490710158d2396162b0b1a792e60a4c9852f6a1c0a3b84567193de2b17ab319670202ed1cbc66e5ce322ccc0dc879a2511744112cfb30b8dd7165b7dc73b4a1e0edff3e39c1a26faff1b4b00cc2ae69ca1389f516a858c2b7f1f05f008fa0495933959cf909cdf347587d548c3bac2243343c69b0e6b202de9b2bd76215a9f9cb899d25c2b18f73f75d4649a773054288d532fbae1bc03dbe78a31f69746660c0d9bd0549656698b3dea710f42f421316ace54c5d34ea598e6180b47b1ada64c05ac775cd57ebae2164288fd404ae54a351ee6d1888701d893a916fa90e35606ffd576ed4ff689f9a13763cfc49eb8eb738c5fc528c24bf1d06d0d057f2fc7f0124616cef0452abc95baae084f8dcc8227a06f8c2b96a0f4e348c47911f308919a21ce0bf68e8fb9337594b7a03120da18f8fea7e7093d501def85bbaa3b9e11fdcea02611426"
+    }
   },
-
   "retail-safe-mcp-skill-starter-v06": {
-    itemId: "retail-safe-mcp-skill-starter-v06",
-    title: "Certified Safe Plug-and-Play SKILL.md & MCP Agent Starter Bundle",
-    marketTier: "RETAIL_INDIE",
-    vertical: "VERTICAL_5_CERTIFIED_SKILLS",
-    priceUsdc: 1.5,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-retail",
-    targetBuyerProfile: "Claude Code, Cursor, Windsurf & OpenClaw Indie Builders",
-    summary:
-      "Pre-audited SKILL.md template and MCP JSON-RPC 2.0 quickstart connector guaranteed free of prompt injection, shell trojans, or secret exfiltration.",
-    deliverablePayload: {
-      bundleVersion: "SAFE_SKILL_STARTER_V06",
-      certifiedSkillMarkdownTemplate:
-        "---\nname: safe-market-research-helper\ndescription: Certified read-only market research skill verified by TrustGate ERC-8183.\n---\n# Instructions\n1. Query verified endpoints only.\n2. Never read local credential files (.env, ~/.ssh) or execute raw shell pipes.",
-      recommendedMcpToolForLiveScan: "audit_agent_skill_escrow",
-    },
+    "itemId": "retail-safe-mcp-skill-starter-v06",
+    "title": "Certified Safe Plug-and-Play SKILL.md & MCP Agent Starter Bundle",
+    "marketTier": "RETAIL_INDIE",
+    "vertical": "VERTICAL_5_CERTIFIED_SKILLS",
+    "priceUsdc": 1.5,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-retail",
+    "targetBuyerProfile": "Claude Code, Cursor, Windsurf & OpenClaw Indie Builders",
+    "summary": "Pre-audited SKILL.md template and MCP JSON-RPC 2.0 quickstart connector guaranteed free of prompt injection, shell trojans, or secret exfiltration.",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "5700790fff157904ecaa3bc6",
+      "authTagHex": "0fe203e95c2b038d17f3e906c138db9c",
+      "ciphertextHex": "e4308b4e1f3080bc3f63ef33cdb3e66de791d6964b5b20284a623618dc41eb2d5023a1abdaabc3431afb6886b929142d8e3ffab59887eb0884cd18f9ae65aa1d514eba46b87f2bfbbb7772370856727266cd4a24ac16cb4702508e2747401290cb6635c9a29d1ea7709b8c0739008186f1e43367d058e4020508ae9089596c092e9d7abce5193af62bb2b76fbdc8af4285f5719b4c4a0e282d3a3ffd311aab658efdabfe6e5b5f4585beb4c577f9846b1515b85f811a4926c01e9fe1c76daec3fa5b28cf1715fafe22f689272429aa371731697d8061fd5fd48791f225cdbfb889ae4ca52263c3f7a3f928aa3c70f14c215708d96acc5e2ab56b715eb6f62b8f64060f6eda945614d8ecaa961187ee5f86a58047c185ab327561976f91c6e221fefa3a842ba98148ccb9336828e1e1e79eaf3f6b88e818a2f496db38a7b1b24b8a0d9e9b671f3533b62ff5a72166ff00045e322fa9ccff0d0b58b253b07d051498b1aa6e69498c4487c202fcc5da40c4eae57289cffa4539bca0730284b1c1bf8bcd52fe91d0e94cb3c1257c975d946e"
+    }
   },
-
   "retail-veritas-level3-mastery-tutorial-v07": {
-    itemId: "retail-veritas-level3-mastery-tutorial-v07",
-    title: "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Engineering Tutorial & Ready-to-Pass Blueprint",
-    marketTier: "RETAIL_INDIE",
-    vertical: "VERTICAL_3_SOLIDITY_SECURITY",
-    priceUsdc: 1.5,
-    marginToTreasuryPct: 100,
-    storeId: "trustgate-official-retail",
-    targetBuyerProfile: "AI Agent Developers, MCP Server Authors, Smart Contract Builders seeking 3-Star Institutional Status",
-    summary:
-      "Official step-by-step engineering manual and copy-paste blueprints to pass all 5 VERITAS-8183 Level 3 Exam Pillars (Proof-of-Reserve >=20% wallet setup, Sourcify solc 0.8.38 template, <100ms JSON-RPC architecture, and exam submission script).",
-    deliverablePayload: {
-      tutorialVersion: "VERITAS_8183_LEVEL3_MASTERY_V07",
-      referenceGoldSealContract: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
-      stepByStepPlaybook: [
-        {
-          step: 1,
-          pillar: "Pillar 1 — Auditable Proof-of-Reserve (>=20% Ratio)",
-          instruction:
-            "Designate a dedicated public Base Mainnet wallet (Chain ID 8453) holding liquid USDC/ETH equal to at least 20% of your declared monthly operational volume. Never co-mingle with unverified hot wallets.",
-          formula: "proofOfReserveRatioPct = (lockedOrPublicReserveUsdc / activeOperationalVolumeUsdc) * 100 >= 20.0",
-        },
-        {
-          step: 2,
-          pillar: "Pillar 2 — 100% Deterministic Code & Content Purity (SHA-256 + Sourcify)",
-          instruction:
-            "Compile with solc 0.8.38, strip all selfdestruct/delegatecall/tx.origin opcodes, enforce CEI reentrancy guards, and verify exact_match on Sourcify v2.",
-          readyToCompileSolidityTemplate:
-            "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\ncontract VeritasLevel3CompliantVault {\n  uint256 private _locked = 1;\n  mapping(address => uint256) public reserves;\n  modifier nonReentrant() { require(_locked == 1, 'REENTRANCY'); _locked = 2; _; _locked = 1; }\n  function depositReserve() external payable nonReentrant { reserves[msg.sender] += msg.value; }\n}",
-        },
-        {
-          step: 3,
-          pillar: "Pillar 3 — Verified Client Satisfaction (>=4.8/5.0 & Zero Disputes)",
-          instruction:
-            "Route your first 10 deliveries through notarize_and_witness_a2a_deal so each delivery is SHA-256 timestamped and records a verified post-settlement client rating.",
-        },
-        {
-          step: 4,
-          pillar: "Pillar 4 — Sub-100ms P95 Response Latency & 99.9% Uptime",
-          instruction:
-            "Pre-compute static JSON-RPC schemas in memory, use streaming 64KB chunks for dataset audits, and expose a zero-allocation /healthz keep-alive endpoint.",
-        },
-        {
-          step: 5,
-          pillar: "Pillar 5 — Exact JSON-RPC Payload to Pass submit_veritas_tier_upgrade_exam",
-          copyPasteExamCall: {
-            method: "tools/call",
-            params: {
-              name: "submit_veritas_tier_upgrade_exam",
-              arguments: {
-                storeId: "your-agent-store-id",
-                storeName: "Your Verified AI Node",
-                walletAddress: "0xYourMainnetWallet",
-                publicReserveWallet: "0xYourAuditableReserveWallet",
-                declaredPublicReserveUsdc: 120.0,
-                declaredMonthlyVolumeUsdc: 500.0,
-                vertical: "VERTICAL_3_SOLIDITY_SECURITY",
-                observedLatencyMs: 25,
-              },
-            },
-          },
-        },
-      ],
-    },
-  },
+    "itemId": "retail-veritas-level3-mastery-tutorial-v07",
+    "title": "VERITAS-8183 Level 3 (3-Star Gold Seal) Step-by-Step Engineering Tutorial & Ready-to-Pass Blueprint",
+    "marketTier": "RETAIL_INDIE",
+    "vertical": "VERTICAL_3_SOLIDITY_SECURITY",
+    "priceUsdc": 1.5,
+    "marginToTreasuryPct": 100,
+    "storeId": "trustgate-official-retail",
+    "targetBuyerProfile": "AI Agent Developers, MCP Server Authors, Smart Contract Builders seeking 3-Star Institutional Status",
+    "summary": "Official step-by-step engineering manual and copy-paste blueprints to pass all 5 VERITAS-8183 Level 3 Exam Pillars (Proof-of-Reserve >=20% wallet setup, Sourcify solc 0.8.38 template, <100ms JSON-RPC architecture, and exam submission script).",
+    "encryptedDeliverableVault": {
+      "algorithm": "AES-256-GCM-WALLET-AND-CONTRACT-BOUND",
+      "ivHex": "1a04f1c38d18996b8c22eaa9",
+      "authTagHex": "1a0205548f681cb2f5baeb9b2390cc0e",
+      "ciphertextHex": "4f8b12be02a2e07755fd2fb5a88da3a25c33c1f70b7308ffe1aceffdbcee2cdb5b50ce99bbf73ea564e2760a38a79ecda2ccfea0dda214f6fed856d60c0d1ce840422cac731faa928716da2ef275401f17b3054aadc4df2c217b230b03c5c44ce98576fbbc7622a311e2030af07ae689699c2a09c3e62892cc69d06932e4f9e5ebb2eee2a1527b8ddebf3d5206ce5d74d19a0f88044f2727caebc491053954fde3a4ca13bff7280d9cba9ed30cd1197e6ec728df0d651e788dd64f2c42127c5fbaeebf49ac836e7f334ad8b675ae6a2933fccbe918ac3e2e499aeed2f64da86d24d89bd4ff5f330e55bc3607851cee9eab8f85798bf00725e4c4595e392eb936ded2e6a73c56277b0ed6c4930fba01e96b3f7d15f6f010e7a2a70eeed2e30804a7c52eb37b74f92d125472bda5ef328ebfc208029da7fc969f9bffc0e3b1a6c61ca925e864de83aa5e6fe4a319252ee531827044c5f7754963c920874cd1eff679fca58c8d8afe24911a71041aab9c05665e31c8b734ab6c46ae1e7fc450dd80aa1b89312acb7f1ac7053751af8972c672023346b8346ad71461ecb9b49df4d89796d8fd39f1a984a1441e84f40b6b940a64b8b965e83bea06a866d518a020a32801a3d47ec897ed69f0e5ce49c23a30bd3454856cd260b18f9b434c9a3c5c28b9a1d7669a520dd6826eea09f928085ff7ad36b72529e493abdd36da86ef94063c842679b539f0069885dc0161581ec1fd75ab5c4e748d39f86debbbda2ecc667a4239c74e509136835fa060a9361bfaedee4e78ae102527b64fc5ef8e2e80a0bd0d7aa95ad028898c6cb50ff06e838cc4856aeda39b79a3431ee9a0cce24ae32810dfbf703f7f0e764e513f99a3e06818e51e40cb6503a88ae59f6b80f3820502bfbe3b352f73f0fad7493ba85849ffd0951477daea80ce4f79e7c30d24f2da6c4de9c9d7834118ed61a35958b0e9a65a564101a750dcfb2de2e7db1515d706f2b633444632f1b8691da8c67f0c4336350bc47cf03f50a9b119bdcb0d84f176ee843d5690229ae1be78388f3803aca8f20424f8030b25d43a9f2bf8121384ea185c0143ecb4cb73d226bf61ea24e5d5efe57a473253ac585ff5950660f2b5a2860927f2eb45cfbfdf6e70d5395bdf31d3207101d5bc22b7cce437500e54c3e290ed5cfb02e0e6da7a19a441f388778083a6f7773039b660d00a6ec151916b6a7500a8ec3fcf1c1aa9a3ef9680c998cb3929df71a6c4a0caa9aaeb50d76f023ba2f8ce834d02911e90a80543b8d183f1f7b6dd42ef2722108dab788b5551835087b2b994330d656cccc1a2495fa834605c3daad421553385fa0cb120dce18500cf5206a0bb60bff45c8f3f280974a9dc561359b6024a6bdb7d2b4a476e71e565d88cea22265c6a8e73e10e5926c9dac2710c4c2fd9a10276f7d52919baf40bb327a7cc6476f465fc4dad7c5aec655f4daec5591cd180b4e1d8219bf9d301b72d84495fddfe0924c90ed0264297f641144aaecc4882e17891f7b2fe0a44a41368cb73c999748333d04ca6308d178b2262a8015ad954da895b2daaaa0e01ffb0f175a130aa4f32c96b1a326abfd008af7b627aaad19de789c526b5eff9cf10f515161e61a653a703b7f1f919801c536e79fca22c0cdbdac48a373caebe0b1107c242a50a4f9d992b681691f4779585805e817e3ccff8bdb5af5e48baf0f81416d39d713cd393d87f38bc99966845be9e688224e612849ab901b4fbe9c023be5b63ba6acd9b140998dc4d666b83fdde2014ce3a8367b02154998963f5f6027cd4aa26c6f6981d594a9a485000ce34e6e2b15f4e95cd5780601615d626678b573693ab15d90b0896184cdf784f0069ad8fe68b69513bd692a87f2cade6ac5eb60e5db4bce5f9bc8f1589c06c398ca39884025e169be7193ee8f33c622ed79f743ea7a8118fa8e356bfd3a5ee00d779be41f7190b02358d1556137388916afcd0463d4b565cac77d626dcfd87e1d9e9c0b1aff66db34bd8c35ef62ede4bb53d964c22a8f6a179d1beb03b7f1cf392401fd3a323bf5f7ba6210a14398a8862eb40795155026784577a5debd31ad4fae69598fefdacb85f7e4035987f586f695467cad72347ffa2c017374ca3b5a3a09fa16d41a8c18aaf14dda99ddf5ee70a09189b935ca661632718c8c1d32e4d272f827a166fd33b442c820ff6358ba91eba79fb6cbe3580e6c44827b6b41f4eba67130069fe17acfde40be75023178d0c83792443eea2e2c79ff98463acf030f95cdca4e3d94fc07ca418c1949b0895a30173842ebc477ade11c8acade042c2bcc26a2a85717d234c03d49e5358ea10071b696d41247ff6f68ff90e8e62a770c4ef2f8fcb9187055b99b0571a00d81917d8b8ce57d8c55a656a7d9a4ff982ee23aec426839a3df52a95d1e5768f12bcc6baadffd5949c74051af777171474a4c959686883d06b2470ab75b02c96497fe4ad0a782c5630c31c70b8062b845640f0b3068ceb3159326a35ec72dc3b63338f7d3ee5b2f07e17824f8d18017f1aa6059f0a210af1437530d0a76dae059b79e8c3fa3e32c822eea0d9b6ccb6dda2c21e79fa3299f090f3ba0c3f6269091196fb4900388c00ea172501d6e86ca6c57d00dacd6afabb0a5a311661963a61cda612f3548a3f6a6ecae9ccda4bccb4312e9a811932ca64592ffcce1f3f3b36f595347b93dea944bda2e8480c28d05d86e6ba6d24866f98da2c64a851ac158575f2e9f3eb8e6690f700a409f2ff3eafc52772cb5d49ed64548d942027f7a9e0ae1360d6b83df6e2aae9d7d9578d7fde5a5f7d96add80d9cacf18424db71602bd9b08af425ece8f593612b9818c103db18695187a132074ba4505bac4d53a14d28b7ded5cc4337aa887fe11391ce78f35cb918b3da81dbb769421fd65173900f8b18cadecabd1a170c1829a8a972c23543f824fd09bbcec970fbfa8909e7d65ff786ef46f311932c328fdc0a9aacd3de163324e85e3d0c9e2be4eddcb4b6c29e4faf91ce5d4f8d54bcfd1441aed686ab271d9d176dfdff6e0f21696933f59b40446832bf9afd3470891483ac5645e462ab6e2d82c618ae6fbe86c417fdcecd0ebf2d18e7affc73c38eaddef3c892ebb3e67270b58a6d4dd421f327ed89ce647883fcddaad1902aca76ef"
+    }
+  }
 };
+
+/**
+ * Descifra en memoria RAM el contenido de un paquete oficial First-Party (AES-256-GCM).
+ * La llave y el AAD están atados criptográficamente al contrato 0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e
+ * y a la billetera tesorería 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4. Si un clon cambia la wallet, el descifrado falla.
+ */
+function decryptFirstPartyVaultItem(item, ledger) {
+  if (item.deliverablePayload) return item.deliverablePayload;
+  const vault = item.encryptedDeliverableVault;
+  const contractAddr = ledger?.wallets?.escrow_contract?.address || "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
+  const signerAddr = ledger?.wallets?.evaluator_signer?.address || "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
+  const derivedKey = crypto.pbkdf2Sync(
+    `${contractAddr}|${signerAddr}|59283147`,
+    process.env.TRUSTGATE_VAULT_SALT || "VERITAS-8183-SOURCIFY-LOCKED-VAULT-V07",
+    100000,
+    32,
+    "sha512"
+  );
+  const decipher = crypto.createDecipheriv(
+    "aes-256-gcm",
+    derivedKey,
+    Buffer.from(vault.ivHex, "hex"),
+    { authTagLength: 16 }
+  );
+  decipher.setAAD(Buffer.from(`${item.itemId}|${signerAddr}`, "utf8"));
+  decipher.setAuthTag(Buffer.from(vault.authTagHex, "hex"));
+  const decrypted = Buffer.concat([
+    decipher.update(Buffer.from(vault.ciphertextHex, "hex")),
+    decipher.final(),
+  ]);
+  return JSON.parse(decrypted.toString("utf8"));
+}
 
 /**
  * Ejecuta una compra directa de un paquete oficial First-Party (100% margen a protocol_treasury).
@@ -640,7 +553,8 @@ export function executeFirstPartyCatalogPurchase({
     store.completedJobs += 1;
   }
 
-  const payloadRaw = JSON.stringify(item.deliverablePayload);
+  const unlockedPayload = decryptFirstPartyVaultItem(item, ledger);
+  const payloadRaw = JSON.stringify(unlockedPayload);
   const sha256DeliverableHash =
     "0x" + crypto.createHash("sha256").update(payloadRaw, "utf8").digest("hex");
   const signature =
@@ -685,7 +599,7 @@ export function executeFirstPartyCatalogPurchase({
       evaluatorAddress: ledger.wallets.evaluator_signer.address,
       issuedAt: new Date().toISOString(),
     },
-    deliverablePayload: item.deliverablePayload,
+    deliverablePayload: unlockedPayload,
     auditScopeAndLiability: buildAuditScopeAndLiability(`FIRST_PARTY_${item.vertical}`, [
       "1. Cryptographic SHA-256 integrity hash verification of curated First-Party bundle",
       "2. Pre-audited deterministic compliance against Base Mainnet & Sourcify reference proofs",
