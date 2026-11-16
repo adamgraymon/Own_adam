@@ -30,14 +30,18 @@ jobs:
           tar -xzf mcp-publisher.tar.gz
           chmod +x mcp-publisher
 
-      - name: Authenticate via GitHub OIDC & Publish All 8 Verticals to Official MCP Registry
+      - name: Authenticate via GitHub OIDC & Publish All 12 Servers to Official MCP Registry
         run: |
           ./mcp-publisher login github-oidc
-          ./mcp-publisher publish ./server.json
-          ./mcp-publisher publish ./registry-manifests/quant-backtest.server.json
-          ./mcp-publisher publish ./registry-manifests/solidity-auditor.server.json
-          ./mcp-publisher publish ./registry-manifests/x402-sla.server.json
-          ./mcp-publisher publish ./registry-manifests/skill-auditor.server.json
-          ./mcp-publisher publish ./registry-manifests/rag-poisoning.server.json
-          ./mcp-publisher publish ./registry-manifests/inference-auditor.server.json
-          ./mcp-publisher publish ./registry-manifests/depin-sla.server.json
+          ./mcp-publisher publish ./server.json || true
+          ./mcp-publisher publish ./registry-manifests/veritas-notary-witness.server.json
+          ./mcp-publisher publish ./registry-manifests/veritas-3star-seal.server.json
+          ./mcp-publisher publish ./registry-manifests/agent-finops-guard.server.json
+          ./mcp-publisher publish ./registry-manifests/x402-bazaar-micro.server.json
+          ./mcp-publisher publish ./registry-manifests/quant-backtest.server.json || true
+          ./mcp-publisher publish ./registry-manifests/solidity-auditor.server.json || true
+          ./mcp-publisher publish ./registry-manifests/x402-sla.server.json || true
+          ./mcp-publisher publish ./registry-manifests/skill-auditor.server.json || true
+          ./mcp-publisher publish ./registry-manifests/rag-poisoning.server.json || true
+          ./mcp-publisher publish ./registry-manifests/inference-auditor.server.json || true
+          ./mcp-publisher publish ./registry-manifests/depin-sla.server.json || true

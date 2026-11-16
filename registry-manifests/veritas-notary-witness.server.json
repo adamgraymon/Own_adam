@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/veritas-8183-agent-notary-witness",
+  "description": "VERITAS-8183 Public M2M Notary & Millisecond Witness for A2A Deals and Smart Contracts (Base).",
+  "version": "0.7.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}

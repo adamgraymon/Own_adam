@@ -1,16 +1,16 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.adamgraymon/trustgate-erc8183-mcp",
-  "description": "ERC-8183 8-Vertical Escrow Auditor (Datasets, Quant, Solidity, x402, Skills, RAG, DePIN).",
-  "version": "0.5.0",
-  "repository": {
-    "url": "https://github.com/adamgraymon/Own_adam",
-    "source": "github"
-  },
-  "remotes": [
-    {
-      "type": "streamable-http",
-      "url": "https://own-adam.onrender.com/mcp"
-    }
-  ]
+    "version":  "0.7.0",
+    "name":  "io.github.adamgraymon/trustgate-erc8183-mcp",
+    "remotes":  [
+                    {
+                        "type":  "streamable-http",
+                        "url":  "https://own-adam.onrender.com/mcp"
+                    }
+                ],
+    "repository":  {
+                       "url":  "https://github.com/adamgraymon/Own_adam",
+                       "source":  "github"
+                   },
+    "description":  "VERITAS-8183 M2M Notary, 3-Star Rating Bureau, FinOps Spend Guard \u0026 8-Vertical Escrow on Base.",
+    "$schema":  "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
 }

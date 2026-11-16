@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/x402-bazaar-micro-auditor",
+  "description": "x402 Micro-Bazaar (0.10-1.00 USDC on Base): Instant Notary Actas, 3-Star Exams & Token Scans.",
+  "version": "0.7.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}

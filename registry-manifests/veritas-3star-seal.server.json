@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/veritas-8183-3star-rating-seal",
+  "description": "VERITAS-8183 3-Star Agent & Smart Contract Rating Bureau with Proof-of-Reserve >=20% Solvency.",
+  "version": "0.7.0",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
+}
