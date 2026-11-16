@@ -206,7 +206,12 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/.well-known/x402-bazaar.json" ||
           url.pathname === "/.well-known/x402" ||
-          url.pathname === "/.well-known/x402.json")
+          url.pathname === "/.well-known/x402.json" ||
+          url.pathname === "/.well-known/payment" ||
+          url.pathname === "/.well-known/payments" ||
+          url.pathname === "/.well-known/pricing" ||
+          url.pathname === "/.well-known/pricing.json" ||
+          url.pathname === "/pricing.json")
       ) {
         ledger.logWirePacket({
           protocol: "x402-BAZAAR",
@@ -214,9 +219,18 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           to: "EvaluatorNode",
           action: `GET ${url.pathname}`,
           status: 200,
-          payloadSummary: "x402 Bazaar catalog descriptor served",
+          payloadSummary: "x402 Bazaar & Pricing descriptor served",
         });
-        return sendJson(res, 200, ledger.getX402BazaarDescriptor(baseUrl));
+        const bazaar = ledger.getX402BazaarDescriptor(baseUrl);
+        const catalog = ledger.getFullCatalogManifest(baseUrl);
+        return sendJson(res, 200, {
+          ...bazaar,
+          curatedFirstPartyPackages: catalog.curatedFirstPartyPackages,
+          vipBuyerDiscounts: {
+            VIP_GOLD_PRIME_BUYER: "15% Fee Discount + 10% Catalog Discount",
+            VIP_SILVER_GOOD_PAYER: "10% Fee Discount + 5% Catalog Discount",
+          },
+        });
       }
 
       if (
@@ -356,6 +370,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         (url.pathname === "/llms.txt" ||
           url.pathname === "/llms-full.txt" ||
           url.pathname === "/.well-known/llms.txt" ||
+          url.pathname === "/.well-known/capabilities.txt" ||
           url.pathname === "/api/llms.txt" ||
           url.pathname === "/agents.txt")
       ) {
@@ -406,6 +421,23 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         return res.end(llmsTxt);
       }
 
+      if (req.method === "GET" && url.pathname === "/sitemap.xml") {
+        const sitemapXml = [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+          `  <url><loc>${baseUrl}/</loc><priority>1.0</priority></url>`,
+          `  <url><loc>${baseUrl}/notary.json</loc><priority>0.95</priority></url>`,
+          `  <url><loc>${baseUrl}/catalog.json</loc><priority>0.95</priority></url>`,
+          `  <url><loc>${baseUrl}/llms.txt</loc><priority>0.9</priority></url>`,
+          `  <url><loc>${baseUrl}/.well-known/x402-bazaar.json</loc><priority>0.9</priority></url>`,
+          `  <url><loc>${baseUrl}/.well-known/agent.json</loc><priority>0.9</priority></url>`,
+          `  <url><loc>${baseUrl}/openapi.json</loc><priority>0.85</priority></url>`,
+          "</urlset>",
+        ].join("\n");
+        res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8" });
+        return res.end(sitemapXml);
+      }
+
       if (req.method === "GET" && url.pathname === "/robots.txt") {
         const robotsTxt = [
           "User-agent: *",
@@ -417,7 +449,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "User-agent: Google-Extended",
           "User-agent: DeepSeekBot",
           "Allow: /",
-          `Sitemap: ${baseUrl}/openapi.json`,
+          `Sitemap: ${baseUrl}/sitemap.xml`,
           `# LLMs Index: ${baseUrl}/llms.txt`,
           `# VERITAS-8183 Notary Registry: ${baseUrl}/notary.json`,
           `# MCP Endpoint: ${baseUrl}/mcp`,
