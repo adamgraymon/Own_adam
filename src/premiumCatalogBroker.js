@@ -34,6 +34,14 @@ const OFFICIAL_TREASURY_WALLET = "0x861ac49f8299c45cca6bd9f0254080fd82061ac4";
 const OFFICIAL_ESCROW_CONTRACT = "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
 const usedOnChainPaymentTxHashes = new Set();
 
+/** Marca un tx hash como consumido en el registro global anti-replay (compartido entre servicios). */
+export function markOnChainPaymentTxHashUsed(txHash) {
+  const norm = String(txHash || "").trim().toLowerCase();
+  if (!norm || usedOnChainPaymentTxHashes.has(norm)) return false;
+  usedOnChainPaymentTxHashes.add(norm);
+  return true;
+}
+
 /**
  * Verifica criptográficamente en vivo contra Base Mainnet (Chain ID 8453) que un paymentTxHash:
  *  1. Exista y tenga status === "0x1" (confirmado en bloque real)

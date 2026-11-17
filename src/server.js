@@ -14,7 +14,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
-import { handleMcpJsonRpc, MCP_TOOLS } from "./mcpServer.js";
+import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
+import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats } from "./freeTrustCheck.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
   CURATED_FIRST_PARTY_CATALOG,
@@ -503,8 +504,12 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           `- **ERC-8004 Agent Card**: \`GET ${baseUrl}/.well-known/agent.json\``,
           `- **Coinbase x402 Bazaar**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
           `- **OpenAPI 3.1.0 Spec**: \`GET ${baseUrl}/openapi.json\``,
+          `- **Free MCP Trust Badge**: \`GET ${baseUrl}/badge.svg?server=<mcp-url>\` · record: \`GET ${baseUrl}/trust?server=<mcp-url>\``,
           "",
-          "## 19 MCP Tools: 8 Audited Verticals + VERITAS-8183 Notary, 3-Star Seal, FinOps, Continuous Trust & Buyer Matchmaker (EN / ES / 中文)",
+          "## START HERE (FREE): Is this MCP server safe to connect?",
+          "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check. 0.25 USDC on Base unlocks the full signed 7-question dossier.",
+          "",
+          "## 20 MCP Tools: Free Trust Check + 8 Audited Verticals + VERITAS-8183 Notary, 3-Star Seal, FinOps, Continuous Trust & Buyer Matchmaker (EN / ES / 中文)",
           "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`)",
           "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC)",
           "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault",
@@ -570,6 +575,32 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         ].join("\n");
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
         return res.end(robotsTxt);
+      }
+
+      // =====================================================================
+      // Insignia pública VERITAS MCP Trust (para README de dueños de servidores MCP)
+      // =====================================================================
+      if (req.method === "GET" && url.pathname === "/badge.svg") {
+        const target = url.searchParams.get("server") || "";
+        recordExternalVisit(req, "/badge.svg");
+        res.writeHead(200, {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "public, max-age=1800",
+          "Access-Control-Allow-Origin": "*",
+        });
+        return res.end(renderTrustBadgeSvg(ledger, target));
+      }
+      if (req.method === "GET" && url.pathname === "/trust") {
+        recordExternalVisit(req, "/trust");
+        const target = url.searchParams.get("server");
+        if (!target) {
+          return sendJson(res, 200, {
+            service: "VERITAS MCP Trust Check",
+            howTo: "Call MCP tool check_mcp_server_trust at https://own-adam.onrender.com/mcp with { serverUrl }. Then view /trust?server=<url> or embed /badge.svg?server=<url>.",
+            stats: getFreeTrustCheckStats(ledger),
+          });
+        }
+        return sendJson(res, 200, getPublicTrustRecord(ledger, target));
       }
 
       // =====================================================================
@@ -650,6 +681,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
               });
           }
         }
+
+        const callerIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "local";
+        const callerKey = "v_" + crypto.createHash("sha256").update(`${callerIp}|${req.headers["user-agent"] || ""}`).digest("hex").slice(0, 10);
+        await prepareAsyncToolCall(rpcPayload, ledger, { callerKey });
 
         const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger);
         if (!rpcResponse) {

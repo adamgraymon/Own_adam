@@ -23,11 +23,95 @@ import {
   attachVeritasForensicGateAndAutoCaptureBuyer,
   autoCaptureBuyerLeadInDatabase,
 } from "./veritas8183NotaryEngine.js";
+import {
+  probeMcpServerLive,
+  buildMcpTrustReport,
+  consumeFreeCheckQuota,
+  buildQuotaExhaustedResponse,
+  validatePublicMcpUrl,
+  FULL_DOSSIER_PRICE_USDC,
+  EXTRA_CHECK_PRICE_USDC,
+} from "./freeTrustCheck.js";
+import { verifyOnChainBaseMainnetUsdcPayment, markOnChainPaymentTxHashUsed } from "./premiumCatalogBroker.js";
+
+/**
+ * Pre-procesa herramientas que necesitan trabajo asíncrono (red / blockchain) antes del
+ * manejador JSON-RPC síncrono. Deja el resultado en params.arguments._trustCheckResult.
+ */
+export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "anonymous" } = {}) {
+  if (rpcPayload?.method !== "tools/call" || rpcPayload?.params?.name !== "check_mcp_server_trust") return;
+  const args = (rpcPayload.params.arguments = rpcPayload.params.arguments || {});
+  delete args._trustCheckResult;
+  if (!args.serverUrl) return;
+
+  const valid = await validatePublicMcpUrl(args.serverUrl);
+  if (!valid.ok) {
+    args._trustCheckResult = { ok: false, tool: "check_mcp_server_trust", stage: "url_validation", reason: valid.reason };
+    return;
+  }
+
+  let mode = "FREE";
+  let quota = null;
+  if (args.paymentTxHash) {
+    const pay = await verifyOnChainBaseMainnetUsdcPayment({
+      paymentTxHash: args.paymentTxHash,
+      requiredAmountUsdc: EXTRA_CHECK_PRICE_USDC,
+    });
+    if (!pay.verified) {
+      args._trustCheckResult = { ok: false, tool: "check_mcp_server_trust", httpStatus: 402, status: "PAYMENT_NOT_VERIFIED", reason: pay.reason };
+      return;
+    }
+    if (!markOnChainPaymentTxHashUsed(pay.txHash)) {
+      args._trustCheckResult = { ok: false, tool: "check_mcp_server_trust", httpStatus: 402, status: "PAYMENT_TX_ALREADY_USED", reason: "This paymentTxHash was already used." };
+      return;
+    }
+    mode = pay.verifiedUsdcPaid + 1e-6 >= FULL_DOSSIER_PRICE_USDC ? "FULL" : "FREE";
+  } else {
+    quota = consumeFreeCheckQuota(ledger, callerKey);
+    if (!quota.allowed) {
+      args._trustCheckResult = buildQuotaExhaustedResponse(quota);
+      return;
+    }
+  }
+
+  const probe = await probeMcpServerLive(valid.url.toString());
+  args._trustCheckResult = buildMcpTrustReport({ ledger, probe, mode, quota, paymentTxHash: args.paymentTxHash || null });
+}
 
 export const MCP_TOOLS = [
   {
+    "name": "check_mcp_server_trust",
+    "description": "Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
+    "annotations": {
+      "title": "Check if an MCP server is safe (free)",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": true
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serverUrl": {
+          "type": "string",
+          "description": "Public https URL of the MCP server to check.",
+          "examples": [
+            "https://own-adam.onrender.com/mcp"
+          ]
+        },
+        "paymentTxHash": {
+          "type": "string",
+          "description": "Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, 0.25 USDC = full signed 7-question dossier."
+        }
+      },
+      "required": [
+        "serverUrl"
+      ]
+    }
+  },
+  {
     "name": "discover_verified_stores",
-    "description": "Search the ERC-8004 marketplace for audited AI stores and curated packages by reputation, tier, vertical, or price cap. Example: minReputation=85, marketTier='INSTITUTIONAL_B2B'.",
+    "description": "Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
     "annotations": {
       "title": "discover_verified_stores",
       "readOnlyHint": true,
@@ -82,7 +166,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "quote_multitoken_escrow",
-    "description": "Quote an atomic conversion from SOL, ETH, VIRTUAL, USDT, or USDC into Base Mainnet USDC with escrow fee breakdown. Example: tokenSymbol='SOL', tokenAmount=0.5.",
+    "description": "How much USDC will I get and what fees apply if I pay a seller with SOL, ETH, VIRTUAL, USDT or USDC? Read-only quote. Example: tokenSymbol='SOL', tokenAmount=0.5.",
     "annotations": {
       "title": "quote_multitoken_escrow",
       "readOnlyHint": true,
@@ -120,7 +204,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "open_escrow_job",
-    "description": "Lock funds in the ERC-8183 non-custodial escrow vault for a target store and dataset row requirement. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
+    "description": "Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
     "annotations": {
       "title": "open_escrow_job",
       "readOnlyHint": false,
@@ -171,7 +255,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "submit_encrypted_deliverable",
-    "description": "Audit a JSON dataset deliverable in AES-256-GCM memory for CSV malware, prompt injection, and 30-row sampling before escrow settlement. Example: jobId='JOB-1001'.",
+    "description": "Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
     "annotations": {
       "title": "submit_encrypted_deliverable",
       "readOnlyHint": false,
@@ -199,7 +283,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_quant_backtest_escrow",
-    "description": "Verify quantitative trading backtest trades for chronological look-ahead bias, exact PnL math, profit factor, and drawdown limits. Example: minTrades=20, minProfitFactor=1.25.",
+    "description": "Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
     "annotations": {
       "title": "audit_quant_backtest_escrow",
       "readOnlyHint": false,
@@ -237,7 +321,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_smart_contract_escrow",
-    "description": "Compile Solidity source code with solc 0.8.38 and scan for selfdestruct, arbitrary delegatecall, tx.origin phishing, and missing ABI functions. Example: contractName='VaultToken'.",
+    "description": "Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
     "annotations": {
       "title": "audit_smart_contract_escrow",
       "readOnlyHint": false,
@@ -274,7 +358,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_api_sla_escrow",
-    "description": "Verify paid x402 API or oracle JSON responses against latency thresholds, mandatory schema keys, and timestamp freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
+    "description": "Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
     "annotations": {
       "title": "audit_api_sla_escrow",
       "readOnlyHint": false,
@@ -312,7 +396,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_agent_skill_escrow",
-    "description": "Scan agent SKILL.md files and bundled scripts for credential exfiltration, arbitrary code execution sinks, hidden Unicode stego, and version drift. Example: version='1.1.0'.",
+    "description": "Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. Example: version='1.1.0'.",
     "annotations": {
       "title": "audit_agent_skill_escrow",
       "readOnlyHint": false,
@@ -354,7 +438,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_rag_embeddings_escrow",
-    "description": "Audit RAG knowledge chunks and vector embeddings for dimension consistency, L2 norm integrity, duplicates, and indirect prompt injection. Example: expectedDimension=4, minChunks=5.",
+    "description": "Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
     "annotations": {
       "title": "audit_rag_embeddings_escrow",
       "readOnlyHint": false,
@@ -388,7 +472,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_ai_inference_escrow",
-    "description": "Verify LLM inference outputs against token billing inflation, lexical repetition collapse (model downgrade fraud), and required terms. Example: billedOutputTokens=32.",
+    "description": "Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
     "annotations": {
       "title": "audit_ai_inference_escrow",
       "readOnlyHint": false,
@@ -433,7 +517,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_depin_gpu_sla_escrow",
-    "description": "Verify DePIN GPU compute node telemetry against contracted FP16 TFLOPS, VRAM capacity, memory bandwidth, and thermal limits. Example: minTflopsFp16=250, minVramGb=80.",
+    "description": "Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
     "annotations": {
       "title": "audit_depin_gpu_sla_escrow",
       "readOnlyHint": false,
@@ -472,7 +556,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "verify_onchain_escrow_status",
-    "description": "Return Base Mainnet contract verification proofs (Sourcify #59283147), LEGION Ed25519 Passport receipts, and fee terms. Example: call with {} to inspect on-chain status.",
+    "description": "Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
     "annotations": {
       "title": "verify_onchain_escrow_status",
       "readOnlyHint": true,
@@ -495,7 +579,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "purchase_firstparty_catalog_item",
-    "description": "Purchase and decrypt an official TrustGate curated dataset, security scanner, or Level 3 tutorial package on Base Mainnet. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
+    "description": "Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
     "annotations": {
       "title": "purchase_firstparty_catalog_item",
       "readOnlyHint": false,
@@ -546,7 +630,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "register_and_certify_store",
-    "description": "Onboard an external AI store into the ERC-8004 directory (0 USDC upfront) after passing a live deterministic vertical audit. Example: storeId='indie-safe-solidity-lab'.",
+    "description": "Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
     "annotations": {
       "title": "register_and_certify_store",
       "readOnlyHint": false,
@@ -611,7 +695,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "inspect_veritas_8183_seal",
-    "description": "Inspect 1-to-3 Star Seller Seals, Proof-of-Reserve ratios, the 15-node 2★/3★ leaderboard, 7-Question Continuous Trust Dossier, and Pre-Execution Firewall. Example: targetId='ALL'.",
+    "description": "Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
     "annotations": {
       "title": "inspect_veritas_8183_seal",
       "readOnlyHint": true,
@@ -671,7 +755,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "submit_veritas_tier_upgrade_exam",
-    "description": "Run the 5-pillar VERITAS-8183 seller exam (Proof-of-Reserve >=20% ratio, code purity, client rating, and <=100ms latency) to earn 1 to 3 Stars. Example: storeId='prime-node'.",
+    "description": "Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
     "annotations": {
       "title": "submit_veritas_tier_upgrade_exam",
       "readOnlyHint": false,
@@ -736,7 +820,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "manage_buyer_finops_spend_passport",
-    "description": "Register a buyer agent in the Buyer Intent Database, set per-tx/daily USDC spend caps, compare LLM token costs, and claim 1 single-use unlock token. Example: buyerId='alphaquant-agent'.",
+    "description": "Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
     "annotations": {
       "title": "manage_buyer_finops_spend_passport",
       "readOnlyHint": false,
@@ -794,7 +878,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "notarize_and_witness_a2a_deal",
-    "description": "Issue an ECDSA-signed A2A Notary Acta or execute an x402 micro-service (0.10 to 1.00 USDC, including single-sector radar unlock). Example: serviceId='x402-veritas-deal-witness-acta'.",
+    "description": "Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
     "annotations": {
       "title": "notarize_and_witness_a2a_deal",
       "readOnlyHint": false,
@@ -854,7 +938,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "match_verified_buyers_by_intent",
-    "description": "Match 2-Star and 3-Star certified sellers with verified buyers filtered by available USDC budget and vertical (first 3 matched clients at 0% extra fee). Example: sellerStoreId='quantalpha-institutional-node'.",
+    "description": "Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
     "annotations": {
       "title": "match_verified_buyers_by_intent",
       "readOnlyHint": false,
@@ -942,7 +1026,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             version: "0.7.0",
           },
           instructions:
-            "Start with inspect_veritas_8183_seal (free) to check 1-to-3 Star Seller Seals, 7-Question Continuous Trust Dossiers, and Pre-Execution Firewall status. Register in manage_buyer_finops_spend_passport (0 USDC) to claim 1 single-use unlock token.",
+            "Before connecting to an unknown MCP server, call check_mcp_server_trust with its URL: free, no signup, 5 checks/day. It tells you what the server can do, which tools are risky and whether it changed since last time. Other tools: audit deliverables (code, datasets, RAG, inference, GPU) before paying, and hold payments in escrow on Base.",
         },
       };
     }
@@ -1058,6 +1142,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
 
       let output;
       switch (toolName) {
+        case "check_mcp_server_trust":
+          if (!args.serverUrl) {
+            output = { ok: false, tool: "check_mcp_server_trust", reason: "serverUrl is required. Example: https://example.com/mcp" };
+          } else {
+            output = args._trustCheckResult || {
+              ok: false,
+              tool: "check_mcp_server_trust",
+              reason: "Live check unavailable in this transport. Use https://own-adam.onrender.com/mcp",
+            };
+          }
+          break;
         case "discover_verified_stores":
           if (args.buyerId) {
             autoCaptureBuyerLeadInDatabase({
@@ -1421,11 +1516,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const standaloneLedger = new AgenticEscrowLedger();
   const rl = readline.createInterface({ input: process.stdin, terminal: false });
 
-  rl.on("line", (line) => {
+  rl.on("line", async (line) => {
     const trimmed = line.trim();
     if (!trimmed) return;
     try {
       const req = JSON.parse(trimmed);
+      await prepareAsyncToolCall(req, standaloneLedger, { callerKey: "stdio-local" });
       const resp = handleMcpJsonRpc(req, standaloneLedger);
       if (resp) {
         process.stdout.write(JSON.stringify(resp) + "\n");
