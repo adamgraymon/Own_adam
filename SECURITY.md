@@ -72,6 +72,14 @@ Note: many security crawlers visit this endpoint. Visits are **not** audit passe
 
 ---
 
+## 中文摘要 / Resumen en español
+
+**中文：** 本服务器为远程服务，无法访问用户的电脑、文件、环境变量或钱包。用户从不需要提供私钥。`EVALUATOR_PRIVATE_KEY` 只能批准（向卖家支付约定金额减去手续费）或拒绝（向买家 100% 退款），无法将资金转到其他地址。截止时间过后，任何人都可以触发 100% 退款。合约已在 Base 上部署并通过 Sourcify 验证；但 MCP 托管工具目前使用内存中的模拟账本，尚未转移链上资金。标有 `[DEMO]` 的条目为虚构。已知局限：单一评估者、新项目、单一维护者。
+
+**Español:** El servidor es remoto y no tiene acceso a tu equipo, archivos, variables de entorno ni billeteras. Nunca pedimos claves privadas. `EVALUATOR_PRIVATE_KEY` solo puede aprobar (pagar al vendedor lo acordado menos la comisión) o rechazar (devolver el 100% al comprador), nunca enviar fondos a otra dirección. Vencido el plazo, cualquiera puede activar el reembolso del 100%. El contrato está desplegado en Base y verificado en Sourcify, pero las herramientas MCP de escrow usan hoy un libro contable simulado en memoria y no mueven fondos en cadena. Lo marcado `[DEMO]` es ficticio. Limitaciones conocidas: evaluador único, proyecto nuevo, un solo mantenedor.
+
+---
+
 ## 7. Reporting a vulnerability
 
 Open a GitHub issue at https://github.com/adamgraymon/Own_adam/issues (title prefix `[security]`; do not post exploit details publicly — ask for a private channel in the issue).

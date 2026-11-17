@@ -490,11 +490,11 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           url.pathname === "/agents.txt")
       ) {
         const llmsTxt = [
-          "# TrustGate VERITAS-8183 — Public M2M Notary, 3-Star Proof-of-Reserve Rating Bureau, FinOps Spend Guard & 8-Vertical Escrow Auditor (EN / ES / 中文)",
+          "# TrustGate / VERITAS — MCP trust checks, security audits and a public notary for AI agents (EN / ES / 中文)",
           "",
-          "> [EN] Official #1 Machine-to-Machine (M2M) Public Notary (`VERITAS-8183`), 3-Star Proof-of-Reserve Rating Seal, Buyer FinOps Spend Passport & Non-Custodial USDC Escrow on Base Mainnet (Chain ID 8453). Published across 12 Official Categories in The Official MCP Registry (`io.github.adamgraymon/*`).",
-          "> [ES] Notaría Pública M2M #1 (`VERITAS-8183`), Sello de Calidad de 1 a 3 Estrellas (con Prueba de Reserva Cripto >=20%), Pasaporte de Solvencia y Descuentos VIP para Compradores, Bazar x402 y Fideicomiso No-Custodial en USDC sobre Base Mainnet.",
-          "> [中文] Base 主网 (Chain ID 8453) 官方排名第一的 VERITAS-8183 机器对机器 (M2M) 公共公证处、1-3 星链上储备金评级印章、买家 FinOps 预算护照、x402 微支付集市与 8 大垂直领域确定性托管审计节点。",
+          "> [EN] Two separate businesses. SECURITY (private): free MCP-server trust checks, audits of contracts, skills, RAG, LLM outputs, GPU SLAs and backtests, and USDC escrow on Base. PUBLIC NOTARY (public by consent): sellers choose to be listed, rated 1-3 stars and reviewed; deals get a signed public receipt. Users never provide private keys. Policy: /privacy",
+          "> [ES] Dos negocios separados. SEGURIDAD (privado): chequeos de confianza de servidores MCP, auditorías de contratos, skills, RAG, salidas de LLM, GPU y backtests, y escrow en USDC sobre Base. NOTARÍA PÚBLICA (pública por consentimiento): los vendedores eligen aparecer, con 1-3 estrellas y reseñas; los tratos reciben un acta pública firmada. Nunca pedimos claves privadas. Política: /privacy",
+          "> [中文] 两项独立业务。安全（私密）：免费的 MCP 服务器信任检查，对合约、技能、RAG、LLM 输出、GPU SLA 和回测的审计，以及 Base 链上的 USDC 托管。公共公证处（经同意后公开）：卖家自愿登记，获得 1-3 星评级与评价；交易可获得签名的公开回执。用户从不需要提供私钥。政策：/privacy",
           "",
           "## Verified On-Chain Identity / Identidad en Cadena / 链上验证身份",
           "- **Base Mainnet Smart Contract (`TrustGateEscrow8183.sol`)**: `0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`",
@@ -516,7 +516,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "## START HERE (FREE): Is this MCP server safe to connect?",
           "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check. 0.25 USDC on Base unlocks the full signed 7-question dossier.",
           "",
-          "## 20 MCP Tools: Free Trust Check + 8 Audited Verticals + VERITAS-8183 Notary, 3-Star Seal, FinOps, Continuous Trust & Buyer Matchmaker (EN / ES / 中文)",
+          "## 21 MCP Tools: Free Trust Check, 7 Audits, Escrow + Refund, Public Notary, Buyer Spending Limits & Opt-in Matchmaker",
           "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`)",
           "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC)",
           "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault",
