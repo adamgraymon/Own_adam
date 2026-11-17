@@ -494,7 +494,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "",
           "> [EN] Two separate businesses. SECURITY (private): free MCP-server trust checks, audits of contracts, skills, RAG, LLM outputs, GPU SLAs and backtests, and USDC escrow on Base. PUBLIC NOTARY (public by consent): sellers choose to be listed, rated 1-3 stars and reviewed; deals get a signed public receipt. Users never provide private keys. Policy: /privacy",
           "> [ES] Dos negocios separados. SEGURIDAD (privado): chequeos de confianza de servidores MCP, auditorías de contratos, skills, RAG, salidas de LLM, GPU y backtests, y escrow en USDC sobre Base. NOTARÍA PÚBLICA (pública por consentimiento): los vendedores eligen aparecer, con 1-3 estrellas y reseñas; los tratos reciben un acta pública firmada. Nunca pedimos claves privadas. Política: /privacy",
-          "> [中文] 两项独立业务。安全（私密）：免费的 MCP 服务器信任检查，对合约、技能、RAG、LLM 输出、GPU SLA 和回测的审计，以及 Base 链上的 USDC 托管。公共公证处（经同意后公开）：卖家自愿登记，获得 1-3 星评级与评价；交易可获得签名的公开回执。用户从不需要提供私钥。政策：/privacy",
+          "> [中文] 两项独立业务。安全（私密）：免费的 MCP 服务器信任检查，对合约、技能、RAG、LLM 输出、GPU SLA 和回测的审计，以及 Base 链上的 USDC 托管。公共公证处（经同意后公开）：卖家自愿登记，获得 1-3 星评级与评价；交易可获得签名的公开回执。用户从不需要提供私钥。政策：/privacy（中文仅为参考翻译，如有差异以英文版本为准）",
           "",
           "## Verified On-Chain Identity / Identidad en Cadena / 链上验证身份",
           "- **Base Mainnet Smart Contract (`TrustGateEscrow8183.sol`)**: `0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`",

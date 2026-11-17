@@ -9,11 +9,24 @@
  * Esta política se sirve en /privacy (JSON) y /privacy.md, y se refleja en PRIVACY.md del repositorio.
  */
 
-export const DATA_POLICY_VERSION = "1.0.0";
+export const DATA_POLICY_VERSION = "1.0.1";
+
+/** Prevalencia de idiomas: rige el inglés; el español es traducción oficial; el chino es solo referencia. */
+export const LANGUAGE_PRECEDENCE = {
+  authoritative: "en",
+  officialTranslation: "es",
+  referenceOnly: ["zh"],
+  en: "Language precedence: the English text is authoritative. The Spanish text is an official translation. The Simplified Chinese text is a reference translation for convenience only; in case of any difference or ambiguity, the English version prevails.",
+  es: "Prevalencia de idiomas: el texto en inglés es el que rige. El texto en español es una traducción oficial. El texto en chino simplificado es solo una traducción de referencia; ante cualquier diferencia o ambigüedad, prevalece la versión en inglés.",
+  zh: "【语言说明】中文版本仅为便于阅读的参考翻译。如中文与英文或西班牙文版本存在任何差异或歧义，以英文版本为准（西班牙文版本为正式译本）。",
+};
 export const PUBLIC_REGISTRY_TERMS_VERSION = "1.0.0";
 
 export const PUBLIC_REGISTRY_TERMS = {
   version: PUBLIC_REGISTRY_TERMS_VERSION,
+  get languagePrecedence() {
+    return LANGUAGE_PRECEDENCE;
+  },
   en: "By registering a store in the VERITAS public notary registry you agree that the following is PUBLIC and may be shown, ranked and included in paid market reports: store id and name, endpoint URL, payout wallet address, category (vertical), market tier, starting price, star level, audit verdicts and their dates, reputation score, verified reviews and usage statistics of your listing (views, searches that matched your category, deals closed). The CONTENT of your deliverables, your buyers' identities and the content of notarized deals are NOT published. You can request removal at any time; past notarial records (hashes and dates) are kept as an append-only public log.",
   zh: "在 VERITAS 公共公证登记处注册店铺，即表示您同意以下信息为【公开】信息，可被展示、排名并纳入付费市场报告：店铺 ID 与名称、端点 URL、收款钱包地址、类别（垂直领域）、市场层级、起始价格、星级、审计结论及其日期、信誉分、经验证的评价，以及您店铺页面的使用统计（浏览量、与您类别匹配的搜索次数、已成交的交易）。您交付物的【内容】、您买家的身份以及经公证交易的内容【不会】被公开。您可随时申请下架；过往的公证记录（哈希值与日期）将作为只可追加的公开日志保留。",
   es: "Al registrar una tienda en el registro notarial público VERITAS aceptas que lo siguiente es PÚBLICO y puede mostrarse, rankearse e incluirse en informes de mercado de pago: id y nombre de la tienda, URL del endpoint, wallet de cobro, rubro (vertical), segmento, precio inicial, nivel de estrellas, veredictos de auditoría y sus fechas, reputación, reseñas verificadas y estadísticas de uso de tu ficha (vistas, búsquedas que coincidieron con tu rubro, tratos cerrados). NO se publica el CONTENIDO de tus entregables, la identidad de tus compradores ni el contenido de los tratos notariados. Puedes pedir la baja cuando quieras; los registros notariales pasados (hashes y fechas) se conservan como registro público de solo-añadir.",
@@ -27,6 +40,7 @@ export const BUYER_DIRECTORY_TERMS = {
 
 export const DATA_POLICY = {
   version: DATA_POLICY_VERSION,
+  languagePrecedence: LANGUAGE_PRECEDENCE,
   operator: "adamgraymon (GitHub: github.com/adamgraymon/Own_adam)",
   summary: {
     en: "Two businesses, two rules. SECURITY & ESCROW clients are private. SELLERS who register in the PUBLIC NOTARY accept that their listing is public. Traffic is only shared as anonymous aggregates.",
@@ -139,6 +153,12 @@ export function renderPrivacyMarkdown() {
   const list = (arr) => arr.map((x) => `- ${x}`).join("\n");
   return `# VERITAS / TrustGate — Data & Privacy Policy · Política de datos · 数据与隐私政策 (v${p.version})
 
+> ${LANGUAGE_PRECEDENCE.en}
+>
+> ${LANGUAGE_PRECEDENCE.es}
+>
+> ${LANGUAGE_PRECEDENCE.zh}
+
 ${p.summary.en}
 
 ${p.summary.es}
@@ -164,6 +184,8 @@ ${PUBLIC_REGISTRY_TERMS.en}
 ${PUBLIC_REGISTRY_TERMS.es}
 
 ${PUBLIC_REGISTRY_TERMS.zh}
+
+_${LANGUAGE_PRECEDENCE.zh}_
 
 **Buyer directory (opt-in)**
 

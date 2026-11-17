@@ -12,6 +12,8 @@
 > **[ES]** Un servidor MCP remoto con dos negocios separados: **Seguridad (privado)** — chequeos de confianza de servidores MCP, auditorías y escrow en USDC — y **Notaría pública (pública por consentimiento)** — registro de vendedores que eligen aparecer, con estrellas, reseñas y actas firmadas.
 >
 > **[中文]** 一个远程 MCP 服务器，包含两项明确区分的业务：**安全（私密）** —— 免费的 MCP 服务器信任检查，对 Solidity 合约、智能体技能、RAG 数据、LLM 输出、GPU SLA 和交易回测的审计，以及 Base 链上的 USDC 托管；**公共公证处（经同意后公开）** —— 卖家自愿登记、获得 1-3 星评级与评价，交易可获得签名的公开回执。
+>
+> _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与英文或西班牙文版本存在任何差异或歧义，以英文版本为准（西班牙文版本为正式译本）。_
 
 ---
 
@@ -36,7 +38,11 @@ Then call `check_mcp_server_trust` with any public MCP URL: free, no signup, 5 c
 
 Full policy: [PRIVACY.md](./PRIVACY.md) · live JSON: https://own-adam.onrender.com/privacy
 
+> **Language precedence / Prevalencia de idiomas:** English is authoritative; Spanish is an official translation; Simplified Chinese is a reference translation only. If they differ, the English version prevails. / Rige el inglés; el español es traducción oficial; el chino es solo referencia. Ante diferencias, prevalece el inglés.
+
 **[中文] 隐私一览**
+
+_【语言说明】中文版本仅为便于阅读的参考翻译。如中文与英文或西班牙文版本存在任何差异或歧义，以英文版本为准（西班牙文版本为正式译本）。_
 
 | 您的身份 | 您的数据如何处理 |
 | :--- | :--- |
@@ -58,6 +64,8 @@ Full policy: [PRIVACY.md](./PRIVACY.md) · live JSON: https://own-adam.onrender.
 What is real vs. simulated (for example, MCP escrow tools currently use an in-memory ledger) is listed honestly in [SECURITY.md](./SECURITY.md#2-current-status--what-is-real-and-what-is-simulated).
 
 **[中文] 常被误报的事实**
+
+_【语言说明】中文版本仅为便于阅读的参考翻译。如中文与英文或西班牙文版本存在任何差异或歧义，以英文版本为准（西班牙文版本为正式译本）。_
 
 - **许可证：** MIT（[LICENSE](./LICENSE)）。
 - **版本：** 0.7.0。部分旧的注册表条目仍显示 0.5.0。
