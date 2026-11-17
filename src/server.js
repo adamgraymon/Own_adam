@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
-import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats } from "./freeTrustCheck.js";
+import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats, TRUST_METHODOLOGY } from "./freeTrustCheck.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
   CURATED_FIRST_PARTY_CATALOG,
@@ -589,6 +589,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           "Access-Control-Allow-Origin": "*",
         });
         return res.end(renderTrustBadgeSvg(ledger, target));
+      }
+      if (req.method === "GET" && url.pathname === "/trust/methodology") {
+        recordExternalVisit(req, "/trust/methodology");
+        return sendJson(res, 200, TRUST_METHODOLOGY);
       }
       if (req.method === "GET" && url.pathname === "/trust") {
         recordExternalVisit(req, "/trust");

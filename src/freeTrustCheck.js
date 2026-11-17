@@ -243,15 +243,18 @@ export async function probeMcpServerLive(serverUrl) {
 // ---------------------------------------------------------------------------
 // Análisis
 // ---------------------------------------------------------------------------
+// Los verbos aceptan conjugaciones (deletes, deleted, deleting...) para que no se escapen variantes.
+const V = "(?:s|es|d|ed|ing)?";
 const CAPABILITY_PATTERNS = [
-  { capability: "CODE_OR_SHELL_EXECUTION", risk: "HIGH", re: /\b(exec|execute|shell|bash|terminal|command|run_?code|eval|subprocess|powershell)\b/i },
-  { capability: "FILESYSTEM_WRITE_OR_DELETE", risk: "HIGH", re: /\b(write_?file|delete|remove|rm|unlink|overwrite|move_?file|create_?file|edit_?file)\b/i },
-  { capability: "MONEY_OR_PAYMENTS", risk: "HIGH", re: /\b(pay|payment|transfer|send_?(usdc|eth|funds)|withdraw|purchase|buy|swap|wallet|invoice|charge)\b/i },
-  { capability: "CREDENTIALS_OR_SECRETS", risk: "HIGH", re: /\b(secret|password|credential|api[_ -]?key|token|private[_ -]?key|seed phrase|mnemonic)\b/i },
-  { capability: "OUTBOUND_MESSAGING", risk: "MEDIUM", re: /\b(send_?(email|message|sms)|post_?(tweet|message)|notify|slack|telegram|discord|email)\b/i },
-  { capability: "NETWORK_FETCH", risk: "MEDIUM", re: /\b(fetch|http|url|browse|scrape|crawl|download|request)\b/i },
+  { capability: "CODE_OR_SHELL_EXECUTION", risk: "HIGH", re: new RegExp(`\\b(exec|execut(?:e|es|ed|ing)|shell|bash|terminal|commands?|run[_ ]?code|eval|subprocess|powershell)\\b`, "i") },
+  { capability: "FILESYSTEM_WRITE_OR_DELETE", risk: "HIGH", re: new RegExp(`\\b(writ(?:e|es|ing)[_ ]?files?|delet(?:e|es|ed|ing)|remov(?:e|es|ed|ing)|rm|unlink${V}|overwrit(?:e|es|ing)|move[_ ]?files?|create[_ ]?files?|edit[_ ]?files?|wipe${V})\\b`, "i") },
+  { capability: "MONEY_OR_PAYMENTS", risk: "HIGH", re: new RegExp(`\\b(pay${V}|payments?|transfer${V}|send${V}[_ ]?(usdc|eth|funds|money|tokens)|withdraw${V}|purchas(?:e|es|ed|ing)|buy|buys|swap${V}|wallets?|invoices?|charg(?:e|es|ed|ing))\\b`, "i") },
+  { capability: "CREDENTIALS_OR_SECRETS", risk: "HIGH", re: /\b(secrets?|passwords?|credentials?|api[_ -]?keys?|(access|auth|bearer|refresh|oauth|session)[_ -]?tokens?|private[_ -]?keys?|seed phrase|mnemonic|id_rsa|\.ssh|\.env)\b/i },
+  { capability: "DATA_EXFILTRATION", risk: "HIGH", re: new RegExp(`\\b(exfiltrat(?:e|es|ed|ing)|leak${V}|upload${V}[^.]{0,40}(our|external|remote|third[- ]party) server)\\b`, "i") },
+  { capability: "OUTBOUND_MESSAGING", risk: "MEDIUM", re: new RegExp(`\\b(send${V}[_ ]?(emails?|messages?|sms)|post${V}[_ ]?(tweets?|messages?)|notif(?:y|ies)|slack|telegram|discord|emails?)\\b`, "i") },
+  { capability: "NETWORK_FETCH", risk: "MEDIUM", re: new RegExp(`\\b(fetch${V}|http|urls?|brows(?:e|es|ing)|scrap(?:e|es|ing)|crawl${V}|download${V}|upload${V}|requests?)\\b`, "i") },
   { capability: "DATABASE_WRITE", risk: "MEDIUM", re: /\b(insert|update|upsert|drop|truncate|sql|database|db_)\b/i },
-  { capability: "FILESYSTEM_READ", risk: "LOW", re: /\b(read_?file|list_?(dir|files)|get_?file|open_?file)\b/i },
+  { capability: "FILESYSTEM_READ", risk: "LOW", re: /\b(read[_ ]?files?|list[_ ]?(dir|files)|get[_ ]?files?|open[_ ]?files?)\b/i },
 ];
 
 const INJECTION_PATTERNS = [
@@ -263,6 +266,66 @@ const INJECTION_PATTERNS = [
 ];
 
 const INVISIBLE_UNICODE = /[\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF\u{E0000}-\u{E007F}]/u;
+
+/**
+ * Metodología pública del puntaje. Cualquier cambio de reglas se registra aquí y aplica a TODOS
+ * los servidores por igual (incluido el nuestro).
+ */
+export const TRUST_METHODOLOGY = {
+  version: "1.1.0",
+  scoring: {
+    start: 100,
+    penalties: { CRITICAL: -35, HIGH: -15, MEDIUM: -5, LOW: -1, toolsChangedSinceLastCheck: -10 },
+    verdicts: { DO_NOT_CONNECT: "any CRITICAL finding", LOW_RISK: ">= 80", REVIEW_BEFORE_USE: "55-79", HIGH_RISK: "< 55" },
+  },
+  signals: [
+    "Capabilities inferred from tool names and descriptions (code execution, file write/delete, payments, credentials, messaging, network, database).",
+    "Prompt-injection / tool-poisoning phrases and hidden Unicode in tool metadata.",
+    "MCP safety annotations (readOnlyHint, destructiveHint) compared against inferred capabilities.",
+    "Tool list fingerprint compared with the previous check (drift / rug-pull).",
+    "Tool list compared across two identical calls (cloaking).",
+  ],
+  limitations: [
+    "Only public metadata is analyzed. Runtime behavior requires a local gateway.",
+    "Keyword heuristics can produce false positives and false negatives.",
+  ],
+  changelog: [
+    { version: "1.0.0", date: "2026-11-17", change: "Initial release." },
+    {
+      version: "1.1.0",
+      date: "2026-11-17",
+      change:
+        "Fewer false positives for security/audit tools: text that only DESCRIBES what a tool detects ('scans for', 'detects', 'flags', 'checks for'), negations ('does not move funds') and references to the caller's own actions ('before you pay') no longer count as capabilities, unless the same clause also chains a real action ('and then deletes'). 'token' alone no longer means credentials (LLM tokens); only access/auth/bearer/session tokens do. Unauthenticated-exposure finding now only counts high-impact tools that are not declared read-only. Stricter in other places: verb conjugations (deletes, deleted, pays...), snake_case tool names (run_shell), ~/.ssh / .env references and exfiltration to external servers are now detected. Adversarial regression tests keep real attacks detected.",
+    },
+  ],
+};
+
+const DETECTION_VERBS = /\b(scans?|scanning|detects?|detecting|flags?|flagging|checks?|checking|looks? for|searches|searching|audits?|auditing|verif(?:y|ies)|monitors?|blocks?|prevents?|protects? against|guards? against|identif(?:y|ies))\b/i;
+const CHAINED_ACTION = /(\b(and|then|by|to)\b|,)\s*(then\s+)?(it\s+)?(delet|remov|execut|run|send|transfer|pay|writ|upload|post|withdraw|overwrit|exfiltrat|forward|leak)\w*/i;
+const NEGATION_SPAN = /\b(does not|doesn't|do not|never|cannot|can't|without|no)\s+(\w+\s+){0,3}?(move|moves|send|sends|transfer|transfers|pay|pays|touch|touches|execute|executes|write|writes|delete|deletes|access|accesses|store|stores)\b[^.;]*/gi;
+const CALLER_ACTION_SPAN = /\b(before|after|when|if)?\s*(you|you've|you have|you're)\s+(pay|paid|paying|buy|bought|buying|spend|spent|purchase|purchased)\b(\s+for)?/gi;
+
+/**
+ * Elimina del texto las partes que solo DESCRIBEN lo que la herramienta detecta, negaciones y
+ * acciones del propio usuario. Conserva cualquier acción real encadenada en la misma frase.
+ */
+export function stripNonCapabilityContext(text) {
+  let out = String(text || "")
+    .replace(NEGATION_SPAN, " ")
+    .replace(CALLER_ACTION_SPAN, " ");
+  const clauses = out.split(/(?<=[.;:!?])\s+|\s+-\s+/);
+  return clauses
+    .map((clause) => {
+      const m = clause.match(DETECTION_VERBS);
+      if (!m) return clause;
+      const before = clause.slice(0, m.index);
+      const after = clause.slice(m.index);
+      const chained = after.match(CHAINED_ACTION);
+      // Si la frase encadena una acción real ("detects X and then deletes"), conservar desde esa acción.
+      return chained ? `${before} ${after.slice(chained.index)}` : before;
+    })
+    .join(" ");
+}
 
 function sha256(text) {
   return crypto.createHash("sha256").update(text).digest("hex");
@@ -289,7 +352,7 @@ function perToolHashes(tools) {
 }
 
 function classifyTool(tool) {
-  const haystack = `${tool.name || ""} ${tool.description || ""}`;
+  const haystack = `${String(tool.name || "").replace(/_/g, " ")} ${stripNonCapabilityContext(tool.description || "")}`;
   const caps = CAPABILITY_PATTERNS.filter((p) => p.re.test(haystack)).map((p) => ({ capability: p.capability, risk: p.risk }));
   const ann = tool.annotations || {};
   const declaredReadOnly = ann.readOnlyHint === true;
@@ -340,9 +403,9 @@ function scanFindings(probe, classified) {
       findings.push({ severity: "MEDIUM", tool: c.name, id: "HIGH_RISK_TOOL_WITHOUT_ANNOTATIONS", detail: "High-impact tool has no safety annotations (destructiveHint / readOnlyHint)." });
     }
   }
-  const highRiskCount = classified.filter((c) => c.risk === "HIGH").length;
-  if (highRiskCount > 0) {
-    findings.push({ severity: "MEDIUM", tool: null, id: "HIGH_RISK_TOOLS_EXPOSED_WITHOUT_AUTH", detail: `${highRiskCount} high-impact tool(s) are listed to anonymous clients with no authentication.` });
+  const highRiskWritable = classified.filter((c) => c.risk === "HIGH" && !c.declaredReadOnly);
+  if (highRiskWritable.length > 0) {
+    findings.push({ severity: "MEDIUM", tool: null, id: "HIGH_RISK_TOOLS_EXPOSED_WITHOUT_AUTH", detail: `${highRiskWritable.length} high-impact, non-read-only tool(s) are listed to anonymous clients with no authentication: ${highRiskWritable.map((c) => c.name).join(", ")}.` });
   }
   return findings;
 }
@@ -562,6 +625,7 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
       q5_hasBehaviorChangedAfterUpdate: q5,
     },
     disclaimer: "Evidence-based snapshot from public MCP metadata. Not an absolute security guarantee.",
+    methodology: { version: TRUST_METHODOLOGY.version, url: `${PUBLIC_BASE_URL}/trust/methodology` },
     badge: {
       svgUrl: badgeUrl,
       markdownForReadme: `[![VERITAS MCP Trust](${badgeUrl})](${PUBLIC_BASE_URL}/trust?server=${encodeURIComponent(probe.serverUrl)})`,

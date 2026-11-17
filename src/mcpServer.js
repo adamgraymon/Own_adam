@@ -113,7 +113,7 @@ export const MCP_TOOLS = [
     "name": "discover_verified_stores",
     "description": "Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
     "annotations": {
-      "title": "discover_verified_stores",
+      "title": "Find audited sellers",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -166,9 +166,9 @@ export const MCP_TOOLS = [
   },
   {
     "name": "quote_multitoken_escrow",
-    "description": "How much USDC will I get and what fees apply if I pay a seller with SOL, ETH, VIRTUAL, USDT or USDC? Read-only quote. Example: tokenSymbol='SOL', tokenAmount=0.5.",
+    "description": "Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
     "annotations": {
-      "title": "quote_multitoken_escrow",
+      "title": "Price quote in USDC (read-only)",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -206,7 +206,7 @@ export const MCP_TOOLS = [
     "name": "open_escrow_job",
     "description": "Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
     "annotations": {
-      "title": "open_escrow_job",
+      "title": "Lock a payment in escrow",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -257,7 +257,7 @@ export const MCP_TOOLS = [
     "name": "submit_encrypted_deliverable",
     "description": "Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
     "annotations": {
-      "title": "submit_encrypted_deliverable",
+      "title": "Submit a delivery for audit",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -285,7 +285,7 @@ export const MCP_TOOLS = [
     "name": "audit_quant_backtest_escrow",
     "description": "Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
     "annotations": {
-      "title": "audit_quant_backtest_escrow",
+      "title": "Audit a trading backtest",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -323,7 +323,7 @@ export const MCP_TOOLS = [
     "name": "audit_smart_contract_escrow",
     "description": "Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
     "annotations": {
-      "title": "audit_smart_contract_escrow",
+      "title": "Audit a Solidity contract",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -360,7 +360,7 @@ export const MCP_TOOLS = [
     "name": "audit_api_sla_escrow",
     "description": "Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
     "annotations": {
-      "title": "audit_api_sla_escrow",
+      "title": "Audit a paid API response",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -398,7 +398,7 @@ export const MCP_TOOLS = [
     "name": "audit_agent_skill_escrow",
     "description": "Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. Example: version='1.1.0'.",
     "annotations": {
-      "title": "audit_agent_skill_escrow",
+      "title": "Audit an agent skill",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -440,7 +440,7 @@ export const MCP_TOOLS = [
     "name": "audit_rag_embeddings_escrow",
     "description": "Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
     "annotations": {
-      "title": "audit_rag_embeddings_escrow",
+      "title": "Audit RAG chunks and embeddings",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -474,7 +474,7 @@ export const MCP_TOOLS = [
     "name": "audit_ai_inference_escrow",
     "description": "Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
     "annotations": {
-      "title": "audit_ai_inference_escrow",
+      "title": "Audit an LLM output and its bill",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -519,7 +519,7 @@ export const MCP_TOOLS = [
     "name": "audit_depin_gpu_sla_escrow",
     "description": "Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
     "annotations": {
-      "title": "audit_depin_gpu_sla_escrow",
+      "title": "Audit a rented GPU",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -558,7 +558,7 @@ export const MCP_TOOLS = [
     "name": "verify_onchain_escrow_status",
     "description": "Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
     "annotations": {
-      "title": "verify_onchain_escrow_status",
+      "title": "Show on-chain proofs",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -581,11 +581,11 @@ export const MCP_TOOLS = [
     "name": "purchase_firstparty_catalog_item",
     "description": "Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
     "annotations": {
-      "title": "purchase_firstparty_catalog_item",
+      "title": "Buy an official pack (USDC on Base)",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
-      "openWorldHint": false
+      "openWorldHint": true
     },
     "inputSchema": {
       "type": "object",
@@ -632,7 +632,7 @@ export const MCP_TOOLS = [
     "name": "register_and_certify_store",
     "description": "Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
     "annotations": {
-      "title": "register_and_certify_store",
+      "title": "List your store",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -697,7 +697,7 @@ export const MCP_TOOLS = [
     "name": "inspect_veritas_8183_seal",
     "description": "Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
     "annotations": {
-      "title": "inspect_veritas_8183_seal",
+      "title": "Check a seller's trust seal",
       "readOnlyHint": true,
       "destructiveHint": false,
       "idempotentHint": true,
@@ -757,7 +757,7 @@ export const MCP_TOOLS = [
     "name": "submit_veritas_tier_upgrade_exam",
     "description": "Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
     "annotations": {
-      "title": "submit_veritas_tier_upgrade_exam",
+      "title": "Take the seller star exam",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -822,7 +822,7 @@ export const MCP_TOOLS = [
     "name": "manage_buyer_finops_spend_passport",
     "description": "Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
     "annotations": {
-      "title": "manage_buyer_finops_spend_passport",
+      "title": "Set your agent's spending limits",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
@@ -880,11 +880,11 @@ export const MCP_TOOLS = [
     "name": "notarize_and_witness_a2a_deal",
     "description": "Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
     "annotations": {
-      "title": "notarize_and_witness_a2a_deal",
+      "title": "Signed deal receipt / paid micro-service",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
-      "openWorldHint": false
+      "openWorldHint": true
     },
     "inputSchema": {
       "type": "object",
@@ -940,7 +940,7 @@ export const MCP_TOOLS = [
     "name": "match_verified_buyers_by_intent",
     "description": "Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
     "annotations": {
-      "title": "match_verified_buyers_by_intent",
+      "title": "Find buyers for your store",
       "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": false,
