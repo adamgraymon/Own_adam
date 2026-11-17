@@ -58,11 +58,10 @@ export function initOrLoadAgentWallets() {
     fs.writeFileSync(
       ENV_EXAMPLE_PATH,
       [
-        "# Configuración de Wallets para Nodo Interventor en Base Sepolia",
+        "# Configuración de Wallets para Nodo Interventor en Base",
         "BASE_SEPOLIA_RPC_URL=https://sepolia.base.org",
-        "EVALUATOR_PRIVATE_KEY=0x_REEMPLAZAR_CON_LLAVE_DE_SOLO_FIRMA_DEL_JUEZ_IA",
-        "TREASURY_PUBLIC_ADDRESS=0x_TU_WALLET_PERSONAL_FRIA_DONDE_CAEN_LOS_USDC",
-        "ESCROW_CONTRACT_ADDRESS=",
+        "TREASURY_PUBLIC_ADDRESS=0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
+        "ESCROW_CONTRACT_ADDRESS=0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
         "",
       ].join("\n"),
       "utf8"
@@ -75,20 +74,17 @@ export function initOrLoadAgentWallets() {
   }
 
   let createdNew = false;
-  if (!envVars.EVALUATOR_PRIVATE_KEY || !envVars.TREASURY_PUBLIC_ADDRESS) {
-    const evaluatorPk = process.env.EVALUATOR_PRIVATE_KEY || generatePrivateKey();
+  const activeKeyHex = envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY;
+  if (!activeKeyHex || !envVars.TREASURY_PUBLIC_ADDRESS) {
+    const evaluatorPk = generatePrivateKey();
     const evaluatorAcc = privateKeyToAccount(evaluatorPk);
 
-    const defaultEscrow =
-      process.env.ESCROW_CONTRACT_ADDRESS || "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
-    const defaultTreasury =
-      process.env.TREASURY_ADDRESS ||
-      process.env.TREASURY_PUBLIC_ADDRESS ||
-      "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
+    const defaultEscrow = "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
+    const defaultTreasury = "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
 
     envVars = {
       BASE_SEPOLIA_RPC_URL: "https://sepolia.base.org",
-      EVALUATOR_PRIVATE_KEY: evaluatorPk,
+      EVALUATOR_SIGNER_HEX: evaluatorPk,
       EVALUATOR_PUBLIC_ADDRESS: evaluatorAcc.address,
       TREASURY_PUBLIC_ADDRESS: defaultTreasury,
       ESCROW_CONTRACT_ADDRESS: defaultEscrow,
@@ -97,10 +93,10 @@ export function initOrLoadAgentWallets() {
     const envFileBody = [
       "# GENERADO AUTOMÁTICAMENTE (PROTEGIDO POR .gitignore — NO SUBIR A GITHUB)",
       `BASE_SEPOLIA_RPC_URL=${envVars.BASE_SEPOLIA_RPC_URL}`,
-      `# Wallet Programática exclusiva del Juez IA (Solo firma veredictos, 0 custodia de clientes)`,
-      `EVALUATOR_PRIVATE_KEY=${envVars.EVALUATOR_PRIVATE_KEY}`,
+      `# Wallet Efímera de Solo-Firma del Juez IA (0 custodia de clientes)`,
+      `EVALUATOR_SIGNER_HEX=${envVars.EVALUATOR_SIGNER_HEX}`,
       `EVALUATOR_PUBLIC_ADDRESS=${envVars.EVALUATOR_PUBLIC_ADDRESS}`,
-      `# Dirección Pública de Tu Tesorería (El servidor NO posee la llave privada de esta cuenta)`,
+      `# Dirección Pública de Tesorería`,
       `TREASURY_PUBLIC_ADDRESS=${envVars.TREASURY_PUBLIC_ADDRESS}`,
       `ESCROW_CONTRACT_ADDRESS=${envVars.ESCROW_CONTRACT_ADDRESS}`,
       "",
@@ -110,7 +106,7 @@ export function initOrLoadAgentWallets() {
     createdNew = true;
   }
 
-  const evaluatorAccount = privateKeyToAccount(envVars.EVALUATOR_PRIVATE_KEY);
+  const evaluatorAccount = privateKeyToAccount(envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY);
 
   return {
     createdNew,
@@ -118,11 +114,9 @@ export function initOrLoadAgentWallets() {
     evaluatorAccount,
     evaluatorAddress: evaluatorAccount.address,
     treasuryAddress:
-      process.env.TREASURY_ADDRESS ||
       envVars.TREASURY_PUBLIC_ADDRESS ||
       "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
     escrowContractAddress:
-      process.env.ESCROW_CONTRACT_ADDRESS ||
       envVars.ESCROW_CONTRACT_ADDRESS ||
       "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
   };

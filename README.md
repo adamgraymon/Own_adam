@@ -1,6 +1,7 @@
 # TrustGate VERITAS-8183 — Public M2M Notary, 3-Star Rating Bureau & 8-Vertical USDC Escrow (`MCP` / `x402` / `ERC-8004`)
 
 [![LEGION Passport](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg)](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d)
+[![M8ven Score](https://m8ven.ai/badge/mcp/adamgraymon/own_adam?variant=verified)](https://m8ven.ai/mcp/adamgraymon/own_adam?s=readme)
 [![Sourcify Verified](https://img.shields.io/badge/Sourcify_v2-Exact_Match_%2359283147-10b981)](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
 [![LEGION TLog](https://img.shields.io/badge/LEGION_Merkle_Log-Leaf_%2371826_Signed-3b82f6)](https://tlog.legion-api.com/tlog/v0/records/71826)
 [![SealKeeper Uptime](https://img.shields.io/badge/SealKeeper_Audit-100%25_Uptime-8b5cf6)](https://sealkeeper.run/agents/own-adam.onrender.com)

@@ -22,240 +22,468 @@ import {
 
 export const MCP_TOOLS = [
   {
-    name: "discover_verified_stores",
-    description:
-      "[EN] Query ERC-8004 Dual-Tier AI Marketplace (INSTITUTIONAL_B2B & RETAIL_INDIE) across 8 verticals, including Official First-Party curated packages. | [ES] Consulta el Catálogo Dual ERC-8004 (Institucional B2B y Retail/Indie) en las 8 verticales y paquetes oficiales. | [中文] 查询 ERC-8004 双层 AI 市场目录（机构 B2B 与零售/独立开发者，覆盖 8 大垂直领域）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        minReputation: {
-          type: "number",
-          description: "Minimum ERC-8004 reputation score (0-100). Recommended >= 70.",
+    "name": "discover_verified_stores",
+    "description": "[EN] Query ERC-8004 Dual-Tier AI Marketplace (INSTITUTIONAL_B2B & RETAIL_INDIE) across 8 verticals, including Official First-Party curated packages. | [ES] Consulta el Catálogo Dual ERC-8004 (Institucional B2B y Retail/Indie) en las 8 verticales y paquetes oficiales. | [中文] 查询 ERC-8004 双层 AI 市场目录（机构 B2B 与零售/独立开发者，覆盖 8 大垂直领域）。",
+    "annotations": {
+      "title": "discover_verified_stores",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "minReputation": {
+          "type": "number",
+          "description": "Minimum ERC-8004 reputation score (0-100). Recommended >= 70."
         },
-        marketTier: {
-          type: "string",
-          enum: ["ALL", "INSTITUTIONAL_B2B", "RETAIL_INDIE"],
-          description: "Filter by INSTITUTIONAL_B2B (non-retail enterprise/funds), RETAIL_INDIE (traders/indie bots), or ALL.",
+        "marketTier": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "INSTITUTIONAL_B2B",
+            "RETAIL_INDIE"
+          ],
+          "description": "Filter by INSTITUTIONAL_B2B (non-retail enterprise/funds), RETAIL_INDIE (traders/indie bots), or ALL."
         },
-        vertical: {
-          type: "string",
-          description: "Filter by vertical (e.g. VERTICAL_1_DATASET, VERTICAL_2_QUANT_ALPHA, VERTICAL_3_SOLIDITY_SECURITY, etc. or ALL).",
+        "vertical": {
+          "type": "string",
+          "description": "Filter by vertical (e.g. VERTICAL_1_DATASET, VERTICAL_2_QUANT_ALPHA, VERTICAL_3_SOLIDITY_SECURITY, etc. or ALL)."
         },
-        maxPriceUsdc: {
-          type: "number",
-          description: "Optional maximum starting price in USDC.",
+        "maxPriceUsdc": {
+          "type": "number",
+          "description": "Optional maximum starting price in USDC."
         },
-        firstPartyOnly: {
-          type: "boolean",
-          description: "If true, returns only TrustGate Official First-Party stores & instant-delivery bundles.",
+        "firstPartyOnly": {
+          "type": "boolean",
+          "description": "If true, returns only TrustGate Official First-Party stores & instant-delivery bundles."
         },
-        callerSectorOrTrend: {
-          type: "string",
-          description:
-            "Optional: specify your project's industry sector or your user's shopping/search trend to personalize recommendations and VIP discounts.",
+        "callerSectorOrTrend": {
+          "type": "string",
+          "description": "Optional: specify your project's industry sector or your user's shopping/search trend to personalize recommendations and VIP discounts."
+        }
+      }
+    }
+  },
+  {
+    "name": "quote_multitoken_escrow",
+    "description": "[EN] Atomic multi-token swap quote (SOL, ETH, VIRTUAL, USDT -> Base USDC) with Dual-Lane Guardrail & volume discount (1% from 10 USDC). | [ES] Cotiza conversión atómica a USDC en Base con descuento por volumen. | [中文] 多代币原子兑换报价 (SOL/ETH/USDT 转 Base USDC) 及 ERC-8183 托管费用计算。",
+    "annotations": {
+      "title": "quote_multitoken_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "tokenSymbol": {
+          "type": "string",
+          "enum": [
+            "SOL",
+            "ETH",
+            "VIRTUAL",
+            "USDT",
+            "USDC"
+          ]
         },
+        "tokenAmount": {
+          "type": "number"
+        }
       },
-    },
+      "required": [
+        "tokenSymbol",
+        "tokenAmount"
+      ]
+    }
   },
   {
-    name: "quote_multitoken_escrow",
-    description:
-      "[EN] Atomic multi-token swap quote (SOL, ETH, VIRTUAL, USDT -> Base USDC) with Dual-Lane Guardrail & volume discount (1% from 10 USDC). | [ES] Cotiza conversión atómica a USDC en Base con descuento por volumen. | [中文] 多代币原子兑换报价 (SOL/ETH/USDT 转 Base USDC) 及 ERC-8183 托管费用计算。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        tokenSymbol: { type: "string", enum: ["SOL", "ETH", "VIRTUAL", "USDT", "USDC"] },
-        tokenAmount: { type: "number" },
+    "name": "open_escrow_job",
+    "description": "[EN] Lock USDC in non-custodial ERC-8183 Smart Contract on Base Mainnet to hire an AI store. | [ES] Bloquea fondos en USDC en el contrato ERC-8183 para contratar una Tienda IA. | [中文] 在 Base 主网 ERC-8183 非托管智能合约中锁定 USDC 资金以雇佣 AI 代理商店。",
+    "annotations": {
+      "title": "open_escrow_job",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "buyerId": {
+          "type": "string"
+        },
+        "storeId": {
+          "type": "string"
+        },
+        "tokenSymbol": {
+          "type": "string"
+        },
+        "tokenAmount": {
+          "type": "number"
+        },
+        "minRows": {
+          "type": "number"
+        }
       },
-      required: ["tokenSymbol", "tokenAmount"],
-    },
+      "required": [
+        "storeId",
+        "tokenSymbol",
+        "tokenAmount"
+      ]
+    }
   },
   {
-    name: "open_escrow_job",
-    description:
-      "[EN] Lock USDC in non-custodial ERC-8183 Smart Contract on Base Mainnet to hire an AI store. | [ES] Bloquea fondos en USDC en el contrato ERC-8183 para contratar una Tienda IA. | [中文] 在 Base 主网 ERC-8183 非托管智能合约中锁定 USDC 资金以雇佣 AI 代理商店。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        buyerId: { type: "string" },
-        storeId: { type: "string" },
-        tokenSymbol: { type: "string" },
-        tokenAmount: { type: "number" },
-        minRows: { type: "number" },
+    "name": "submit_encrypted_deliverable",
+    "description": "[EN] Vertical 1 (Datasets): Audit encrypted CSV/JSON dataset (100% deterministic antimalware/clone scan + 30-row Vitter cryptographic blind sampling) & settle USDC or refund 100%. | [ES] Línea 1 (Datasets): Escáner Antimalware + Muestreo Ciego de 30 filas y liquidación automática. | [中文] 垂直领域1 (数据集审计): AES-256 加密 CSV/JSON 数据集反恶意软件与盲抽样审计，自动释放 USDC 或 100% 退款。",
+    "annotations": {
+      "title": "submit_encrypted_deliverable",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string"
+        },
+        "rawDatasetJsonString": {
+          "type": "string"
+        }
       },
-      required: ["storeId", "tokenSymbol", "tokenAmount"],
-    },
+      "required": [
+        "jobId",
+        "rawDatasetJsonString"
+      ]
+    }
   },
   {
-    name: "submit_encrypted_deliverable",
-    description:
-      "[EN] Vertical 1 (Datasets): Audit encrypted CSV/JSON dataset (100% deterministic antimalware/clone scan + 30-row Vitter cryptographic blind sampling) & settle USDC or refund 100%. | [ES] Línea 1 (Datasets): Escáner Antimalware + Muestreo Ciego de 30 filas y liquidación automática. | [中文] 垂直领域1 (数据集审计): AES-256 加密 CSV/JSON 数据集反恶意软件与盲抽样审计，自动释放 USDC 或 100% 退款。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        jobId: { type: "string" },
-        rawDatasetJsonString: { type: "string" },
+    "name": "audit_quant_backtest_escrow",
+    "description": "[EN] Vertical 2 (Quant Backtests): Audit trading strategy backtests (NQ futures, crypto, forex) for Look-Ahead Bias, fake PnL accounting, Profit Factor, Max Drawdown & Sharpe Ratio. | [ES] Línea 2 (Backtests Cuantitativos): Audita historial de trading detectando Look-Ahead Bias y PnL falso. | [中文] 垂直领域2 (量化交易回测审计): 检测未来函数 (Look-Ahead Bias)、虚假盈亏 (PnL)、夏普比率、最大回撤与盈亏比。",
+    "annotations": {
+      "title": "audit_quant_backtest_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "trades": {
+          "type": "array",
+          "description": "Array of trades with entryTime/entryTimestampMs, exitTime/exitTimestampMs, side, entryPrice, exitPrice, size, pnlUsd"
+        },
+        "minTrades": {
+          "type": "number"
+        },
+        "minProfitFactor": {
+          "type": "number"
+        },
+        "maxDrawdownPct": {
+          "type": "number"
+        }
       },
-      required: ["jobId", "rawDatasetJsonString"],
-    },
+      "required": [
+        "trades"
+      ]
+    }
   },
   {
-    name: "audit_quant_backtest_escrow",
-    description:
-      "[EN] Vertical 2 (Quant Backtests): Audit trading strategy backtests (NQ futures, crypto, forex) for Look-Ahead Bias, fake PnL accounting, Profit Factor, Max Drawdown & Sharpe Ratio. | [ES] Línea 2 (Backtests Cuantitativos): Audita historial de trading detectando Look-Ahead Bias y PnL falso. | [中文] 垂直领域2 (量化交易回测审计): 检测未来函数 (Look-Ahead Bias)、虚假盈亏 (PnL)、夏普比率、最大回撤与盈亏比。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        trades: { type: "array", description: "Array of trades with entryTime/entryTimestampMs, exitTime/exitTimestampMs, side, entryPrice, exitPrice, size, pnlUsd" },
-        minTrades: { type: "number" },
-        minProfitFactor: { type: "number" },
-        maxDrawdownPct: { type: "number" },
+    "name": "audit_smart_contract_escrow",
+    "description": "[EN] Vertical 3 (Solidity Smart Contracts): Compile Solidity source with real solc 0.8.38, scan against rugpull backdoors (selfdestruct, delegatecall, tx.origin, assembly sstore) & verify required ABI functions. | [ES] Línea 3 (Smart Contracts Solidity): Compila con solc real y bloquea puertas traseras. | [中文] 垂直领域3 (Solidity 智能合约安全审计): 真实 solc 编译、反跑路后门扫描 (selfdestruct/delegatecall/tx.origin) 与 ABI 接口验证。",
+    "annotations": {
+      "title": "audit_smart_contract_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "soliditySourceCode": {
+          "type": "string"
+        },
+        "contractName": {
+          "type": "string"
+        },
+        "requiredFunctions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      required: ["trades"],
-    },
+      "required": [
+        "soliditySourceCode"
+      ]
+    }
   },
   {
-    name: "audit_smart_contract_escrow",
-    description:
-      "[EN] Vertical 3 (Solidity Smart Contracts): Compile Solidity source with real solc 0.8.38, scan against rugpull backdoors (selfdestruct, delegatecall, tx.origin, assembly sstore) & verify required ABI functions. | [ES] Línea 3 (Smart Contracts Solidity): Compila con solc real y bloquea puertas traseras. | [中文] 垂直领域3 (Solidity 智能合约安全审计): 真实 solc 编译、反跑路后门扫描 (selfdestruct/delegatecall/tx.origin) 与 ABI 接口验证。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        soliditySourceCode: { type: "string" },
-        contractName: { type: "string" },
-        requiredFunctions: { type: "array", items: { type: "string" } },
+    "name": "audit_api_sla_escrow",
+    "description": "[EN] Vertical 4 (x402 Paid API SLA Oracle): Verify paid API latency SLA (ms), mandatory JSON schema keys & cryptographic timestamp freshness. | [ES] Línea 4 (Oráculo SLA de APIs Pagas x402): Audita latencia, esquema JSON y frescura de datos. | [中文] 垂直领域4 (x402 付费 API 与预言机 SLA 审计): 验证响应延迟 (ms)、JSON 必填字段与时间戳新鲜度。",
+    "annotations": {
+      "title": "audit_api_sla_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "apiResponsePayload": {
+          "type": "object"
+        },
+        "observedLatencyMs": {
+          "type": "number"
+        },
+        "maxLatencyMs": {
+          "type": "number"
+        },
+        "requiredKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      required: ["soliditySourceCode"],
-    },
+      "required": [
+        "apiResponsePayload"
+      ]
+    }
   },
   {
-    name: "audit_api_sla_escrow",
-    description:
-      "[EN] Vertical 4 (x402 Paid API SLA Oracle): Verify paid API latency SLA (ms), mandatory JSON schema keys & cryptographic timestamp freshness. | [ES] Línea 4 (Oráculo SLA de APIs Pagas x402): Audita latencia, esquema JSON y frescura de datos. | [中文] 垂直领域4 (x402 付费 API 与预言机 SLA 审计): 验证响应延迟 (ms)、JSON 必填字段与时间戳新鲜度。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        apiResponsePayload: { type: "object" },
-        observedLatencyMs: { type: "number" },
-        maxLatencyMs: { type: "number" },
-        requiredKeys: { type: "array", items: { type: "string" } },
+    "name": "audit_agent_skill_escrow",
+    "description": "[EN] Vertical 5 (Agent Skills & MCP Plugins): Scan SKILL.md, prompts & scripts against Trojan Skills (.env/PRIVATE_KEY exfiltration, eval/child_process, Base64 droppers & zero-width Unicode injection). | [ES] Línea 5 (Skills y Plugins MCP): Bloquea Skills Troyanos y robo de llaves privadas. | [中文] 垂直领域5 (AI 技能与 MCP 插件木马审计): 扫描 SKILL.md 与脚本，拦截私钥环境变量窃取、远程代码执行与隐形 Unicode 提示词注入。",
+    "annotations": {
+      "title": "audit_agent_skill_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "skillMarkdown": {
+          "type": "string"
+        },
+        "bundledScripts": {
+          "type": "string"
+        },
+        "requiredSections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      required: ["apiResponsePayload"],
-    },
+      "required": [
+        "skillMarkdown"
+      ]
+    }
   },
   {
-    name: "audit_agent_skill_escrow",
-    description:
-      "[EN] Vertical 5 (Agent Skills & MCP Plugins): Scan SKILL.md, prompts & scripts against Trojan Skills (.env/PRIVATE_KEY exfiltration, eval/child_process, Base64 droppers & zero-width Unicode injection). | [ES] Línea 5 (Skills y Plugins MCP): Bloquea Skills Troyanos y robo de llaves privadas. | [中文] 垂直领域5 (AI 技能与 MCP 插件木马审计): 扫描 SKILL.md 与脚本，拦截私钥环境变量窃取、远程代码执行与隐形 Unicode 提示词注入。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        skillMarkdown: { type: "string" },
-        bundledScripts: { type: "string" },
-        requiredSections: { type: "array", items: { type: "string" } },
+    "name": "audit_rag_embeddings_escrow",
+    "description": "[EN] Vertical 6 (RAG Knowledge Bases & Vector Embeddings): Verify exact vector dimensions, valid L2 norm (no zero/NaN vectors), zero cloned chunks & block RAG Data Poisoning. | [ES] Línea 6 (Memorias RAG y Vectores): Verifica dimensiones, norma L2 y bloquea envenenamiento RAG. | [中文] 垂直领域6 (RAG 向量知识库防投毒审计): 验证向量维度一致性、L2 范数有效性并拦截间接提示词注入投毒。",
+    "annotations": {
+      "title": "audit_rag_embeddings_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "chunks": {
+          "type": "array"
+        },
+        "expectedDimension": {
+          "type": "number"
+        },
+        "minChunks": {
+          "type": "number"
+        }
       },
-      required: ["skillMarkdown"],
-    },
+      "required": [
+        "chunks"
+      ]
+    }
   },
   {
-    name: "audit_rag_embeddings_escrow",
-    description:
-      "[EN] Vertical 6 (RAG Knowledge Bases & Vector Embeddings): Verify exact vector dimensions, valid L2 norm (no zero/NaN vectors), zero cloned chunks & block RAG Data Poisoning. | [ES] Línea 6 (Memorias RAG y Vectores): Verifica dimensiones, norma L2 y bloquea envenenamiento RAG. | [中文] 垂直领域6 (RAG 向量知识库防投毒审计): 验证向量维度一致性、L2 范数有效性并拦截间接提示词注入投毒。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        chunks: { type: "array" },
-        expectedDimension: { type: "number" },
-        minChunks: { type: "number" },
+    "name": "audit_ai_inference_escrow",
+    "description": "[EN] Vertical 7 (Proof-of-Inference & Anti-Model-Downgrade): Audit LLM output against token billing inflation, repetitive quantization collapse & constraint violations. | [ES] Línea 7 (Proof-of-Inference): Audita contra sobrefacturación de tokens y cambiazo de modelo IA. | [中文] 垂直领域7 (AI 推理防降级证明): 审计 Token 虚假超额计费、模型偷换导致的重复坍塌及指令约束合规性。",
+    "annotations": {
+      "title": "audit_ai_inference_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "responseText": {
+          "type": "string"
+        },
+        "billedOutputTokens": {
+          "type": "number"
+        },
+        "mustIncludeTerms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "forbiddenTerms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minUniqueWordRatio": {
+          "type": "number"
+        }
       },
-      required: ["chunks"],
-    },
+      "required": [
+        "responseText",
+        "billedOutputTokens"
+      ]
+    }
   },
   {
-    name: "audit_ai_inference_escrow",
-    description:
-      "[EN] Vertical 7 (Proof-of-Inference & Anti-Model-Downgrade): Audit LLM output against token billing inflation, repetitive quantization collapse & constraint violations. | [ES] Línea 7 (Proof-of-Inference): Audita contra sobrefacturación de tokens y cambiazo de modelo IA. | [中文] 垂直领域7 (AI 推理防降级证明): 审计 Token 虚假超额计费、模型偷换导致的重复坍塌及指令约束合规性。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        responseText: { type: "string" },
-        billedOutputTokens: { type: "number" },
-        mustIncludeTerms: { type: "array", items: { type: "string" } },
-        forbiddenTerms: { type: "array", items: { type: "string" } },
-        minUniqueWordRatio: { type: "number" },
+    "name": "audit_depin_gpu_sla_escrow",
+    "description": "[EN] Vertical 8 (DePIN & GPU Compute SLA): Verify decentralized GPU hardware benchmarks (FP16 TFLOPS, available VRAM GB, memory bandwidth GB/s, thermal throttling & packet loss). | [ES] Línea 8 (Alquiler de GPUs y Cómputo DePIN): Verifica TFLOPS FP16, VRAM y temperatura. | [中文] 垂直领域8 (DePIN 去中心化 GPU 算力 SLA 审计): 验证 FP16 TFLOPS 算力、可用显存 (VRAM)、显存带宽与温度丢包率。",
+    "annotations": {
+      "title": "audit_depin_gpu_sla_escrow",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "benchmarkReport": {
+          "type": "object"
+        },
+        "minTflopsFp16": {
+          "type": "number"
+        },
+        "minVramGb": {
+          "type": "number"
+        },
+        "minMemoryBandwidthGbs": {
+          "type": "number"
+        },
+        "maxTempCelsius": {
+          "type": "number"
+        }
       },
-      required: ["responseText", "billedOutputTokens"],
-    },
+      "required": [
+        "benchmarkReport"
+      ]
+    }
   },
   {
-    name: "audit_depin_gpu_sla_escrow",
-    description:
-      "[EN] Vertical 8 (DePIN & GPU Compute SLA): Verify decentralized GPU hardware benchmarks (FP16 TFLOPS, available VRAM GB, memory bandwidth GB/s, thermal throttling & packet loss). | [ES] Línea 8 (Alquiler de GPUs y Cómputo DePIN): Verifica TFLOPS FP16, VRAM y temperatura. | [中文] 垂直领域8 (DePIN 去中心化 GPU 算力 SLA 审计): 验证 FP16 TFLOPS 算力、可用显存 (VRAM)、显存带宽与温度丢包率。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        benchmarkReport: { type: "object" },
-        minTflopsFp16: { type: "number" },
-        minVramGb: { type: "number" },
-        minMemoryBandwidthGbs: { type: "number" },
-        maxTempCelsius: { type: "number" },
-      },
-      required: ["benchmarkReport"],
+    "name": "verify_onchain_escrow_status",
+    "description": "[EN] Return Base Mainnet TrustGateEscrow8183 (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) cryptographic proofs, Sourcify exact_match verification & settled tx hashes. | [ES] Devuelve las pruebas criptográficas del contrato en Base Mainnet y Sourcify exact_match. | [中文] 获取 Base 主网托管合约 (0xd4f77bf8...0a5e) 的 Sourcify 源码精确匹配证明与链上交易哈希。",
+    "annotations": {
+      "title": "verify_onchain_escrow_status",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
     },
+    "inputSchema": {
+      "type": "object",
+      "properties": {}
+    }
   },
   {
-    name: "verify_onchain_escrow_status",
-    description:
-      "[EN] Return Base Mainnet TrustGateEscrow8183 (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) cryptographic proofs, Sourcify exact_match verification & settled tx hashes. | [ES] Devuelve las pruebas criptográficas del contrato en Base Mainnet y Sourcify exact_match. | [中文] 获取 Base 主网托管合约 (0xd4f77bf8...0a5e) 的 Sourcify 源码精确匹配证明与链上交易哈希。",
-    inputSchema: {
-      type: "object",
-      properties: {},
+    "name": "purchase_firstparty_catalog_item",
+    "description": "[EN] Instant purchase & cryptographic delivery of TrustGate Official First-Party curated packages (Institutional CME Globex NQ microstructure, Sourcify Solidity blueprints, Enterprise RAG/Skill Firewall, Retail Anti-Rugpull & Zero-Lookahead Starter Packs from 1 USDC). | [ES] Compra y entrega instantánea de paquetes oficiales de TrustGate (Institucional y Retail desde 1 USDC). | [中文] 即时购买并获取 TrustGate 官方认证精选数据包（芝商所 NQ 微观结构、Sourcify 智能合约蓝图、企业级 RAG 防毒包及 1 USDC 起的零售反貔貅工具包）。",
+    "annotations": {
+      "title": "purchase_firstparty_catalog_item",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
-  },
-  {
-    name: "purchase_firstparty_catalog_item",
-    description:
-      "[EN] Instant purchase & cryptographic delivery of TrustGate Official First-Party curated packages (Institutional CME Globex NQ microstructure, Sourcify Solidity blueprints, Enterprise RAG/Skill Firewall, Retail Anti-Rugpull & Zero-Lookahead Starter Packs from 1 USDC). | [ES] Compra y entrega instantánea de paquetes oficiales de TrustGate (Institucional y Retail desde 1 USDC). | [中文] 即时购买并获取 TrustGate 官方认证精选数据包（芝商所 NQ 微观结构、Sourcify 智能合约蓝图、企业级 RAG 防毒包及 1 USDC 起的零售反貔貅工具包）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        itemId: {
-          type: "string",
-          enum: [
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "itemId": {
+          "type": "string",
+          "enum": [
             "inst-cme-nq-microstructure-v06",
             "inst-sourcify-erc8183-vault-v06",
             "inst-enterprise-rag-skill-firewall-v06",
             "retail-anti-rugpull-scanner-pack-v06",
             "retail-nq-quant-starter-backtest-v06",
-            "retail-safe-mcp-skill-starter-v06",
+            "retail-safe-mcp-skill-starter-v06"
           ],
-          description: "ID of the curated First-Party package to purchase.",
+          "description": "ID of the curated First-Party package to purchase."
         },
-        buyerId: { type: "string", description: "Buyer agent ID (optional)." },
-        paymentToken: { type: "string", enum: ["USDC", "SOL", "ETH", "VIRTUAL", "USDT"] },
-        paymentTxHash: {
-          type: "string",
-          description:
-            "Base Mainnet (Chain ID 8453) USDC transfer transaction hash (0x...) paying the exact item price to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4. If omitted on external HTTP calls, returns a 402 Payment Invoice.",
+        "buyerId": {
+          "type": "string",
+          "description": "Buyer agent ID (optional)."
         },
+        "paymentToken": {
+          "type": "string",
+          "enum": [
+            "USDC",
+            "SOL",
+            "ETH",
+            "VIRTUAL",
+            "USDT"
+          ]
+        },
+        "paymentTxHash": {
+          "type": "string",
+          "description": "Base Mainnet (Chain ID 8453) USDC transfer transaction hash (0x...) paying the exact item price to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4. If omitted on external HTTP calls, returns a 402 Payment Invoice."
+        }
       },
-      required: ["itemId"],
-    },
+      "required": [
+        "itemId"
+      ]
+    }
   },
   {
-    name: "register_and_certify_store",
-    description:
-      "[EN] Freemium ERC-8004 Store Onboarding (0 USDC upfront; 2.0% Broker referral fee + 1.0%-1.5% Escrow fee on sales). Requires passing a live deterministic audit of sampleDeliverable for the target vertical. | [ES] Registro y certificación gratuita ERC-8004 para tiendas IA externas (auditoría determinista obligatoria en vivo; comisión solo por venta exitosa). | [中文] 免费注册并认证 ERC-8004 外部 AI 商店（0 预付费用，必须通过实时确定性安全审计，仅在成交时收取 2% 经纪佣金 + 托管费）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        storeId: { type: "string" },
-        storeName: { type: "string" },
-        walletAddress: { type: "string" },
-        endpointUrl: { type: "string" },
-        vertical: {
-          type: "string",
-          enum: [
+    "name": "register_and_certify_store",
+    "description": "[EN] Freemium ERC-8004 Store Onboarding (0 USDC upfront; 2.0% Broker referral fee + 1.0%-1.5% Escrow fee on sales). Requires passing a live deterministic audit of sampleDeliverable for the target vertical. | [ES] Registro y certificación gratuita ERC-8004 para tiendas IA externas (auditoría determinista obligatoria en vivo; comisión solo por venta exitosa). | [中文] 免费注册并认证 ERC-8004 外部 AI 商店（0 预付费用，必须通过实时确定性安全审计，仅在成交时收取 2% 经纪佣金 + 托管费）。",
+    "annotations": {
+      "title": "register_and_certify_store",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string"
+        },
+        "storeName": {
+          "type": "string"
+        },
+        "walletAddress": {
+          "type": "string"
+        },
+        "endpointUrl": {
+          "type": "string"
+        },
+        "vertical": {
+          "type": "string",
+          "enum": [
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
             "VERTICAL_3_SOLIDITY_SECURITY",
@@ -263,79 +491,104 @@ export const MCP_TOOLS = [
             "VERTICAL_5_CERTIFIED_SKILLS",
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
-            "VERTICAL_8_DEPIN_GPU",
+            "VERTICAL_8_DEPIN_GPU"
+          ]
+        },
+        "marketTier": {
+          "type": "string",
+          "enum": [
+            "INSTITUTIONAL_B2B",
+            "RETAIL_INDIE"
+          ]
+        },
+        "startingPriceUsdc": {
+          "type": "number"
+        },
+        "sampleDeliverable": {
+          "type": "object",
+          "description": "Optional sample deliverable payload to be audited live (if omitted, uses a verified reference template for 1-click onboarding)."
+        }
+      }
+    }
+  },
+  {
+    "name": "inspect_veritas_8183_seal",
+    "description": "[EN] FREE (<5ms) VERITAS-8183 Bilateral Quick-Glance Seal & Client Telemetry Inspector. Checks any Seller or Smart Contract's 1-to-3 Star Seal (Proof-of-Reserve >=20% crypto ratio, Content Quality, Verified Client Rating, Response Latency) AND any Buyer Agent's FinOps Spend Passport & VIP Discounts (5%-15% OFF). | [ES] Consulta gratuita en milisegundos del Sello VERITAS-8183 (1 a 3 Estrellas, Reserva Cripto Pública, Estadísticas de Clientes y Pasaporte de Solvencia/Descuentos del Comprador). | [中文] 免费毫秒级查询 VERITAS-8183 双向认证印章（卖家 1-3 星评级、>=20% 链上加密储备金证明、客户评价与延迟统计，以及买家 FinOps 预算护照与 VIP 折扣）。",
+    "annotations": {
+      "title": "inspect_veritas_8183_seal",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "targetId": {
+          "type": "string",
+          "description": "Store ID, Smart Contract ID, or Buyer Agent ID to inspect (or 'ALL' for the complete VERITAS-8183 directory)."
+        },
+        "roleFilter": {
+          "type": "string",
+          "enum": [
+            "ALL",
+            "SELLER",
+            "BUYER"
           ],
+          "description": "Filter directory by SELLER (1-3 Star Seals) or BUYER (FinOps Spend Passports)."
         },
-        marketTier: {
-          type: "string",
-          enum: ["INSTITUTIONAL_B2B", "RETAIL_INDIE"],
+        "proposedTransactionAmountUsdc": {
+          "type": "number",
+          "description": "Optional transaction amount in USDC to pre-check bilateral compatibility."
         },
-        startingPriceUsdc: { type: "number" },
-        sampleDeliverable: {
-          type: "object",
-          description: "Optional sample deliverable payload to be audited live (if omitted, uses a verified reference template for 1-click onboarding).",
+        "buyerIdForSimulation": {
+          "type": "string",
+          "description": "Optional buyer agent ID for bilateral pre-check."
         },
-      },
-    },
+        "callerSectorOrTrend": {
+          "type": "string",
+          "description": "Optional: specify your industry sector or your user's shopping/search trend to personalize VERITAS-8183 telemetry."
+        }
+      }
+    }
   },
   {
-    name: "inspect_veritas_8183_seal",
-    description:
-      "[EN] FREE (<5ms) VERITAS-8183 Bilateral Quick-Glance Seal & Client Telemetry Inspector. Checks any Seller or Smart Contract's 1-to-3 Star Seal (Proof-of-Reserve >=20% crypto ratio, Content Quality, Verified Client Rating, Response Latency) AND any Buyer Agent's FinOps Spend Passport & VIP Discounts (5%-15% OFF). | [ES] Consulta gratuita en milisegundos del Sello VERITAS-8183 (1 a 3 Estrellas, Reserva Cripto Pública, Estadísticas de Clientes y Pasaporte de Solvencia/Descuentos del Comprador). | [中文] 免费毫秒级查询 VERITAS-8183 双向认证印章（卖家 1-3 星评级、>=20% 链上加密储备金证明、客户评价与延迟统计，以及买家 FinOps 预算护照与 VIP 折扣）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        targetId: {
-          type: "string",
-          description:
-            "Store ID, Smart Contract ID, or Buyer Agent ID to inspect (or 'ALL' for the complete VERITAS-8183 directory).",
-        },
-        roleFilter: {
-          type: "string",
-          enum: ["ALL", "SELLER", "BUYER"],
-          description: "Filter directory by SELLER (1-3 Star Seals) or BUYER (FinOps Spend Passports).",
-        },
-        proposedTransactionAmountUsdc: {
-          type: "number",
-          description: "Optional transaction amount in USDC to pre-check bilateral compatibility.",
-        },
-        buyerIdForSimulation: {
-          type: "string",
-          description: "Optional buyer agent ID for bilateral pre-check.",
-        },
-        callerSectorOrTrend: {
-          type: "string",
-          description:
-            "Optional: specify your industry sector or your user's shopping/search trend to personalize VERITAS-8183 telemetry.",
-        },
-      },
+    "name": "submit_veritas_tier_upgrade_exam",
+    "description": "[EN] VERITAS-8183 Seller & Smart Contract Tier Upgrade Exam (1-Star to 3-Star Institutional Gold Seal). Evaluates 5 hard pillars: Auditable Public Crypto Reserve Ratio (>=20% of operational volume for 3 Stars), Deterministic Code/Content Purity (>=98%), Verified Client Rating (>=4.8/5), Latency SLA (<=100ms), and Zero Slashing History. | [ES] Examen oficial de ascenso de nivel VERITAS-8183 (1 a 3 Estrellas) para vendedores y contratos inteligentes con verificación de Reserva Cripto Pública (>=20% del volumen) y calidad determinista. | [中文] VERITAS-8183 卖家与智能合约星级晋升考试（评估公开链上储备金比例 >=20%、内容质量、客户评分与响应时间以授予 1 至 3 星印章）。",
+    "annotations": {
+      "title": "submit_veritas_tier_upgrade_exam",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
-  },
-  {
-    name: "submit_veritas_tier_upgrade_exam",
-    description:
-      "[EN] VERITAS-8183 Seller & Smart Contract Tier Upgrade Exam (1-Star to 3-Star Institutional Gold Seal). Evaluates 5 hard pillars: Auditable Public Crypto Reserve Ratio (>=20% of operational volume for 3 Stars), Deterministic Code/Content Purity (>=98%), Verified Client Rating (>=4.8/5), Latency SLA (<=100ms), and Zero Slashing History. | [ES] Examen oficial de ascenso de nivel VERITAS-8183 (1 a 3 Estrellas) para vendedores y contratos inteligentes con verificación de Reserva Cripto Pública (>=20% del volumen) y calidad determinista. | [中文] VERITAS-8183 卖家与智能合约星级晋升考试（评估公开链上储备金比例 >=20%、内容质量、客户评分与响应时间以授予 1 至 3 星印章）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        storeId: { type: "string" },
-        storeName: { type: "string" },
-        walletAddress: { type: "string" },
-        publicReserveWallet: {
-          type: "string",
-          description: "Public auditable wallet holding the crypto reserve backing operations.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "storeId": {
+          "type": "string"
         },
-        declaredPublicReserveUsdc: {
-          type: "number",
-          description: "Auditable liquid/locked crypto reserve in USDC equivalent.",
+        "storeName": {
+          "type": "string"
         },
-        declaredMonthlyVolumeUsdc: {
-          type: "number",
-          description: "Active operational volume in USDC (3-Star Level 3 requires >=20% reserve-to-volume ratio).",
+        "walletAddress": {
+          "type": "string"
         },
-        vertical: {
-          type: "string",
-          enum: [
+        "publicReserveWallet": {
+          "type": "string",
+          "description": "Public auditable wallet holding the crypto reserve backing operations."
+        },
+        "declaredPublicReserveUsdc": {
+          "type": "number",
+          "description": "Auditable liquid/locked crypto reserve in USDC equivalent."
+        },
+        "declaredMonthlyVolumeUsdc": {
+          "type": "number",
+          "description": "Active operational volume in USDC (3-Star Level 3 requires >=20% reserve-to-volume ratio)."
+        },
+        "vertical": {
+          "type": "string",
+          "enum": [
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
             "VERTICAL_3_SOLIDITY_SECURITY",
@@ -343,87 +596,132 @@ export const MCP_TOOLS = [
             "VERTICAL_5_CERTIFIED_SKILLS",
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
-            "VERTICAL_8_DEPIN_GPU",
-          ],
+            "VERTICAL_8_DEPIN_GPU"
+          ]
         },
-        observedLatencyMs: { type: "number" },
-        sampleDeliverable: { type: "object" },
+        "observedLatencyMs": {
+          "type": "number"
+        },
+        "sampleDeliverable": {
+          "type": "object"
+        }
       },
-      required: ["storeId"],
-    },
+      "required": [
+        "storeId"
+      ]
+    }
   },
   {
-    name: "manage_buyer_finops_spend_passport",
-    description:
-      "[EN] VERITAS-8183 Buyer FinOps Spend Guard, Solvency Passport & LLM Token Cost Optimizer. Sets deterministic per-tx and daily USDC spend caps (advertised to sellers in real time), benchmarks LLM token costs (OpenAI vs Claude vs DeepSeek-R1 vs Qwen), and calculates VIP Good-Buyer Discounts (up to 15% Fee OFF & 10% Catalog OFF for reliable payers with zero spam). | [ES] Pasaporte de Solvencia y Presupuesto Determinista (FinOps) para IAs compradoras: frena sobregiros, anuncia cupo disponible a vendedores y desbloquea descuentos VIP (5%-15%) por buen pago y reseñas. | [中文] VERITAS-8183 买家 FinOps 预算护栏与信用护照（设定单笔及每日支出上限、实时向卖家广播可用额度、对比大模型 Token 成本并解锁高达 15% 的优质买家折扣）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        buyerId: { type: "string" },
-        buyerName: { type: "string" },
-        walletAddress: { type: "string" },
-        maxSpendPerTxUsdc: { type: "number" },
-        dailySpendCapUsdc: { type: "number" },
-        proposedPurchaseUsdc: {
-          type: "number",
-          description: "Optional purchase amount in USDC to test against spend caps and apply VIP buyer discounts.",
-        },
-        estimatedPromptTokens: {
-          type: "number",
-          description: "Optional token count to benchmark LLM inference cost savings.",
-        },
-      },
+    "name": "manage_buyer_finops_spend_passport",
+    "description": "[EN] VERITAS-8183 Buyer FinOps Spend Guard, Solvency Passport & LLM Token Cost Optimizer. Sets deterministic per-tx and daily USDC spend caps (advertised to sellers in real time), benchmarks LLM token costs (OpenAI vs Claude vs DeepSeek-R1 vs Qwen), and calculates VIP Good-Buyer Discounts (up to 15% Fee OFF & 10% Catalog OFF for reliable payers with zero spam). | [ES] Pasaporte de Solvencia y Presupuesto Determinista (FinOps) para IAs compradoras: frena sobregiros, anuncia cupo disponible a vendedores y desbloquea descuentos VIP (5%-15%) por buen pago y reseñas. | [中文] VERITAS-8183 买家 FinOps 预算护栏与信用护照（设定单笔及每日支出上限、实时向卖家广播可用额度、对比大模型 Token 成本并解锁高达 15% 的优质买家折扣）。",
+    "annotations": {
+      "title": "manage_buyer_finops_spend_passport",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
     },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "buyerId": {
+          "type": "string"
+        },
+        "buyerName": {
+          "type": "string"
+        },
+        "walletAddress": {
+          "type": "string"
+        },
+        "maxSpendPerTxUsdc": {
+          "type": "number"
+        },
+        "dailySpendCapUsdc": {
+          "type": "number"
+        },
+        "proposedPurchaseUsdc": {
+          "type": "number",
+          "description": "Optional purchase amount in USDC to test against spend caps and apply VIP buyer discounts."
+        },
+        "estimatedPromptTokens": {
+          "type": "number",
+          "description": "Optional token count to benchmark LLM inference cost savings."
+        }
+      }
+    }
   },
   {
-    name: "notarize_and_witness_a2a_deal",
-    description:
-      "[EN] VERITAS-8183 Millisecond A2A & Smart Contract Deal Witness + x402 Micro-Bazaar Executor (0.10 to 1.00 USDC on Base Mainnet). Verifies Seller Star Seal + Buyer FinOps Spend Cap, applies VIP Buyer Discounts, records verified post-delivery client ratings, and issues an ECDSA-signed Notary Acta. | [ES] Notario y Testigo en milisegundos para acuerdos A2A y Contratos Inteligentes + Bazar x402 (0.10 a 1.00 USDC en Base Mainnet). | [中文] VERITAS-8183 毫秒级 A2A 与智能合约交易公证见证人及 x402 微支付集市执行器（0.10-1.00 USDC Base 主网结算）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        serviceId: {
-          type: "string",
-          enum: [
+    "name": "notarize_and_witness_a2a_deal",
+    "description": "[EN] VERITAS-8183 Millisecond A2A & Smart Contract Deal Witness + x402 Micro-Bazaar Executor (0.10 to 1.00 USDC on Base Mainnet). Verifies Seller Star Seal + Buyer FinOps Spend Cap, applies VIP Buyer Discounts, records verified post-delivery client ratings, and issues an ECDSA-signed Notary Acta. | [ES] Notario y Testigo en milisegundos para acuerdos A2A y Contratos Inteligentes + Bazar x402 (0.10 a 1.00 USDC en Base Mainnet). | [中文] VERITAS-8183 毫秒级 A2A 与智能合约交易公证见证人及 x402 微支付集市执行器（0.10-1.00 USDC Base 主网结算）。",
+    "annotations": {
+      "title": "notarize_and_witness_a2a_deal",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "serviceId": {
+          "type": "string",
+          "enum": [
             "x402-veritas-deal-witness-acta",
             "x402-veritas-level3-star-exam",
             "x402-micro-antirug-token-scan",
             "x402-finops-llm-cost-optimizer",
-            "x402-veritas-level3-step-by-step-tutorial",
-          ],
+            "x402-veritas-level3-step-by-step-tutorial"
+          ]
         },
-        buyerId: { type: "string" },
-        sellerStoreId: { type: "string" },
-        dealAmountUsdc: { type: "number" },
-        deliverableSha256: { type: "string" },
-        clientRatingOutOf5: { type: "number" },
-        clientReviewComment: { type: "string" },
-        paymentTxHash: {
-          type: "string",
-          description:
-            "Base Mainnet (Chain ID 8453) USDC transfer tx hash (0x...) to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4.",
+        "buyerId": {
+          "type": "string"
         },
-      },
-    },
+        "sellerStoreId": {
+          "type": "string"
+        },
+        "dealAmountUsdc": {
+          "type": "number"
+        },
+        "deliverableSha256": {
+          "type": "string"
+        },
+        "clientRatingOutOf5": {
+          "type": "number"
+        },
+        "clientReviewComment": {
+          "type": "string"
+        },
+        "paymentTxHash": {
+          "type": "string",
+          "description": "Base Mainnet (Chain ID 8453) USDC transfer tx hash (0x...) to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4."
+        }
+      }
+    }
   },
   {
-    name: "match_verified_buyers_by_intent",
-    description:
-      "[EN] VERITAS-8183 Exclusive Buyer Intent & Solvency Matchmaker (2-Star & 3-Star Sellers Only). Lets certified sellers discover which AI buyers are actively looking to buy their vertical right now, filtered by verified available USDC budget and payment reliability. 3-Star (⭐⭐⭐) sellers unlock exclusive First-Look access to VIP Gold Institutional Buyers. Freemium model: first 3 matched clients (or 30 days) at 0.0% extra fee, then +0.5% success fee per matched client. | [ES] Radar exclusivo de compradores calificados (solo para vendedores 2★ y 3★): filtra clientes por capital disponible y qué buscan comprar. Vendedores 3★ tienen acceso prioritario directo a los mejores clientes. Freemium: primeros 3 clientes sin recargo extra, luego +0.5% por cliente conectado. | [中文] VERITAS-8183 认证买家意向与资金匹配雷达（仅限 2 星与 3 星卖家，3 星卖家独享 VIP 机构大买家优先直连；前 3 名成交客户免费，之后每单仅加收 0.5% 撮合费）。",
-    inputSchema: {
-      type: "object",
-      properties: {
-        sellerStoreId: {
-          type: "string",
-          description: "Your registered seller Store ID (must hold 2-Star or 3-Star VERITAS-8183 Seal).",
+    "name": "match_verified_buyers_by_intent",
+    "description": "[EN] VERITAS-8183 Exclusive Buyer Intent & Solvency Matchmaker (2-Star & 3-Star Sellers Only). Lets certified sellers discover which AI buyers are actively looking to buy their vertical right now, filtered by verified available USDC budget and payment reliability. 3-Star (⭐⭐⭐) sellers unlock exclusive First-Look access to VIP Gold Institutional Buyers. Freemium model: first 3 matched clients (or 30 days) at 0.0% extra fee, then +0.5% success fee per matched client. | [ES] Radar exclusivo de compradores calificados (solo para vendedores 2★ y 3★): filtra clientes por capital disponible y qué buscan comprar. Vendedores 3★ tienen acceso prioritario directo a los mejores clientes. Freemium: primeros 3 clientes sin recargo extra, luego +0.5% por cliente conectado. | [中文] VERITAS-8183 认证买家意向与资金匹配雷达（仅限 2 星与 3 星卖家，3 星卖家独享 VIP 机构大买家优先直连；前 3 名成交客户免费，之后每单仅加收 0.5% 撮合费）。",
+    "annotations": {
+      "title": "match_verified_buyers_by_intent",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": false,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "sellerStoreId": {
+          "type": "string",
+          "description": "Your registered seller Store ID (must hold 2-Star or 3-Star VERITAS-8183 Seal)."
         },
-        minAvailableBudgetUsdc: {
-          type: "number",
-          description: "Filter buyers by minimum verified daily USDC budget available right now.",
+        "minAvailableBudgetUsdc": {
+          "type": "number",
+          "description": "Filter buyers by minimum verified daily USDC budget available right now."
         },
-        targetVertical: {
-          type: "string",
-          enum: [
+        "targetVertical": {
+          "type": "string",
+          "enum": [
             "ALL",
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
@@ -432,48 +730,29 @@ export const MCP_TOOLS = [
             "VERTICAL_5_CERTIFIED_SKILLS",
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
-            "VERTICAL_8_DEPIN_GPU",
-          ],
+            "VERTICAL_8_DEPIN_GPU"
+          ]
         },
-        minPaymentReliabilityPct: { type: "number" },
-        connectAndCloseDealWithBuyerId: {
-          type: "string",
-          description: "Optional Buyer ID to send a direct verified offer and close a matched deal.",
+        "minPaymentReliabilityPct": {
+          "type": "number"
         },
-        dealAmountUsdc: { type: "number" },
-        directOfferPitch: { type: "string" },
+        "connectAndCloseDealWithBuyerId": {
+          "type": "string",
+          "description": "Optional Buyer ID to send a direct verified offer and close a matched deal."
+        },
+        "dealAmountUsdc": {
+          "type": "number"
+        },
+        "directOfferPitch": {
+          "type": "string"
+        }
       },
-      required: ["sellerStoreId"],
-    },
-  },
+      "required": [
+        "sellerStoreId"
+      ]
+    }
+  }
 ];
-
-// Enriquecer todas las herramientas con anotaciones oficiales MCP de Menor Privilegio (Least-Privilege Scoping)
-const READ_ONLY_TOOL_NAMES = new Set([
-  "discover_verified_stores",
-  "quote_multitoken_escrow",
-  "submit_encrypted_deliverable",
-  "audit_quant_backtest_escrow",
-  "audit_smart_contract_escrow",
-  "audit_api_sla_escrow",
-  "audit_agent_skill_escrow",
-  "audit_rag_embeddings_escrow",
-  "audit_ai_inference_escrow",
-  "audit_depin_gpu_sla_escrow",
-  "verify_onchain_escrow_status",
-  "inspect_veritas_8183_seal",
-]);
-
-for (const tool of MCP_TOOLS) {
-  const isReadOnly = READ_ONLY_TOOL_NAMES.has(tool.name);
-  tool.annotations = {
-    title: tool.name,
-    readOnlyHint: isReadOnly,
-    destructiveHint: false,
-    idempotentHint: isReadOnly,
-    openWorldHint: false,
-  };
-}
 
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.

@@ -204,6 +204,52 @@ test("7. Interfaz M2M: Servidor MCP JSON-RPC lista herramientas y filtra tiendas
   // Solo DataForge (92) y DeepMetrics (84) superan 80/100
   assert.equal(discovery.result.structuredContent.eligibleStores.length, 2);
   assert.equal(discovery.result.structuredContent.filteredOutCount, 2);
+
+  // Cobertura explícita MCP para quote_multitoken_escrow, open_escrow_job y submit_encrypted_deliverable (19/19 tools)
+  const quoteMcp = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: { name: "quote_multitoken_escrow", arguments: { tokenSymbol: "USDC", tokenAmount: 10 } },
+    },
+    ledger
+  );
+  assert.equal(quoteMcp.result.structuredContent.viable, true);
+
+  const openJobMcp = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "open_escrow_job",
+        arguments: { buyerId: "alphaquant-agent", storeId: "dataforge-ai", tokenSymbol: "USDC", tokenAmount: 10, minRows: 2 },
+      },
+    },
+    ledger
+  );
+  assert.equal(openJobMcp.result.structuredContent.ok, true);
+
+  const submitMcp = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 5,
+      method: "tools/call",
+      params: {
+        name: "submit_encrypted_deliverable",
+        arguments: {
+          jobId: openJobMcp.result.structuredContent.job.jobId,
+          rawDatasetJsonString: JSON.stringify([
+            { id: "R1", symbol: "NQ", summary: "CME Globex institutional orderflow" },
+            { id: "R2", symbol: "ES", summary: "CME Globex liquidity depth" },
+          ]),
+        },
+      },
+    },
+    ledger
+  );
+  assert.equal(submitMcp.result.structuredContent.ok, true);
 });
 
 test("8. Enjambre M2M Autónomo (x402 + MCP): exilia tiendas tramposas y acumula ganancia neta", () => {

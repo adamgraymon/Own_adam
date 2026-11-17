@@ -1,7 +1,12 @@
 {
   "name": "trustgate-erc8183-mcp",
-  "version": "0.6.0",
-  "description": "Nodo M2M Interventor 8-Verticales (ERC-8183 + ERC-8004 + MCP + x402) para Datasets, Backtests, Solidity, APIs, Skills, RAG, Inferencia y GPUs DePIN en Base Mainnet",
+  "version": "0.7.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/adamgraymon/Own_adam.git"
+  },
+  "description": "Nodo M2M Interventor 8-Verticales y Notaría VERITAS-8183 (ERC-8183 + ERC-8004 + MCP + x402) en Base Mainnet",
   "type": "module",
   "bin": {
     "trustgate-mcp": "./src/mcpServer.js"
