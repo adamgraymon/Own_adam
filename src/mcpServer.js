@@ -27,7 +27,7 @@ import {
 export const MCP_TOOLS = [
   {
     "name": "discover_verified_stores",
-    "description": "[EN] Query ERC-8004 Dual-Tier AI Marketplace (INSTITUTIONAL_B2B & RETAIL_INDIE) across 8 verticals, including Official First-Party curated packages. | [ES] Consulta el Catálogo Dual ERC-8004 (Institucional B2B y Retail/Indie) en las 8 verticales y paquetes oficiales. | [中文] 查询 ERC-8004 双层 AI 市场目录（机构 B2B 与零售/独立开发者，覆盖 8 大垂直领域）。",
+    "description": "Search the ERC-8004 marketplace for audited AI stores and curated packages by reputation, tier, vertical, or price cap. Example: minReputation=85, marketTier='INSTITUTIONAL_B2B'.",
     "annotations": {
       "title": "discover_verified_stores",
       "readOnlyHint": true,
@@ -40,7 +40,10 @@ export const MCP_TOOLS = [
       "properties": {
         "minReputation": {
           "type": "number",
-          "description": "Minimum ERC-8004 reputation score (0-100). Recommended >= 70."
+          "description": "Minimum ERC-8004 reputation score (0 to 100).",
+          "examples": [
+            85
+          ]
         },
         "marketTier": {
           "type": "string",
@@ -49,30 +52,37 @@ export const MCP_TOOLS = [
             "INSTITUTIONAL_B2B",
             "RETAIL_INDIE"
           ],
-          "description": "Filter by INSTITUTIONAL_B2B (non-retail enterprise/funds), RETAIL_INDIE (traders/indie bots), or ALL."
+          "description": "Target market lane to filter stores and packages."
         },
         "vertical": {
           "type": "string",
-          "description": "Filter by vertical (e.g. VERTICAL_1_DATASET, VERTICAL_2_QUANT_ALPHA, VERTICAL_3_SOLIDITY_SECURITY, etc. or ALL)."
+          "enum": [
+            "ALL",
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU"
+          ],
+          "description": "Audit vertical category to filter providers."
         },
         "maxPriceUsdc": {
           "type": "number",
-          "description": "Optional maximum starting price in USDC."
+          "description": "Maximum starting price in USDC."
         },
         "firstPartyOnly": {
           "type": "boolean",
-          "description": "If true, returns only TrustGate Official First-Party stores & instant-delivery bundles."
-        },
-        "callerSectorOrTrend": {
-          "type": "string",
-          "description": "Optional: specify your project's industry sector or your user's shopping/search trend to personalize recommendations and VIP discounts."
+          "description": "Return only official TrustGate curated packages."
         }
       }
     }
   },
   {
     "name": "quote_multitoken_escrow",
-    "description": "[EN] Atomic multi-token swap quote (SOL, ETH, VIRTUAL, USDT -> Base USDC) with Dual-Lane Guardrail & volume discount (1% from 10 USDC). | [ES] Cotiza conversión atómica a USDC en Base con descuento por volumen. | [中文] 多代币原子兑换报价 (SOL/ETH/USDT 转 Base USDC) 及 ERC-8183 托管费用计算。",
+    "description": "Quote an atomic conversion from SOL, ETH, VIRTUAL, USDT, or USDC into Base Mainnet USDC with escrow fee breakdown. Example: tokenSymbol='SOL', tokenAmount=0.5.",
     "annotations": {
       "title": "quote_multitoken_escrow",
       "readOnlyHint": true,
@@ -86,15 +96,20 @@ export const MCP_TOOLS = [
         "tokenSymbol": {
           "type": "string",
           "enum": [
-            "SOL",
+            "USDC",
             "ETH",
+            "SOL",
             "VIRTUAL",
-            "USDT",
-            "USDC"
-          ]
+            "USDT"
+          ],
+          "description": "Input token symbol to swap and lock."
         },
         "tokenAmount": {
-          "type": "number"
+          "type": "number",
+          "description": "Amount of input token to quote.",
+          "examples": [
+            10
+          ]
         }
       },
       "required": [
@@ -105,7 +120,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "open_escrow_job",
-    "description": "[EN] Lock USDC in non-custodial ERC-8183 Smart Contract on Base Mainnet to hire an AI store. | [ES] Bloquea fondos en USDC en el contrato ERC-8183 para contratar una Tienda IA. | [中文] 在 Base 主网 ERC-8183 非托管智能合约中锁定 USDC 资金以雇佣 AI 代理商店。",
+    "description": "Lock funds in the ERC-8183 non-custodial escrow vault for a target store and dataset row requirement. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
     "annotations": {
       "title": "open_escrow_job",
       "readOnlyHint": false,
@@ -117,19 +132,34 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "buyerId": {
-          "type": "string"
+          "type": "string",
+          "description": "Buyer agent identifier opening the escrow order."
         },
         "storeId": {
-          "type": "string"
+          "type": "string",
+          "description": "Target verified store identifier.",
+          "examples": [
+            "dataforge-ai"
+          ]
         },
         "tokenSymbol": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "USDC",
+            "ETH",
+            "SOL",
+            "VIRTUAL",
+            "USDT"
+          ],
+          "description": "Payment token symbol."
         },
         "tokenAmount": {
-          "type": "number"
+          "type": "number",
+          "description": "Token amount to fund into escrow."
         },
         "minRows": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum dataset rows required for settlement."
         }
       },
       "required": [
@@ -141,22 +171,24 @@ export const MCP_TOOLS = [
   },
   {
     "name": "submit_encrypted_deliverable",
-    "description": "[EN] Vertical 1 (Datasets): Audit encrypted CSV/JSON dataset (100% deterministic antimalware/clone scan + 30-row Vitter cryptographic blind sampling) & settle USDC or refund 100%. | [ES] Línea 1 (Datasets): Escáner Antimalware + Muestreo Ciego de 30 filas y liquidación automática. | [中文] 垂直领域1 (数据集审计): AES-256 加密 CSV/JSON 数据集反恶意软件与盲抽样审计，自动释放 USDC 或 100% 退款。",
+    "description": "Audit a JSON dataset deliverable in AES-256-GCM memory for CSV malware, prompt injection, and 30-row sampling before escrow settlement. Example: jobId='JOB-1001'.",
     "annotations": {
       "title": "submit_encrypted_deliverable",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
-      "idempotentHint": true,
+      "idempotentHint": false,
       "openWorldHint": false
     },
     "inputSchema": {
       "type": "object",
       "properties": {
         "jobId": {
-          "type": "string"
+          "type": "string",
+          "description": "Active escrow job identifier (e.g. JOB-1001)."
         },
         "rawDatasetJsonString": {
-          "type": "string"
+          "type": "string",
+          "description": "Serialized JSON array of dataset rows to encrypt and audit."
         }
       },
       "required": [
@@ -167,10 +199,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_quant_backtest_escrow",
-    "description": "[EN] Vertical 2 (Quant Backtests): Audit trading strategy backtests (NQ futures, crypto, forex) for Look-Ahead Bias, fake PnL accounting, Profit Factor, Max Drawdown & Sharpe Ratio. | [ES] Línea 2 (Backtests Cuantitativos): Audita historial de trading detectando Look-Ahead Bias y PnL falso. | [中文] 垂直领域2 (量化交易回测审计): 检测未来函数 (Look-Ahead Bias)、虚假盈亏 (PnL)、夏普比率、最大回撤与盈亏比。",
+    "description": "Verify quantitative trading backtest trades for chronological look-ahead bias, exact PnL math, profit factor, and drawdown limits. Example: minTrades=20, minProfitFactor=1.25.",
     "annotations": {
       "title": "audit_quant_backtest_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -180,16 +212,22 @@ export const MCP_TOOLS = [
       "properties": {
         "trades": {
           "type": "array",
-          "description": "Array of trades with entryTime/entryTimestampMs, exitTime/exitTimestampMs, side, entryPrice, exitPrice, size, pnlUsd"
+          "items": {
+            "type": "object"
+          },
+          "description": "Array of trade objects with entry/exit timestamps, prices, and PnL."
         },
         "minTrades": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum required trade count for statistical validity."
         },
         "minProfitFactor": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum gross profit to gross loss ratio."
         },
         "maxDrawdownPct": {
-          "type": "number"
+          "type": "number",
+          "description": "Maximum allowed peak-to-trough equity drawdown percentage."
         }
       },
       "required": [
@@ -199,10 +237,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_smart_contract_escrow",
-    "description": "[EN] Vertical 3 (Solidity Smart Contracts): Compile Solidity source with real solc 0.8.38, scan against rugpull backdoors (selfdestruct, delegatecall, tx.origin, assembly sstore) & verify required ABI functions. | [ES] Línea 3 (Smart Contracts Solidity): Compila con solc real y bloquea puertas traseras. | [中文] 垂直领域3 (Solidity 智能合约安全审计): 真实 solc 编译、反跑路后门扫描 (selfdestruct/delegatecall/tx.origin) 与 ABI 接口验证。",
+    "description": "Compile Solidity source code with solc 0.8.38 and scan for selfdestruct, arbitrary delegatecall, tx.origin phishing, and missing ABI functions. Example: contractName='VaultToken'.",
     "annotations": {
       "title": "audit_smart_contract_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -211,16 +249,22 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "soliditySourceCode": {
-          "type": "string"
+          "type": "string",
+          "description": "Complete Solidity smart contract source code to compile and scan."
         },
         "contractName": {
-          "type": "string"
+          "type": "string",
+          "description": "Target contract name inside the Solidity source.",
+          "examples": [
+            "VaultToken"
+          ]
         },
         "requiredFunctions": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Function names that must exist in the compiled ABI."
         }
       },
       "required": [
@@ -230,10 +274,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_api_sla_escrow",
-    "description": "[EN] Vertical 4 (x402 Paid API SLA Oracle): Verify paid API latency SLA (ms), mandatory JSON schema keys & cryptographic timestamp freshness. | [ES] Línea 4 (Oráculo SLA de APIs Pagas x402): Audita latencia, esquema JSON y frescura de datos. | [中文] 垂直领域4 (x402 付费 API 与预言机 SLA 审计): 验证响应延迟 (ms)、JSON 必填字段与时间戳新鲜度。",
+    "description": "Verify paid x402 API or oracle JSON responses against latency thresholds, mandatory schema keys, and timestamp freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
     "annotations": {
       "title": "audit_api_sla_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -242,19 +286,23 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "apiResponsePayload": {
-          "type": "object"
+          "type": "object",
+          "description": "Parsed JSON payload returned by the oracle or API."
         },
         "observedLatencyMs": {
-          "type": "number"
+          "type": "number",
+          "description": "Measured round-trip response latency in milliseconds."
         },
         "maxLatencyMs": {
-          "type": "number"
+          "type": "number",
+          "description": "Maximum allowed SLA latency in milliseconds."
         },
         "requiredKeys": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Mandatory top-level JSON keys required by the SLA."
         }
       },
       "required": [
@@ -264,10 +312,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_agent_skill_escrow",
-    "description": "[EN] Vertical 5 (Agent Skills & MCP Plugins): Scan SKILL.md, prompts & scripts against Trojan Skills (.env/PRIVATE_KEY exfiltration, eval/child_process, Base64 droppers & zero-width Unicode injection). | [ES] Línea 5 (Skills y Plugins MCP): Bloquea Skills Troyanos y robo de llaves privadas. | [中文] 垂直领域5 (AI 技能与 MCP 插件木马审计): 扫描 SKILL.md 与脚本，拦截私钥环境变量窃取、远程代码执行与隐形 Unicode 提示词注入。",
+    "description": "Scan agent SKILL.md files and bundled scripts for credential exfiltration, arbitrary code execution sinks, hidden Unicode stego, and version drift. Example: version='1.1.0'.",
     "annotations": {
       "title": "audit_agent_skill_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -276,16 +324,27 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "skillMarkdown": {
-          "type": "string"
+          "type": "string",
+          "description": "Full SKILL.md markdown content including YAML frontmatter."
         },
         "bundledScripts": {
-          "type": "string"
+          "type": "string",
+          "description": "Optional helper script code bundled with the skill."
         },
         "requiredSections": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Required frontmatter or markdown headings."
+        },
+        "targetAgentId": {
+          "type": "string",
+          "description": "Optional agent or plugin ID to track version drift history."
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version string (e.g. '1.0.0') for behavioral drift comparison."
         }
       },
       "required": [
@@ -295,10 +354,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_rag_embeddings_escrow",
-    "description": "[EN] Vertical 6 (RAG Knowledge Bases & Vector Embeddings): Verify exact vector dimensions, valid L2 norm (no zero/NaN vectors), zero cloned chunks & block RAG Data Poisoning. | [ES] Línea 6 (Memorias RAG y Vectores): Verifica dimensiones, norma L2 y bloquea envenenamiento RAG. | [中文] 垂直领域6 (RAG 向量知识库防投毒审计): 验证向量维度一致性、L2 范数有效性并拦截间接提示词注入投毒。",
+    "description": "Audit RAG knowledge chunks and vector embeddings for dimension consistency, L2 norm integrity, duplicates, and indirect prompt injection. Example: expectedDimension=4, minChunks=5.",
     "annotations": {
       "title": "audit_rag_embeddings_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -307,13 +366,19 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "chunks": {
-          "type": "array"
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "Array of RAG objects containing text and numeric embedding arrays."
         },
         "expectedDimension": {
-          "type": "number"
+          "type": "number",
+          "description": "Expected vector length for every embedding."
         },
         "minChunks": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum required number of valid knowledge chunks."
         }
       },
       "required": [
@@ -323,10 +388,10 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_ai_inference_escrow",
-    "description": "[EN] Vertical 7 (Proof-of-Inference & Anti-Model-Downgrade): Audit LLM output against token billing inflation, repetitive quantization collapse & constraint violations. | [ES] Línea 7 (Proof-of-Inference): Audita contra sobrefacturación de tokens y cambiazo de modelo IA. | [中文] 垂直领域7 (AI 推理防降级证明): 审计 Token 虚假超额计费、模型偷换导致的重复坍塌及指令约束合规性。",
+    "description": "Verify LLM inference outputs against token billing inflation, lexical repetition collapse (model downgrade fraud), and required terms. Example: billedOutputTokens=32.",
     "annotations": {
       "title": "audit_ai_inference_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -335,39 +400,43 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "responseText": {
-          "type": "string"
+          "type": "string",
+          "description": "Generated text output returned by the inference provider."
         },
         "billedOutputTokens": {
-          "type": "number"
+          "type": "number",
+          "description": "Number of output tokens billed by the provider."
         },
         "mustIncludeTerms": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Keywords or phrases that must appear in the output."
         },
         "forbiddenTerms": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Terms that must not appear in the output."
         },
         "minUniqueWordRatio": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum lexical diversity ratio (0 to 1) to detect model downgrade."
         }
       },
       "required": [
-        "responseText",
-        "billedOutputTokens"
+        "responseText"
       ]
     }
   },
   {
     "name": "audit_depin_gpu_sla_escrow",
-    "description": "[EN] Vertical 8 (DePIN & GPU Compute SLA): Verify decentralized GPU hardware benchmarks (FP16 TFLOPS, available VRAM GB, memory bandwidth GB/s, thermal throttling & packet loss). | [ES] Línea 8 (Alquiler de GPUs y Cómputo DePIN): Verifica TFLOPS FP16, VRAM y temperatura. | [中文] 垂直领域8 (DePIN 去中心化 GPU 算力 SLA 审计): 验证 FP16 TFLOPS 算力、可用显存 (VRAM)、显存带宽与温度丢包率。",
+    "description": "Verify DePIN GPU compute node telemetry against contracted FP16 TFLOPS, VRAM capacity, memory bandwidth, and thermal limits. Example: minTflopsFp16=250, minVramGb=80.",
     "annotations": {
       "title": "audit_depin_gpu_sla_escrow",
-      "readOnlyHint": true,
+      "readOnlyHint": false,
       "destructiveHint": false,
       "idempotentHint": true,
       "openWorldHint": false
@@ -376,19 +445,24 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "benchmarkReport": {
-          "type": "object"
+          "type": "object",
+          "description": "Hardware telemetry object with measuredTflopsFp16, availableVramGb, and gpuTempCelsius."
         },
         "minTflopsFp16": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum required FP16 compute throughput in TFLOPS."
         },
         "minVramGb": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum required GPU VRAM in gigabytes."
         },
         "minMemoryBandwidthGbs": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum memory bandwidth in GB/s."
         },
         "maxTempCelsius": {
-          "type": "number"
+          "type": "number",
+          "description": "Maximum safe GPU operating temperature in Celsius."
         }
       },
       "required": [
@@ -398,7 +472,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "verify_onchain_escrow_status",
-    "description": "[EN] Return Base Mainnet TrustGateEscrow8183 (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) cryptographic proofs, Sourcify exact_match verification & settled tx hashes. | [ES] Devuelve las pruebas criptográficas del contrato en Base Mainnet y Sourcify exact_match. | [中文] 获取 Base 主网托管合约 (0xd4f77bf8...0a5e) 的 Sourcify 源码精确匹配证明与链上交易哈希。",
+    "description": "Return Base Mainnet contract verification proofs (Sourcify #59283147), LEGION Ed25519 Passport receipts, and fee terms. Example: call with {} to inspect on-chain status.",
     "annotations": {
       "title": "verify_onchain_escrow_status",
       "readOnlyHint": true,
@@ -408,12 +482,20 @@ export const MCP_TOOLS = [
     },
     "inputSchema": {
       "type": "object",
-      "properties": {}
+      "properties": {
+        "includeReceipts": {
+          "type": "boolean",
+          "description": "Include Sourcify and LEGION Merkle inclusion receipts.",
+          "examples": [
+            true
+          ]
+        }
+      }
     }
   },
   {
     "name": "purchase_firstparty_catalog_item",
-    "description": "[EN] Instant purchase & cryptographic delivery of TrustGate Official First-Party curated packages (Institutional CME Globex NQ microstructure, Sourcify Solidity blueprints, Enterprise RAG/Skill Firewall, Retail Anti-Rugpull & Zero-Lookahead Starter Packs from 1 USDC). | [ES] Compra y entrega instantánea de paquetes oficiales de TrustGate (Institucional y Retail desde 1 USDC). | [中文] 即时购买并获取 TrustGate 官方认证精选数据包（芝商所 NQ 微观结构、Sourcify 智能合约蓝图、企业级 RAG 防毒包及 1 USDC 起的零售反貔貅工具包）。",
+    "description": "Purchase and decrypt an official TrustGate curated dataset, security scanner, or Level 3 tutorial package on Base Mainnet. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
     "annotations": {
       "title": "purchase_firstparty_catalog_item",
       "readOnlyHint": false,
@@ -428,31 +510,33 @@ export const MCP_TOOLS = [
           "type": "string",
           "enum": [
             "inst-cme-nq-microstructure-v06",
-            "inst-sourcify-erc8183-vault-v06",
+            "inst-solidity-0838-vault-blueprint-v06",
             "inst-enterprise-rag-skill-firewall-v06",
             "retail-anti-rugpull-scanner-pack-v06",
-            "retail-nq-quant-starter-backtest-v06",
-            "retail-safe-mcp-skill-starter-v06"
+            "retail-nq-crypto-clean-backtest-v06",
+            "retail-safe-mcp-skills-starter-v06",
+            "retail-veritas-level3-mastery-tutorial-v07"
           ],
-          "description": "ID of the curated First-Party package to purchase."
+          "description": "Catalog package identifier to unlock."
         },
         "buyerId": {
           "type": "string",
-          "description": "Buyer agent ID (optional)."
+          "description": "Buyer agent ID claiming the package."
         },
         "paymentToken": {
           "type": "string",
           "enum": [
             "USDC",
-            "SOL",
             "ETH",
+            "SOL",
             "VIRTUAL",
             "USDT"
-          ]
+          ],
+          "description": "Settlement token symbol."
         },
         "paymentTxHash": {
           "type": "string",
-          "description": "Base Mainnet (Chain ID 8453) USDC transfer transaction hash (0x...) paying the exact item price to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4. If omitted on external HTTP calls, returns a 402 Payment Invoice."
+          "description": "Base Mainnet USDC transaction hash (0x...) paying the package price."
         }
       },
       "required": [
@@ -462,7 +546,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "register_and_certify_store",
-    "description": "[EN] Freemium ERC-8004 Store Onboarding (0 USDC upfront; 2.0% Broker referral fee + 1.0%-1.5% Escrow fee on sales). Requires passing a live deterministic audit of sampleDeliverable for the target vertical. | [ES] Registro y certificación gratuita ERC-8004 para tiendas IA externas (auditoría determinista obligatoria en vivo; comisión solo por venta exitosa). | [中文] 免费注册并认证 ERC-8004 外部 AI 商店（0 预付费用，必须通过实时确定性安全审计，仅在成交时收取 2% 经纪佣金 + 托管费）。",
+    "description": "Onboard an external AI store into the ERC-8004 directory (0 USDC upfront) after passing a live deterministic vertical audit. Example: storeId='indie-safe-solidity-lab'.",
     "annotations": {
       "title": "register_and_certify_store",
       "readOnlyHint": false,
@@ -474,16 +558,20 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "storeId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique slug identifier for the store."
         },
         "storeName": {
-          "type": "string"
+          "type": "string",
+          "description": "Display name of the AI provider node."
         },
         "walletAddress": {
-          "type": "string"
+          "type": "string",
+          "description": "Payout wallet address on Base Mainnet."
         },
         "endpointUrl": {
-          "type": "string"
+          "type": "string",
+          "description": "MCP or A2A delivery endpoint URL."
         },
         "vertical": {
           "type": "string",
@@ -496,28 +584,34 @@ export const MCP_TOOLS = [
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
-          ]
+          ],
+          "description": "Primary service vertical to certify."
         },
         "marketTier": {
           "type": "string",
           "enum": [
             "INSTITUTIONAL_B2B",
             "RETAIL_INDIE"
-          ]
+          ],
+          "description": "Target market tier."
         },
         "startingPriceUsdc": {
-          "type": "number"
+          "type": "number",
+          "description": "Base order price in USDC."
         },
         "sampleDeliverable": {
           "type": "object",
-          "description": "Optional sample deliverable payload to be audited live (if omitted, uses a verified reference template for 1-click onboarding)."
+          "description": "Sample deliverable payload to verify deterministically before listing."
         }
-      }
+      },
+      "required": [
+        "storeId"
+      ]
     }
   },
   {
     "name": "inspect_veritas_8183_seal",
-    "description": "[EN] FREE (<5ms) VERITAS-8183 Bilateral Quick-Glance Seal & Client Telemetry Inspector. Checks any Seller or Smart Contract's 1-to-3 Star Seal (Proof-of-Reserve >=20% crypto ratio, Content Quality, Verified Client Rating, Response Latency) AND any Buyer Agent's FinOps Spend Passport & VIP Discounts (5%-15% OFF). | [ES] Consulta gratuita en milisegundos del Sello VERITAS-8183 (1 a 3 Estrellas, Reserva Cripto Pública, Estadísticas de Clientes y Pasaporte de Solvencia/Descuentos del Comprador). | [中文] 免费毫秒级查询 VERITAS-8183 双向认证印章（卖家 1-3 星评级、>=20% 链上加密储备金证明、客户评价与延迟统计，以及买家 FinOps 预算护照与 VIP 折扣）。",
+    "description": "Inspect 1-to-3 Star Seller Seals, Proof-of-Reserve ratios, the 15-node 2★/3★ leaderboard, 7-Question Continuous Trust Dossier, and Pre-Execution Firewall. Example: targetId='ALL'.",
     "annotations": {
       "title": "inspect_veritas_8183_seal",
       "readOnlyHint": true,
@@ -530,7 +624,10 @@ export const MCP_TOOLS = [
       "properties": {
         "targetId": {
           "type": "string",
-          "description": "Store ID, Smart Contract ID, or Buyer Agent ID to inspect (or 'ALL' for the complete VERITAS-8183 directory)."
+          "description": "Store ID, agent ID, or 'ALL' for the full directory.",
+          "examples": [
+            "trustgate-official-institutional"
+          ]
         },
         "roleFilter": {
           "type": "string",
@@ -539,42 +636,42 @@ export const MCP_TOOLS = [
             "SELLER",
             "BUYER"
           ],
-          "description": "Filter directory by SELLER (1-3 Star Seals) or BUYER (FinOps Spend Passports)."
+          "description": "Filter directory output by SELLER or BUYER."
         },
         "proposedTransactionAmountUsdc": {
           "type": "number",
-          "description": "Optional transaction amount in USDC to pre-check bilateral compatibility."
+          "description": "Optional USDC amount to check against buyer FinOps spend caps."
         },
         "buyerIdForSimulation": {
           "type": "string",
-          "description": "Optional buyer agent ID for bilateral pre-check."
+          "description": "Buyer agent ID for bilateral pre-check or single-use unlock."
         },
         "callerSectorOrTrend": {
           "type": "string",
-          "description": "Optional: specify ONE (1) single industry sector or keyword query to unlock WHO searched, HOW MANY TIMES, and with WHICH EXACT KEYWORDS (requires 1-time registration trial or 0.25 USDC per sector)."
+          "description": "Single industry sector or keyword to query radar search intelligence."
         },
         "forensicUnlockToken": {
           "type": "string",
-          "description": "Optional 1-Time Single-Use Unlock Token issued by manage_buyer_finops_spend_passport."
+          "description": "Single-use unlock token issued by manage_buyer_finops_spend_passport."
         },
         "versionToInspectOrUpdate": {
           "type": "string",
-          "description": "Optional agent/server version (e.g. '1.0.0' or '2.1.0') to compare against historical baseline for Behavioral Drift detection."
+          "description": "Agent version string to inspect for behavioral drift (v1 vs v2)."
         },
         "simulatedUpdateBehavior": {
           "type": "object",
-          "description": "Optional update payload ({ version, skillMarkdown, bundledScripts, declaredTools }) to test for Behavioral Drift (v1 vs v2)."
+          "description": "Optional update payload to evaluate version drift before deployment."
         },
         "preExecutionCallCheck": {
           "type": "object",
-          "description": "Optional pre-execution firewall check ({ toolName, argumentsPayload }) to block dangerous actions BEFORE execution."
+          "description": "Optional tool call payload to evaluate in the pre-execution firewall."
         }
       }
     }
   },
   {
     "name": "submit_veritas_tier_upgrade_exam",
-    "description": "[EN] VERITAS-8183 Seller & Smart Contract Tier Upgrade Exam (1-Star to 3-Star Institutional Gold Seal). Evaluates 5 hard pillars: Auditable Public Crypto Reserve Ratio (>=20% of operational volume for 3 Stars), Deterministic Code/Content Purity (>=98%), Verified Client Rating (>=4.8/5), Latency SLA (<=100ms), and Zero Slashing History. | [ES] Examen oficial de ascenso de nivel VERITAS-8183 (1 a 3 Estrellas) para vendedores y contratos inteligentes con verificación de Reserva Cripto Pública (>=20% del volumen) y calidad determinista. | [中文] VERITAS-8183 卖家与智能合约星级晋升考试（评估公开链上储备金比例 >=20%、内容质量、客户评分与响应时间以授予 1 至 3 星印章）。",
+    "description": "Run the 5-pillar VERITAS-8183 seller exam (Proof-of-Reserve >=20% ratio, code purity, client rating, and <=100ms latency) to earn 1 to 3 Stars. Example: storeId='prime-node'.",
     "annotations": {
       "title": "submit_veritas_tier_upgrade_exam",
       "readOnlyHint": false,
@@ -586,25 +683,28 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "storeId": {
-          "type": "string"
+          "type": "string",
+          "description": "Candidate store identifier."
         },
         "storeName": {
-          "type": "string"
+          "type": "string",
+          "description": "Display name of the candidate node."
         },
         "walletAddress": {
-          "type": "string"
+          "type": "string",
+          "description": "Primary operational wallet address."
         },
         "publicReserveWallet": {
           "type": "string",
-          "description": "Public auditable wallet holding the crypto reserve backing operations."
+          "description": "Public wallet holding auditable crypto reserves."
         },
         "declaredPublicReserveUsdc": {
           "type": "number",
-          "description": "Auditable liquid/locked crypto reserve in USDC equivalent."
+          "description": "Liquid crypto reserve balance in USDC equivalent."
         },
         "declaredMonthlyVolumeUsdc": {
           "type": "number",
-          "description": "Active operational volume in USDC (3-Star Level 3 requires >=20% reserve-to-volume ratio)."
+          "description": "Monthly operational volume in USDC (>=20% reserve ratio required for 3 Stars)."
         },
         "vertical": {
           "type": "string",
@@ -617,13 +717,16 @@ export const MCP_TOOLS = [
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
-          ]
+          ],
+          "description": "Technical vertical for the live exam."
         },
         "observedLatencyMs": {
-          "type": "number"
+          "type": "number",
+          "description": "Measured P95 response latency in milliseconds."
         },
         "sampleDeliverable": {
-          "type": "object"
+          "type": "object",
+          "description": "Deliverable sample to audit during the exam."
         }
       },
       "required": [
@@ -633,7 +736,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "manage_buyer_finops_spend_passport",
-    "description": "[EN] VERITAS-8183 Buyer FinOps Spend Guard, Solvency Passport & 1-Time Single-Use Unlock Issuer. Registers the buyer in the Live Buyer Intent Database, sets deterministic per-tx and daily USDC spend caps, benchmarks LLM token costs, unlocks up to 15% VIP Buyer Discounts, and issues ONE (1) single-use token (not eternal) to unlock 1 Radar sector/keyword or 1 Forensic Dossier. | [ES] Pasaporte de Solvencia y Registro de Compradores (FinOps): registra tu intención/presupuesto en la base de datos y entrega 1 token de uso único (no eterno) para desbloquear 1 sector del Radar o 1 Radiografía Forense + Listado 2★/3★. | [中文] VERITAS-8183 买家 FinOps 预算护照与单次解锁令牌签发器（注册买家采购意向与预算，并赠送 1 次单行业雷达或取证报告免费解锁权益）。",
+    "description": "Register a buyer agent in the Buyer Intent Database, set per-tx/daily USDC spend caps, compare LLM token costs, and claim 1 single-use unlock token. Example: buyerId='alphaquant-agent'.",
     "annotations": {
       "title": "manage_buyer_finops_spend_passport",
       "readOnlyHint": false,
@@ -645,43 +748,53 @@ export const MCP_TOOLS = [
       "type": "object",
       "properties": {
         "buyerId": {
-          "type": "string"
+          "type": "string",
+          "description": "Unique buyer agent identifier.",
+          "examples": [
+            "alphaquant-agent"
+          ]
         },
         "buyerName": {
-          "type": "string"
+          "type": "string",
+          "description": "Human-readable name of the buyer agent."
         },
         "walletAddress": {
-          "type": "string"
+          "type": "string",
+          "description": "Buyer wallet address."
         },
         "maxSpendPerTxUsdc": {
-          "type": "number"
+          "type": "number",
+          "description": "Maximum authorized spend per transaction in USDC."
         },
         "dailySpendCapUsdc": {
-          "type": "number"
+          "type": "number",
+          "description": "Maximum authorized daily spend cap in USDC."
         },
         "lookingToBuyVerticals": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "Verticals this buyer agent is looking to purchase (e.g. ['VERTICAL_3_SOLIDITY_SECURITY', 'VERTICAL_5_CERTIFIED_SKILLS'])."
+          "items": {
+            "type": "string"
+          },
+          "description": "Verticals this buyer is actively purchasing."
         },
         "activeRfqDescription": {
           "type": "string",
-          "description": "Short description of what the buyer agent wants to purchase or audit."
+          "description": "Brief procurement requirement description for 2★/3★ sellers."
         },
         "proposedPurchaseUsdc": {
           "type": "number",
-          "description": "Optional purchase amount in USDC to test against spend caps and apply VIP buyer discounts."
+          "description": "Optional purchase amount to test against FinOps caps and VIP discounts."
         },
         "estimatedPromptTokens": {
           "type": "number",
-          "description": "Optional token count to benchmark LLM inference cost savings."
+          "description": "Token count to benchmark LLM inference cost across providers."
         }
       }
     }
   },
   {
     "name": "notarize_and_witness_a2a_deal",
-    "description": "[EN] VERITAS-8183 Millisecond A2A & Smart Contract Deal Witness + x402 Micro-Bazaar Executor (0.10 to 1.00 USDC on Base Mainnet, including 0.25 USDC Pay-Per-Sector Radar Intelligence 'x402-radar-single-sector-intel'). Verifies Seller Star Seal + Buyer FinOps Spend Cap, applies VIP Buyer Discounts, and issues an ECDSA-signed Notary Acta. | [ES] Notario y Testigo en milisegundos A2A + Bazar x402 (incluye compra individual por sector o palabra clave del Radar por 0.25 USDC en Base Mainnet). | [中文] VERITAS-8183 毫秒级 A2A 交易公证与 x402 微支付集市执行器（含 0.25 USDC 单行业/单关键词流量雷达情报解锁）。",
+    "description": "Issue an ECDSA-signed A2A Notary Acta or execute an x402 micro-service (0.10 to 1.00 USDC, including single-sector radar unlock). Example: serviceId='x402-veritas-deal-witness-acta'.",
     "annotations": {
       "title": "notarize_and_witness_a2a_deal",
       "readOnlyHint": false,
@@ -701,40 +814,47 @@ export const MCP_TOOLS = [
             "x402-finops-llm-cost-optimizer",
             "x402-veritas-level3-step-by-step-tutorial",
             "x402-radar-single-sector-intel"
-          ]
+          ],
+          "description": "Micro-bazaar service or notary action to execute."
         },
         "buyerId": {
-          "type": "string"
+          "type": "string",
+          "description": "Buyer agent identifier."
         },
         "sellerStoreId": {
-          "type": "string"
+          "type": "string",
+          "description": "Counterparty seller store identifier."
         },
         "dealAmountUsdc": {
-          "type": "number"
+          "type": "number",
+          "description": "Transaction value in USDC being witnessed."
         },
         "deliverableSha256": {
-          "type": "string"
+          "type": "string",
+          "description": "SHA-256 hash of the delivered payload."
         },
         "clientRatingOutOf5": {
-          "type": "number"
+          "type": "number",
+          "description": "Verified buyer rating (1.0 to 5.0) for the seller."
         },
         "clientReviewComment": {
-          "type": "string"
+          "type": "string",
+          "description": "Short post-delivery review note."
         },
         "targetSectorOrKeyword": {
           "type": "string",
-          "description": "Required when serviceId is 'x402-radar-single-sector-intel': specify ONE (1) single sector or keyword to unlock WHO searched and HOW MANY TIMES ('ALL' is prohibited)."
+          "description": "Single sector or keyword to unlock when serviceId is 'x402-radar-single-sector-intel'."
         },
         "paymentTxHash": {
           "type": "string",
-          "description": "Base Mainnet (Chain ID 8453) USDC transfer tx hash (0x...) to Treasury 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4."
+          "description": "Base Mainnet USDC transfer transaction hash (0x...)."
         }
       }
     }
   },
   {
     "name": "match_verified_buyers_by_intent",
-    "description": "[EN] VERITAS-8183 Exclusive Buyer Intent & Solvency Matchmaker (2-Star & 3-Star Sellers Only). Lets certified sellers discover which AI buyers are actively looking to buy their vertical right now, filtered by verified available USDC budget and payment reliability. 3-Star (⭐⭐⭐) sellers unlock exclusive First-Look access to VIP Gold Institutional Buyers. Freemium model: first 3 matched clients (or 30 days) at 0.0% extra fee, then +0.5% success fee per matched client. | [ES] Radar exclusivo de compradores calificados (solo para vendedores 2★ y 3★): filtra clientes por capital disponible y qué buscan comprar. Vendedores 3★ tienen acceso prioritario directo a los mejores clientes. Freemium: primeros 3 clientes sin recargo extra, luego +0.5% por cliente conectado. | [中文] VERITAS-8183 认证买家意向与资金匹配雷达（仅限 2 星与 3 星卖家，3 星卖家独享 VIP 机构大买家优先直连；前 3 名成交客户免费，之后每单仅加收 0.5% 撮合费）。",
+    "description": "Match 2-Star and 3-Star certified sellers with verified buyers filtered by available USDC budget and vertical (first 3 matched clients at 0% extra fee). Example: sellerStoreId='quantalpha-institutional-node'.",
     "annotations": {
       "title": "match_verified_buyers_by_intent",
       "readOnlyHint": false,
@@ -747,11 +867,14 @@ export const MCP_TOOLS = [
       "properties": {
         "sellerStoreId": {
           "type": "string",
-          "description": "Your registered seller Store ID (must hold 2-Star or 3-Star VERITAS-8183 Seal)."
+          "description": "Registered seller store ID holding a 2★ or 3★ VERITAS-8183 Seal.",
+          "examples": [
+            "quantalpha-institutional-node"
+          ]
         },
         "minAvailableBudgetUsdc": {
           "type": "number",
-          "description": "Filter buyers by minimum verified daily USDC budget available right now."
+          "description": "Minimum verified remaining daily USDC budget required."
         },
         "targetVertical": {
           "type": "string",
@@ -765,20 +888,24 @@ export const MCP_TOOLS = [
             "VERTICAL_6_RAG_KNOWLEDGE",
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
-          ]
+          ],
+          "description": "Vertical category to match buyer intent."
         },
         "minPaymentReliabilityPct": {
-          "type": "number"
+          "type": "number",
+          "description": "Minimum historical payment completion percentage (0 to 100)."
         },
         "connectAndCloseDealWithBuyerId": {
           "type": "string",
-          "description": "Optional Buyer ID to send a direct verified offer and close a matched deal."
+          "description": "Optional buyer ID to send a direct pitch and close a matched order."
         },
         "dealAmountUsdc": {
-          "type": "number"
+          "type": "number",
+          "description": "Proposed order amount in USDC when closing a matched deal."
         },
         "directOfferPitch": {
-          "type": "string"
+          "type": "string",
+          "description": "Short offer message sent to the matched buyer."
         }
       },
       "required": [
@@ -797,16 +924,25 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
 
   try {
     if (method === "initialize") {
+      const requestedSpec = params?.protocolVersion;
+      const supportedSpecs = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
+      const negotiatedSpec = supportedSpecs.includes(requestedSpec) ? requestedSpec : "2026-07-28";
       return {
         jsonrpc,
         id,
         result: {
-          protocolVersion: "2025-06-18",
-          capabilities: { tools: {} },
+          protocolVersion: negotiatedSpec,
+          capabilities: {
+            tools: { listChanged: false },
+            resources: { listChanged: false },
+            prompts: { listChanged: false },
+          },
           serverInfo: {
             name: "trustgate-erc8183-mcp",
             version: "0.7.0",
           },
+          instructions:
+            "Start with inspect_veritas_8183_seal (free) to check 1-to-3 Star Seller Seals, 7-Question Continuous Trust Dossiers, and Pre-Execution Firewall status. Register in manage_buyer_finops_spend_passport (0 USDC) to claim 1 single-use unlock token.",
         },
       };
     }
@@ -828,7 +964,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
         jsonrpc,
         id,
         result: {
-          protocolVersion: "2025-06-18",
+          protocolVersion: "2026-07-28",
           serverInfo: {
             name: "trustgate-erc8183-mcp",
             version: "0.7.0",
@@ -851,17 +987,23 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           resources: [
             {
               uri: "https://own-adam.onrender.com/notary.json",
-              name: "VERITAS-8183 Public M2M Notary Registry, 3-Star Seller Seals & Buyer FinOps Passports",
+              name: "VERITAS-8183 Public M2M Notary Registry",
+              description:
+                "Live registry of 1-to-3 Star Seller Seals, Proof-of-Reserve ratios, and Buyer FinOps Spend Passports.",
               mimeType: "application/json",
             },
             {
               uri: "https://own-adam.onrender.com/catalog.json",
-              name: "TrustGate Dual-Tier AI Marketplace Catalog (Institutional B2B, Retail/Indie & x402 Bazaar)",
+              name: "TrustGate Dual-Tier AI Marketplace Catalog",
+              description:
+                "Institutional B2B and Retail/Indie audited packages, partner stores, and x402 micro-bazaar services.",
               mimeType: "application/json",
             },
             {
               uri: "https://own-adam.onrender.com/.well-known/agent.json",
               name: "ERC-8004 Agent Identity & Base Mainnet Contract Manifest",
+              description:
+                "On-chain Base Mainnet contract address (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) and Sourcify proofs.",
               mimeType: "application/json",
             },
           ],

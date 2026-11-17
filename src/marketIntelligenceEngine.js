@@ -4,7 +4,7 @@
  * - Tope duro de memoria (MAX_UNIQUE_AGENTS = 350, MAX_TREND_TOPICS = 100) para garantizar <0.008% de uso de RAM en Render.
  */
 
-export const HISTORICAL_BASELINE_HITS = 18447;
+export const HISTORICAL_BASELINE_HITS = 20148;
 
 import { unsealVeritasVaultPayload } from "./veritasEncryptedVaultLoader.js";
 

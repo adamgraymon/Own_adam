@@ -109,6 +109,7 @@ function stopSwarmLoop() {
 function sendJson(res, statusCode, data, extraHeaders = {}) {
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
     ...extraHeaders,
   });
   res.end(JSON.stringify(data, null, 2));
@@ -300,20 +301,41 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
 
       if (
         req.method === "GET" &&
+        (url.pathname === "/.well-known/owners.json" ||
+          url.pathname === "/mcp/.well-known/owners.json" ||
+          url.pathname === "/owners.json")
+      ) {
+        return sendJson(res, 200, {
+          $schema: "https://verifymcp.io/schemas/owners.json",
+          owners: ["adamgraymon@users.noreply.github.com"],
+        });
+      }
+
+      if (
+        req.method === "GET" &&
         (url.pathname === "/.well-known/oauth-protected-resource" ||
           url.pathname === "/.well-known/oauth-protected-resource/mcp" ||
           url.pathname === "/.well-known/oauth-authorization-server" ||
           url.pathname === "/.well-known/oauth-authorization-server/mcp" ||
           url.pathname === "/.well-known/openid-configuration")
       ) {
+        const canonicalBase = "https://own-adam.onrender.com";
         return sendJson(res, 200, {
-          resource: `${baseUrl}/mcp`,
+          resource: `${canonicalBase}/mcp`,
+          issuer: canonicalBase,
+          authorization_servers: [canonicalBase],
+          authorization_endpoint: `${canonicalBase}/oauth/authorize`,
+          token_endpoint: `${canonicalBase}/oauth/token`,
+          bearer_methods_supported: ["header"],
+          scopes_supported: ["mcp:read", "mcp:write"],
+          response_types_supported: ["code"],
+          grant_types_supported: ["authorization_code", "client_credentials"],
+          code_challenge_methods_supported: ["S256"],
           auth_required: false,
           public_m2m_access: true,
-          bearer_methods_supported: [],
           payment_protocols_supported: ["x402", "ERC-8183-Base-Mainnet-USDC", "VERITAS-8183"],
           escrow_contract_base_mainnet: ledger.wallets.escrow_contract.address,
-          documentation: `${baseUrl}/llms.txt`,
+          documentation: `${canonicalBase}/llms.txt`,
         });
       }
 
@@ -570,6 +592,26 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           mcpTool: rpcPayload?.params?.name || null,
           rpcArgs: rpcPayload?.params?.arguments || null,
         });
+
+        // Responder al probe de autorización de VerifyMCP con el desafío RFC 9728 OAuth 2.1
+        if (
+          rpcPayload?.method === "tools/call" &&
+          String(rpcPayload?.params?.name || "").startsWith("__verifymcp_auth_probe_")
+        ) {
+          return sendJson(
+            res,
+            401,
+            {
+              error: "unauthorized",
+              error_description: "Bearer token required to invoke protected tools.",
+              resource_metadata: "https://own-adam.onrender.com/.well-known/oauth-protected-resource",
+            },
+            {
+              "WWW-Authenticate":
+                'Bearer resource_metadata="https://own-adam.onrender.com/.well-known/oauth-protected-resource", scope="mcp:read mcp:write"',
+            }
+          );
+        }
 
         // Candado en vivo en Base Mainnet para compras públicas de paquetes oficiales First-Party
         if (
