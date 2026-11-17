@@ -8,12 +8,14 @@ COPY package.json package-lock.json* ./
 RUN npm install --omit=dev
 
 COPY contracts ./contracts
-RUN mkdir -p ./artifacts
-COPY public ./public
-COPY src ./src
+RUN mkdir -p ./artifacts && chown -R node:node /app
+COPY --chown=node:node public ./public
+COPY --chown=node:node src ./src
 
 ENV NODE_ENV=production
 ENV PORT=3402
+
+USER node
 
 EXPOSE 3402
 

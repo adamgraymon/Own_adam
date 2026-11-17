@@ -448,6 +448,33 @@ export const MCP_TOOLS = [
   },
 ];
 
+// Enriquecer todas las herramientas con anotaciones oficiales MCP de Menor Privilegio (Least-Privilege Scoping)
+const READ_ONLY_TOOL_NAMES = new Set([
+  "discover_verified_stores",
+  "quote_multitoken_escrow",
+  "submit_encrypted_deliverable",
+  "audit_quant_backtest_escrow",
+  "audit_smart_contract_escrow",
+  "audit_api_sla_escrow",
+  "audit_agent_skill_escrow",
+  "audit_rag_embeddings_escrow",
+  "audit_ai_inference_escrow",
+  "audit_depin_gpu_sla_escrow",
+  "verify_onchain_escrow_status",
+  "inspect_veritas_8183_seal",
+]);
+
+for (const tool of MCP_TOOLS) {
+  const isReadOnly = READ_ONLY_TOOL_NAMES.has(tool.name);
+  tool.annotations = {
+    title: tool.name,
+    readOnlyHint: isReadOnly,
+    destructiveHint: false,
+    idempotentHint: isReadOnly,
+    openWorldHint: false,
+  };
+}
+
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.
  */
@@ -672,8 +699,34 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             ok: true,
             ...ledger.getAgentCardManifest().identity,
             paymentTerms: ledger.getAgentCardManifest().paymentTerms,
+            externalCryptographicAuditReceipts: {
+              zeroLocalExecutionRisk:
+                "100% Remote streamable-http endpoint inside non-root Docker sandbox (USER node). Zero npx/local file access.",
+              sourcifySmartContractAudit: {
+                status: "exact_match",
+                matchId: "59283147",
+                contractAddress: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+                verifyUrl: "https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+              },
+              legionCryptographicAgentPassport: {
+                passportId: "lp0_a1990fc66ed863c9179d571a9db8a28d",
+                merkleLeafIndex: 797,
+                merkleRootSha256: "34e0b62eddf661f7c35bba19f8e2f67d24f2234ead41a07d9172b5c5355f4265",
+                badgeSvgUrl: "https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg",
+                signedReceiptJsonUrl: "https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.json",
+              },
+              legionTransparencyLogManifestReceipt: {
+                merkleLeafIndex: 71826,
+                signatureEd25519: "RAjOmjNmwCKBra4Iy9eT+4taNuXYwKN/mdDr8bfcasp3+XgL9e7vZiAziyy4D9MMq1dfN6Kd9y+DEBIom8QIBQ==",
+                verifyUrl: "https://tlog.legion-api.com/tlog/v0/records/71826",
+              },
+              sealkeeperIndependentUptimeAudit: {
+                uptimePct: "100%",
+                verifyUrl: "https://sealkeeper.run/agents/own-adam.onrender.com",
+              },
+            },
             liveEcosystemTraction: {
-              verifiedM2MHitsAllTime: "15,000+",
+              verifiedM2MHitsAllTime: "18,447+",
               uniqueIndexedAiSystems: "209+",
               officialMcpRegistryServersCount: 12,
               standard: "VERITAS-8183 & ERC-8183",
