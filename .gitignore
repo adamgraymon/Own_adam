@@ -8,3 +8,5 @@ data/*.ndjson
 data/DATABENTO_*.csv
 data/composicion_bid_ask.csv
 telegram_mt5_bridge/
+data/trust-snapshots.json
+data/trust-snapshots.json.tmp

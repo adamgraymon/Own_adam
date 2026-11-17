@@ -416,9 +416,26 @@ function ensureStore(ledger) {
       snapshots: new Map(), // url -> { fingerprint, toolHashes, firstSeenAt, lastSeenAt, checks }
       quota: new Map(), // callerKey|day -> count
       stats: { totalChecks: 0, freeChecks: 0, paidChecks: 0, quotaBlocked: 0 },
+      persist: null, // función (url, snap, map) => Promise; se activa con enableTrustPersistence()
     };
   }
   return ledger.freeTrustCheck;
+}
+
+/**
+ * Activa la persistencia del historial (Upstash Redis o archivo local) y recarga las fichas guardadas.
+ * Solo lo llama server.js; los tests trabajan en memoria.
+ */
+export async function enableTrustPersistence(ledger) {
+  const { loadTrustSnapshots, saveTrustSnapshot, trustStoreStatus } = await import("./trustStore.js");
+  const store = ensureStore(ledger);
+  const entries = await loadTrustSnapshots();
+  for (const [url, snap] of entries) {
+    if (snap && snap.fingerprint && !store.snapshots.has(url)) store.snapshots.set(url, snap);
+  }
+  store.persist = saveTrustSnapshot;
+  store.persistStatus = trustStoreStatus;
+  return trustStoreStatus;
 }
 
 /** Consume una consulta gratis diaria. Devuelve { allowed, remaining }. */
@@ -486,6 +503,8 @@ export function getPublicTrustRecord(ledger, serverUrl) {
     totalChecks: snap.checks,
     stale,
     toolFingerprint: snap.fingerprint.slice(0, 16),
+    serverVersion: snap.serverVersion ?? null,
+    history: snap.history || [],
   };
 }
 
@@ -602,6 +621,24 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
   snap.lastScore = score;
   snap.lastVerdict = verdict;
   snap.serverName = probe.serverInfo?.name || null;
+  snap.serverVersion = probe.serverInfo?.version || null;
+  // Historial técnico de confianza: una línea por chequeo (últimos 50).
+  snap.history = [
+    ...(prev?.history || []),
+    {
+      at: probe.checkedAt,
+      score,
+      verdict,
+      version: probe.serverInfo?.version || null,
+      fingerprint: fingerprint.slice(0, 16),
+      toolCount: probe.tools.length,
+      drift: drift.status,
+      ...(drift.status === "CHANGED_SINCE_LAST_CHECK"
+        ? { added: drift.addedTools.length, removed: drift.removedTools.length, modified: drift.modifiedTools.length }
+        : {}),
+    },
+  ].slice(-50);
+  if (store.persist) store.persist(probe.serverUrl, snap, store.snapshots);
   const badgeUrl = `${PUBLIC_BASE_URL}/badge.svg?server=${encodeURIComponent(probe.serverUrl)}`;
 
   const base = {
@@ -703,5 +740,11 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
 
 export function getFreeTrustCheckStats(ledger) {
   const store = ensureStore(ledger);
-  return { ...store.stats, serversTracked: store.snapshots.size };
+  return {
+    ...store.stats,
+    serversTracked: store.snapshots.size,
+    persistence: store.persistStatus
+      ? { backend: store.persistStatus.backend, loadedOnStartup: store.persistStatus.loadedSnapshots, lastSaveAt: store.persistStatus.lastSaveAt, saveErrors: store.persistStatus.saveErrors }
+      : { backend: "memory" },
+  };
 }

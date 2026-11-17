@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
-import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats, TRUST_METHODOLOGY } from "./freeTrustCheck.js";
+import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats, TRUST_METHODOLOGY, enableTrustPersistence } from "./freeTrustCheck.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
   CURATED_FIRST_PARTY_CATALOG,
@@ -783,6 +783,9 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const server = createLabServer({ autoStartSwarm: true });
+  // Recargar el historial de confianza guardado antes de aceptar tráfico.
+  const persist = await enableTrustPersistence(ledger);
+  console.log(` * Trust history   : backend=${persist.backend}, fichas recargadas=${persist.loadedSnapshots}${persist.lastError ? `, error=${persist.lastError}` : ""}`);
   server.listen(PORT, () => {
     console.log(`\n===================================================================`);
     console.log(` NODO M2M INTERVENTOR ACTIVO (Tráfico Autónomo Bot-a-Bot en curso)`);
