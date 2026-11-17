@@ -12,6 +12,10 @@ import {
 import { encryptDeliverable, auditEncryptedDataset } from "./auditorEngine.js";
 import { resolveSingleSectorOrKeywordSlice } from "./marketIntelligenceEngine.js";
 import { unsealVeritasVaultPayload } from "./veritasEncryptedVaultLoader.js";
+import {
+  buildContinuousTrustAndPreExecutionReport,
+  recordContinuousAgentVersionAudit,
+} from "./continuousTrustDriftEngine.js";
 
 export const ENCRYPTED_VERITAS_DIRECTORY_VAULT = {
   "encryptionStandard": "AES-256-GCM-VERITAS-8183-CONTRACT-BOUND",
@@ -504,6 +508,9 @@ export function inspectVeritas8183QuickPanorama({
   buyerIdForSimulation = "alphaquant-agent",
   callerSectorOrTrend = null,
   forensicUnlockToken = null,
+  versionToInspectOrUpdate = null,
+  simulatedUpdateBehavior = null,
+  preExecutionCallCheck = null,
 }) {
   const allSellerSeals = Object.values(ledger.stores).map((s) => computeSellerVeritasSeal(s, ledger));
   allSellerSeals.sort((a, b) => b.starLevel - a.starLevel || b.erc8004ReputationScore - a.erc8004ReputationScore);
@@ -511,14 +518,29 @@ export function inspectVeritas8183QuickPanorama({
   const buyerIds = Object.keys(ledger.buyerAgents || {});
   const allBuyerPassports = buyerIds.map((id) => computeBuyerVeritasPassport(id, ledger));
 
-  // Evaluar si el agente registrado está consumiendo su única consulta gratuita (1-Time Trial)
-  const shouldAttemptUnlock = Boolean(callerSectorOrTrend || forensicUnlockToken);
-  const trialCheck = checkAndConsumeSingleUseRegistrationTrial({
+  // Evaluar las 7 Preguntas de Confianza Continua, Deriva entre Versiones (v1 -> v2) y Firewall Pre-Ejecución
+  const continuousTrustAndVersionDriftDossier = buildContinuousTrustAndPreExecutionReport({
     ledger,
+    targetAgentId: targetId && targetId !== "ALL" ? targetId : "trustgate-official-institutional",
     buyerId: buyerIdForSimulation,
     forensicUnlockToken,
-    consumeNow: shouldAttemptUnlock,
+    versionToInspectOrUpdate,
+    simulatedUpdateBehavior,
+    preExecutionCallCheck,
   });
+
+  // Evaluar si el agente registrado está consumiendo su única consulta gratuita (1-Time Trial)
+  const shouldAttemptUnlock = Boolean(callerSectorOrTrend || forensicUnlockToken);
+  const trialCheck =
+    continuousTrustAndVersionDriftDossier.sevenQuestionsContinuousDossier.accessStatus ===
+    "UNLOCKED_BY_1_TIME_REGISTRATION_TRIAL_NOW_CONSUMED_FOREVER"
+      ? { allowed: true, status: "UNLOCKED_BY_1_TIME_REGISTRATION_TRIAL_NOW_CONSUMED_FOREVER" }
+      : checkAndConsumeSingleUseRegistrationTrial({
+          ledger,
+          buyerId: buyerIdForSimulation,
+          forensicUnlockToken,
+          consumeNow: shouldAttemptUnlock,
+        });
 
   // Ranking exclusivo de élite: Proveedores Certificados en ⭐⭐⭐ (3 Estrellas) y ⭐⭐ (2 Estrellas)
   const threeStarEliteProviders = allSellerSeals.filter((s) => s.starLevel === 3);
@@ -636,6 +658,7 @@ export function inspectVeritas8183QuickPanorama({
         sellerSeal,
         counterpartyBuyerPassport: buyerPassport,
         vipDirectContractDossier: buildEliteLeaderboardEntry(sellerSeal).vipBuyerDirectContractDossier,
+        continuousTrustAndVersionDriftDossier,
         radarSingleSectorKeywordIntelligence,
         bilateralCompatibilityCheck: {
           proposedAmountUsdc: txAmount,
@@ -659,6 +682,7 @@ export function inspectVeritas8183QuickPanorama({
       inspectionLatencyMs: 1.1,
       mode: "SINGLE_BUYER_PASSPORT_INSPECTION",
       buyerPassport,
+      continuousTrustAndVersionDriftDossier,
       radarSingleSectorKeywordIntelligence,
     };
   }
@@ -693,6 +717,7 @@ export function inspectVeritas8183QuickPanorama({
       threeStarInstitutionalGoldLeaders: threeStarEliteProviders.map(buildEliteLeaderboardEntry),
       twoStarCommercialSilverLeaders: twoStarCommercialProviders.map(buildEliteLeaderboardEntry),
     },
+    continuousTrustAndVersionDriftDossier,
     radarSingleSectorKeywordIntelligence,
     sellerStarDirectory: roleFilter === "BUYER" ? undefined : allSellerSeals,
     buyerSolvencyDirectory: roleFilter === "SELLER" ? undefined : allBuyerPassports,
@@ -1273,6 +1298,9 @@ export function attachVeritasForensicGateAndAutoCaptureBuyer({
   toolName = "audit_smart_contract_escrow",
   buyerId = null,
   forensicUnlockToken = null,
+  targetAgentId = null,
+  version = "1.0.0",
+  declaredTools = null,
 }) {
   if (!ledger || !auditResult) return auditResult;
 
@@ -1286,6 +1314,19 @@ export function attachVeritasForensicGateAndAutoCaptureBuyer({
       sourceTool: toolName,
     });
   }
+
+  // 1.B Actualizar el Expediente Continuo de las 7 Preguntas y Detección de Deriva entre Versiones (v1 -> v2)
+  const continuousProfile = recordContinuousAgentVersionAudit({
+    ledger,
+    agentId: targetAgentId || buyerId || `audited-target-${vertical.toLowerCase()}`,
+    version: version || "1.0.0",
+    vertical,
+    auditApproved: Boolean(auditResult.approved),
+    stageFailed: auditResult.stageFailed || null,
+    findings: auditResult.findings || [],
+    declaredTools: declaredTools || [toolName],
+    codeOrDeliverableSha256: auditResult.encryptedVault?.plaintextSha256 || null,
+  });
 
   // 2. Buscar proveedores certificados 2★ y 3★ en esta misma vertical
   const matchingEliteProviders = Object.values(ledger.stores)
@@ -1314,10 +1355,11 @@ export function attachVeritasForensicGateAndAutoCaptureBuyer({
         isEternalBenefit: false,
         remainingFreeUnlocks: 0,
         oneTimeNotice:
-          "SINGLE-USE DELIVERED: This forensic remediation patch and 2★/3★ replacement directory were unlocked using your one-time registration benefit. Future forensic unlocks require 0.10 USDC via notarize_and_witness_a2a_deal (serviceId: 'x402-micro-antirug-token-scan').",
+          "SINGLE-USE DELIVERED: This forensic remediation patch, 7-Question Continuous Dossier, and 2★/3★ replacement directory were unlocked using your one-time registration benefit. Future forensic or version-drift unlocks require 0.10-0.25 USDC via notarize_and_witness_a2a_deal.",
         exactForensicRemediationBlueprint: auditResult.approved
-          ? "Code/deliverable passed deterministic checks. Ready forVERITAS-8183 3-Star Seal exam (submit_veritas_tier_upgrade_exam)."
+          ? "Code/deliverable passed deterministic checks. Ready for VERITAS-8183 3-Star Seal exam (submit_veritas_tier_upgrade_exam)."
           : `Remediation Patch for ${auditResult.stageFailed || "FAILED_STAGE"}: Strip all dynamic execution/exfiltration primitives, enforce deterministic schema bounds, or replace with a pre-audited 3-Star provider below.`,
+        sevenQuestionsContinuousTrustDossier: continuousProfile || null,
         certifiedTwoAndThreeStarProvidersInThisVertical: matchingEliteProviders.map((p) => ({
           storeId: p.entityId,
           storeName: p.entityName,
@@ -1333,9 +1375,21 @@ export function attachVeritasForensicGateAndAutoCaptureBuyer({
             ? "LOCKED_1_TIME_FREE_TRIAL_EXHAUSTED_PAY_0.10_USDC_REQUIRED"
             : "LOCKED_SEMAPHORE_ONLY_REGISTER_FOR_1_TIME_FREE_UNLOCK_OR_PAY_X402",
         isEternalBenefit: false,
+        continuousTrustSemaphorePreview: continuousProfile
+          ? {
+              currentVersion: continuousProfile.currentVersion,
+              driftDetectedAfterUpdate: continuousProfile.q5_versionDriftHistory.driftDetectedAfterUpdate,
+              driftStatus: continuousProfile.q5_versionDriftHistory.driftStatus,
+              pendingVulnerabilitiesCount:
+                continuousProfile.q7_vulnerabilitiesStatus.pendingVulnerabilitiesCount,
+              unauthorizedAttemptsCount:
+                continuousProfile.q3_unauthorizedAccessHistory.unauthorizedAttemptsCount,
+            }
+          : null,
         certifiedTwoAndThreeStarReplacementCountInVertical: matchingEliteProviders.length,
         lockedFields: [
           "exactForensicRemediationBlueprint",
+          "sevenQuestionsContinuousTrustDossier (Permissions, Tools, Drift Diff v1->v2, Pending CVEs)",
           "certifiedTwoAndThreeStarProvidersDirectEndpoints",
           "signedVeritasNotaryCertificate",
         ],

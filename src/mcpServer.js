@@ -556,6 +556,18 @@ export const MCP_TOOLS = [
         "forensicUnlockToken": {
           "type": "string",
           "description": "Optional 1-Time Single-Use Unlock Token issued by manage_buyer_finops_spend_passport."
+        },
+        "versionToInspectOrUpdate": {
+          "type": "string",
+          "description": "Optional agent/server version (e.g. '1.0.0' or '2.1.0') to compare against historical baseline for Behavioral Drift detection."
+        },
+        "simulatedUpdateBehavior": {
+          "type": "object",
+          "description": "Optional update payload ({ version, skillMarkdown, bundledScripts, declaredTools }) to test for Behavioral Drift (v1 vs v2)."
+        },
+        "preExecutionCallCheck": {
+          "type": "object",
+          "description": "Optional pre-execution firewall check ({ toolName, argumentsPayload }) to block dangerous actions BEFORE execution."
         }
       }
     }
@@ -967,6 +979,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_quant_backtest_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_smart_contract_escrow":
@@ -981,6 +995,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_smart_contract_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || args.contractName || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_api_sla_escrow":
@@ -998,6 +1014,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_api_sla_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_agent_skill_escrow":
@@ -1012,6 +1030,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_agent_skill_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_rag_embeddings_escrow":
@@ -1026,6 +1046,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_rag_embeddings_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_ai_inference_escrow":
@@ -1042,6 +1064,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_ai_inference_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "audit_depin_gpu_sla_escrow":
@@ -1060,6 +1084,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             toolName: "audit_depin_gpu_sla_escrow",
             buyerId: args.buyerId || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            targetAgentId: args.targetAgentId || null,
+            version: args.version || "1.0.0",
           });
           break;
         case "verify_onchain_escrow_status":
@@ -1158,6 +1184,9 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             buyerIdForSimulation: args.buyerIdForSimulation || "alphaquant-agent",
             callerSectorOrTrend: args.callerSectorOrTrend || null,
             forensicUnlockToken: args.forensicUnlockToken || null,
+            versionToInspectOrUpdate: args.versionToInspectOrUpdate || null,
+            simulatedUpdateBehavior: args.simulatedUpdateBehavior || null,
+            preExecutionCallCheck: args.preExecutionCallCheck || null,
           });
           break;
         case "submit_veritas_tier_upgrade_exam":
