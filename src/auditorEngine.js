@@ -11,27 +11,13 @@ import readline from "node:readline";
 import { pipeline } from "node:stream/promises";
 
 // Patrones de ataque: CSV Formula Injection, XSS/Ejecución y Prompt Injection al árbitro
-const MALWARE_PATTERNS = [
-  { name: "CSV_FORMULA_INJECTION", regex: /^[\s]*[=+\-@](?:cmd|powershell|sh|bash|sum|hyperlink|importxml|dde)/i },
-  { name: "DANGEROUS_CELL_PREFIX", regex: /^[\s]*[=][A-Za-z0-9_]+\s*\(/ },
-  { name: "XSS_OR_SCRIPT_TAG", regex: /<\s*script\b|javascript\s*:|onerror\s*=|onload\s*=/i },
-  { name: "CODE_EXECUTION_VECTOR", regex: /\b(?:child_process|eval\s*\(|Function\s*\(|require\s*\(\s*['"]fs['"])/i },
-  { name: "NULL_BYTE_BINARY", regex: /\x00/ },
-];
+import { unsealVeritasVaultPayload, hydrateRegexRuleList } from "./veritasEncryptedVaultLoader.js";
+import { ENCRYPTED_AUDITOR_SIGNATURES_VAULT } from "./multiVerticalAuditors.js";
 
-const PROMPT_INJECTION_PATTERNS = [
-  {
-    name: "LLM_SYSTEM_OVERRIDE",
-    regex: /(?:\[\s*system\b|system\s*override|ignore\s+(?:all\s+)?previous\s+instructions|ignora\s+(?:todas\s+)?las\s+instrucciones)/i,
-  },
-  {
-    name: "VERDICT_MANIPULATION",
-    regex: /(?:aprueba\s+el\s+pago|approve\s+(?:this\s+)?payment|force\s+verdict|verdict\s*:\s*approved|libera\s+los\s+fondos\s+inmediatamente)/i,
-  },
-];
-
-const PLACEHOLDER_GARBAGE_REGEX =
-  /\b(?:lorem\s+ipsum|asdfgh|test@test\.com|example@example\.com|fake\s*data|dummy\s*row|relleno\s*falso|sin\s*datos\s*reales)\b/i;
+const _UNSEALED_DATASET_RULES = unsealVeritasVaultPayload(ENCRYPTED_AUDITOR_SIGNATURES_VAULT);
+const MALWARE_PATTERNS = hydrateRegexRuleList(_UNSEALED_DATASET_RULES.DATASET_MALWARE_PATTERNS);
+const PROMPT_INJECTION_PATTERNS = hydrateRegexRuleList(_UNSEALED_DATASET_RULES.DATASET_PROMPT_INJECTION_PATTERNS);
+const PLACEHOLDER_GARBAGE_REGEX = new RegExp(_UNSEALED_DATASET_RULES.PLACEHOLDER_GARBAGE_SOURCE, "i");
 
 /**
  * Cifra el entregable cuando la Tienda IA lo sube al Escrow.

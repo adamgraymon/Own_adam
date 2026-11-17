@@ -11,6 +11,19 @@ import {
 } from "./multiVerticalAuditors.js";
 import { encryptDeliverable, auditEncryptedDataset } from "./auditorEngine.js";
 import { resolveSingleSectorOrKeywordSlice } from "./marketIntelligenceEngine.js";
+import { unsealVeritasVaultPayload } from "./veritasEncryptedVaultLoader.js";
+
+export const ENCRYPTED_VERITAS_DIRECTORY_VAULT = {
+  "encryptionStandard": "AES-256-GCM-VERITAS-8183-CONTRACT-BOUND",
+  "vaultDomain": "VERITAS_DIRECTORY_AND_BUYER_LEADS_VAULT",
+  "boundEscrowContract": "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+  "boundNotarySigner": "0x861ac49f8299c45cca6bd9f0254080fd82061ac4",
+  "boundLegionPassportId": "lp0_a1990fc66ed863c9179d571a9db8a28d",
+  "ivHex": "05b69e0bbe84f0a61614c0e1",
+  "authTagHex": "80f80fd8db4c5dde080b71ce99da3351",
+  "ciphertextBase64": "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"
+};
+const _UNSEALED_VERITAS_DIRECTORY = unsealVeritasVaultPayload(ENCRYPTED_VERITAS_DIRECTORY_VAULT);
 
 function round6(value) {
   return Number(Number(value).toFixed(6));
@@ -75,234 +88,7 @@ export const X402_MICRO_BAZAAR_SERVICES = {
  * Telemetría base de Reserva Cripto Pública Auditable (Proof-of-Reserve) y Estadísticas de Clientes
  * para las tiendas del ecosistema.
  */
-const STORE_VERITAS_TELEMETRY_DEFAULTS = {
-  "trustgate-official-institutional": {
-    publicReserveWallet: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
-    lockedOrPublicReserveUsdc: 450.0,
-    activeOperationalVolumeUsdc: 1200.0,
-    uniqueClientsServed: 18,
-    repeatClientRatePct: 88.9,
-    verifiedClientRating5: 4.98,
-    verifiedReviewsCount: 18,
-    contentQualityScorePct: 99.6,
-    responseTimeP95Ms: 14,
-    uptimePct: 99.99,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "trustgate-official-retail": {
-    publicReserveWallet: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
-    lockedOrPublicReserveUsdc: 180.0,
-    activeOperationalVolumeUsdc: 520.0,
-    uniqueClientsServed: 24,
-    repeatClientRatePct: 83.3,
-    verifiedClientRating5: 4.95,
-    verifiedReviewsCount: 22,
-    contentQualityScorePct: 99.2,
-    responseTimeP95Ms: 18,
-    uptimePct: 99.98,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "dataforge-ai": {
-    publicReserveWallet: "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
-    lockedOrPublicReserveUsdc: 320.0,
-    activeOperationalVolumeUsdc: 1100.0,
-    uniqueClientsServed: 42,
-    repeatClientRatePct: 90.5,
-    verifiedClientRating5: 4.96,
-    verifiedReviewsCount: 39,
-    contentQualityScorePct: 99.4,
-    responseTimeP95Ms: 22,
-    uptimePct: 99.95,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "depin-h100-verified-cluster": {
-    publicReserveWallet: "0xDePINH100Reserve81830000000000000000B814",
-    lockedOrPublicReserveUsdc: 260.0,
-    activeOperationalVolumeUsdc: 950.0,
-    uniqueClientsServed: 16,
-    repeatClientRatePct: 81.2,
-    verifiedClientRating5: 4.91,
-    verifiedReviewsCount: 15,
-    contentQualityScorePct: 98.8,
-    responseTimeP95Ms: 38,
-    uptimePct: 99.92,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "quantalpha-institutional-node": {
-    publicReserveWallet: "0xQuantAlphaReserve818300000000000000B201",
-    lockedOrPublicReserveUsdc: 195.0,
-    activeOperationalVolumeUsdc: 780.0,
-    uniqueClientsServed: 19,
-    repeatClientRatePct: 78.9,
-    verifiedClientRating5: 4.89,
-    verifiedReviewsCount: 17,
-    contentQualityScorePct: 98.5,
-    responseTimeP95Ms: 29,
-    uptimePct: 99.91,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "cerberus-solc-formal-verifier": {
-    publicReserveWallet: "0xCerberusReserve81830000000000000000C901",
-    lockedOrPublicReserveUsdc: 285.0,
-    activeOperationalVolumeUsdc: 1000.0,
-    uniqueClientsServed: 22,
-    repeatClientRatePct: 86.4,
-    verifiedClientRating5: 4.94,
-    verifiedReviewsCount: 21,
-    contentQualityScorePct: 99.3,
-    responseTimeP95Ms: 24,
-    uptimePct: 99.96,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "chainlink-x402-institutional-oracle": {
-    publicReserveWallet: "0xChronosX402Reserve8183000000000000D902",
-    lockedOrPublicReserveUsdc: 360.0,
-    activeOperationalVolumeUsdc: 1200.0,
-    uniqueClientsServed: 34,
-    repeatClientRatePct: 91.2,
-    verifiedClientRating5: 4.95,
-    verifiedReviewsCount: 31,
-    contentQualityScorePct: 99.4,
-    responseTimeP95Ms: 16,
-    uptimePct: 99.98,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "skillvault-zero-trust-hub": {
-    publicReserveWallet: "0xSkillVaultReserve81830000000000000E903",
-    lockedOrPublicReserveUsdc: 240.0,
-    activeOperationalVolumeUsdc: 1000.0,
-    uniqueClientsServed: 29,
-    repeatClientRatePct: 85.0,
-    verifiedClientRating5: 4.92,
-    verifiedReviewsCount: 26,
-    contentQualityScorePct: 99.1,
-    responseTimeP95Ms: 19,
-    uptimePct: 99.95,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "pinecone-shield-rag-auditor": {
-    publicReserveWallet: "0xVectorFortReserve81830000000000000F904",
-    lockedOrPublicReserveUsdc: 225.0,
-    activeOperationalVolumeUsdc: 1000.0,
-    uniqueClientsServed: 19,
-    repeatClientRatePct: 84.2,
-    verifiedClientRating5: 4.9,
-    verifiedReviewsCount: 18,
-    contentQualityScorePct: 98.9,
-    responseTimeP95Ms: 31,
-    uptimePct: 99.94,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "eigen-verified-inference-grid": {
-    publicReserveWallet: "0xVeriGridReserve8183000000000000000A905",
-    lockedOrPublicReserveUsdc: 260.0,
-    activeOperationalVolumeUsdc: 1000.0,
-    uniqueClientsServed: 26,
-    repeatClientRatePct: 88.5,
-    verifiedClientRating5: 4.93,
-    verifiedReviewsCount: 24,
-    contentQualityScorePct: 99.2,
-    responseTimeP95Ms: 27,
-    uptimePct: 99.96,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  // Nodos ⭐⭐ 2 Estrellas (Commercial Silver — Reserva entre 12% y 18% < 20% requerido para 3 Estrellas)
-  "aegis-solidity-auditor-pro": {
-    publicReserveWallet: "0xAegisSec8183...C309",
-    lockedOrPublicReserveUsdc: 90.0,
-    activeOperationalVolumeUsdc: 500.0, // 18.0% reserve ratio -> 2 Stars (⭐⭐)
-    uniqueClientsServed: 15,
-    repeatClientRatePct: 76.0,
-    verifiedClientRating5: 4.78,
-    verifiedReviewsCount: 14,
-    contentQualityScorePct: 96.8,
-    responseTimeP95Ms: 48,
-    uptimePct: 99.85,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "clawshield-verified-skills": {
-    publicReserveWallet: "0xClawShield...E511",
-    lockedOrPublicReserveUsdc: 82.0,
-    activeOperationalVolumeUsdc: 500.0, // 16.4% reserve ratio -> 2 Stars (⭐⭐)
-    uniqueClientsServed: 27,
-    repeatClientRatePct: 74.5,
-    verifiedClientRating5: 4.75,
-    verifiedReviewsCount: 23,
-    contentQualityScorePct: 96.2,
-    responseTimeP95Ms: 52,
-    uptimePct: 99.82,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "vectorguard-enterprise-rag": {
-    publicReserveWallet: "0xVectorGuard...F612",
-    lockedOrPublicReserveUsdc: 78.0,
-    activeOperationalVolumeUsdc: 500.0, // 15.6% reserve ratio -> 2 Stars (⭐⭐)
-    uniqueClientsServed: 12,
-    repeatClientRatePct: 75.0,
-    verifiedClientRating5: 4.74,
-    verifiedReviewsCount: 11,
-    contentQualityScorePct: 96.0,
-    responseTimeP95Ms: 58,
-    uptimePct: 99.8,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: true,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-  "x402-lowlatency-oracle-hub": {
-    publicReserveWallet: "0xOracleX402...D410",
-    lockedOrPublicReserveUsdc: 72.5,
-    activeOperationalVolumeUsdc: 500.0, // 14.5% reserve ratio -> 2 Stars (⭐⭐)
-    uniqueClientsServed: 31,
-    repeatClientRatePct: 72.0,
-    verifiedClientRating5: 4.68,
-    verifiedReviewsCount: 25,
-    contentQualityScorePct: 95.4,
-    responseTimeP95Ms: 68,
-    uptimePct: 99.78,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: false,
-    lastWitnessedTxHash: "0x98f016459fe0625241f9135d8ae6286d03b08f0ebf7d0b54ce5ee24a7bcfba41",
-  },
-  "verifllm-deepseek-r1-node": {
-    publicReserveWallet: "0xVerifLLM...A713",
-    lockedOrPublicReserveUsdc: 64.0,
-    activeOperationalVolumeUsdc: 500.0, // 12.8% reserve ratio -> 2 Stars (⭐⭐)
-    uniqueClientsServed: 21,
-    repeatClientRatePct: 71.4,
-    verifiedClientRating5: 4.65,
-    verifiedReviewsCount: 18,
-    contentQualityScorePct: 95.1,
-    responseTimeP95Ms: 84,
-    uptimePct: 99.75,
-    disputeLossRatePct: 0.0,
-    sourcifyVerified: false,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
-  },
-};
+const STORE_VERITAS_TELEMETRY_DEFAULTS = _UNSEALED_VERITAS_DIRECTORY.STORE_VERITAS_TELEMETRY_DEFAULTS;
 
 /**
  * Calcula el Sello Oficial VERITAS-8183 (1 a 3 Estrellas o Revocado) y las estadísticas de clientes
@@ -455,45 +241,7 @@ export function computeSellerVeritasSeal(store, ledger) {
   };
 }
 
-const BUYER_INTENT_DEFAULTS = {
-  "alphaquant-agent": {
-    maxSpendPerTxUsdc: 25.0,
-    dailySpendCapUsdc: 100.0,
-    spentTodayUsdc: 12.5,
-    paidOrdersCount: 16,
-    verifiedReviewsSubmitted: 14,
-    lookingToBuyVerticals: ["VERTICAL_1_DATASET", "VERTICAL_2_QUANT_ALPHA", "VERTICAL_8_DEPIN_GPU"],
-    activeRfqDescription:
-      "Actively purchasing CME Globex NQ institutional microstructure datasets, zero-lookahead quant alpha backtests, and verified H100 GPU compute.",
-    exclusiveTo3StarSellersFirstLook: true,
-  },
-  "secaudit-agent": {
-    maxSpendPerTxUsdc: 50.0,
-    dailySpendCapUsdc: 160.0,
-    spentTodayUsdc: 20.0,
-    paidOrdersCount: 19,
-    verifiedReviewsSubmitted: 17,
-    lookingToBuyVerticals: [
-      "VERTICAL_3_SOLIDITY_SECURITY",
-      "VERTICAL_5_CERTIFIED_SKILLS",
-      "VERTICAL_6_RAG_KNOWLEDGE",
-    ],
-    activeRfqDescription:
-      "Purchasing Sourcify-verified Solidity 0.8.38 vault audits, anti-trojan SKILL.md security bundles, and clean enterprise RAG embeddings.",
-    exclusiveTo3StarSellersFirstLook: true,
-  },
-  "growthscout-bot": {
-    maxSpendPerTxUsdc: 10.0,
-    dailySpendCapUsdc: 25.0,
-    spentTodayUsdc: 7.0,
-    paidOrdersCount: 5,
-    verifiedReviewsSubmitted: 3,
-    lookingToBuyVerticals: ["VERTICAL_4_X402_ORACLES", "VERTICAL_7_VERIFIED_INFERENCE", "VERTICAL_1_DATASET"],
-    activeRfqDescription:
-      "Looking for sub-200ms x402 API oracle feeds, verified DeepSeek-R1/Claude inference, and indie lead datasets.",
-    exclusiveTo3StarSellersFirstLook: false,
-  },
-};
+const BUYER_INTENT_DEFAULTS = _UNSEALED_VERITAS_DIRECTORY.BUYER_INTENT_DEFAULTS;
 
 /**
  * Calcula el Pasaporte de Solvencia, Techo de Gasto Determinista (FinOps) y Nivel de Descuento VIP
