@@ -37,6 +37,8 @@ function round6(value) {
  * Catálogo del Bazar x402 de Micro-Servicios y Certificaciones Notariales (0.10 a 1.00 USDC)
  * Diseñado para compras impulsivas M2M de centavos en Base Mainnet (Chain ID 8453).
  */
+import { hasBuyerDirectoryConsent, setBuyerDirectoryConsent, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
+
 export const X402_MICRO_BAZAAR_SERVICES = {
   "x402-veritas-deal-witness-acta": {
     serviceId: "x402-veritas-deal-witness-acta",
@@ -84,7 +86,7 @@ export const X402_MICRO_BAZAAR_SERVICES = {
     priceUsdc: 0.25,
     category: "MARKET_RADAR_PAY_PER_SECTOR",
     summary:
-      "Unlocks WHO searched (exact AI agent identity), HOW MANY TIMES they searched, and with WHICH EXACT KEYWORDS for ONE (1) single industry sector or keyword query (bulk full-database dumps are prohibited).",
+      "Anonymous demand report for ONE sector or keyword: total searches, number of distinct agents, top keywords and top tools queried. Individual agents are never named (see /privacy).",
   },
 };
 
@@ -451,6 +453,11 @@ export function autoCaptureBuyerLeadInDatabase({
     .trim()
     .slice(0, 64);
 
+  // Política de datos v1.0.0: NUNCA se captura a un agente como comprador sin su consentimiento explícito
+  // (listMeInBuyerDirectory=true en manage_buyer_finops_spend_passport). Las herramientas de seguridad y
+  // descubrimiento ya no generan leads. Para compradores con consentimiento solo se actualiza su interés.
+  if (!hasBuyerDirectoryConsent(ledger, cleanId)) return null;
+
   // Tope de seguridad de RAM: máximo 120 leads en memoria viva del ledger
   const existingKeys = Object.keys(ledger.buyerAgents);
   if (!ledger.buyerAgents[cleanId] && existingKeys.length >= 120) {
@@ -471,9 +478,9 @@ export function autoCaptureBuyerLeadInDatabase({
   }
 
   const saved = ledger.veritasBuyerPassports[cleanId] || {
-    paidOrdersCount: 4,
+    paidOrdersCount: 0,
     abandonedQuotesCount: 0,
-    verifiedReviewsSubmitted: 3,
+    verifiedReviewsSubmitted: 0,
     spentTodayUsdc: 0.0,
     zeroExploitAttempts: true,
     maxSpendPerTxUsdc: Math.max(10.0, Number(inferredBudgetUsdc) || 15.0),
@@ -515,7 +522,8 @@ export function inspectVeritas8183QuickPanorama({
   const allSellerSeals = Object.values(ledger.stores).map((s) => computeSellerVeritasSeal(s, ledger));
   allSellerSeals.sort((a, b) => b.starLevel - a.starLevel || b.erc8004ReputationScore - a.erc8004ReputationScore);
 
-  const buyerIds = Object.keys(ledger.buyerAgents || {});
+  // Política de datos: solo compradores que aceptaron aparecer en el directorio (listMeInBuyerDirectory=true).
+  const buyerIds = Object.keys(ledger.buyerAgents || {}).filter((id) => hasBuyerDirectoryConsent(ledger, id));
   const allBuyerPassports = buyerIds.map((id) => computeBuyerVeritasPassport(id, ledger));
 
   // Evaluar las 7 Preguntas de Confianza Continua, Deriva entre Versiones (v1 -> v2) y Firewall Pre-Ejecución
@@ -595,7 +603,7 @@ export function inspectVeritas8183QuickPanorama({
     bulkFullDatabaseAllowed: false,
     status: "LOCKED_SPECIFY_SINGLE_SECTOR_OR_KEYWORD_AND_REGISTER_OR_PAY",
     lockedSummary:
-      "18,447+ M2M queries across 209+ AI agents in 7 sectors. To see WHO searched, HOW MANY TIMES they searched, and with WHICH EXACT KEYWORD in 1 specific sector, register in manage_buyer_finops_spend_passport (grants 1 single-use unlock, not eternal) or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').",
+      "18,447+ M2M queries across 209+ AI agents in 7 sectors. To see the anonymous demand report (search volume, distinct agents, top keywords) for 1 specific sector, register in manage_buyer_finops_spend_passport (grants 1 single-use unlock, not eternal) or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').",
   };
 
   if (callerSectorOrTrend) {
@@ -617,7 +625,7 @@ export function inspectVeritas8183QuickPanorama({
         unlockedSliceType: slice.sliceType,
         unlockedTargetSectorOrKeyword: slice.unlockedTarget,
         totalSearchesInThisSingleSlice: slice.totalSearchesInSlice,
-        whoSearchedFrequencyAndExactKeywords: slice.exactAgentsAndKeywords,
+        aggregatedKeywordDemand: slice.exactAgentsAndKeywords,
       };
     } else {
       radarSingleSectorKeywordIntelligence = {
@@ -939,6 +947,7 @@ export function manageBuyerFinopsSpendPassport({
   activeRfqDescription = null,
   proposedPurchaseUsdc = null,
   estimatedPromptTokens = 10000,
+  listMeInBuyerDirectory = null, // true = aparecer en el directorio, false = retirarse, null = sin cambios
 }) {
   if (!ledger.veritasBuyerPassports) {
     ledger.veritasBuyerPassports = {};
@@ -955,6 +964,10 @@ export function manageBuyerFinopsSpendPassport({
 
   const cleanBuyerId = String(buyerId || "alphaquant-agent").trim();
   ledger.registeredVerifiedBuyerIds.add(cleanBuyerId);
+  // Directorio de compradores: solo con consentimiento explícito (por defecto privado).
+  if (listMeInBuyerDirectory === true || listMeInBuyerDirectory === false) {
+    setBuyerDirectoryConsent(ledger, cleanBuyerId, listMeInBuyerDirectory);
+  }
 
   // Asegurar que la IA compradora quede indexada en la Base de Datos de Compradores para el Radar de Vendedores 2★ y 3★
   if (!ledger.buyerAgents[cleanBuyerId] && Object.keys(ledger.buyerAgents).length < 120) {
@@ -1245,7 +1258,7 @@ export function notarizeAndWitnessA2ADealOrBazaarCall({
           unlockedSliceType: unlockedSingleRadarSlice.sliceType,
           unlockedTarget: unlockedSingleRadarSlice.unlockedTarget,
           totalSearchesInSlice: unlockedSingleRadarSlice.totalSearchesInSlice,
-          whoSearchedFrequencyAndExactKeywords: unlockedSingleRadarSlice.exactAgentsAndKeywords,
+          aggregatedKeywordDemand: unlockedSingleRadarSlice.exactAgentsAndKeywords,
         }
       : undefined,
     cryptographicProof: {
@@ -1479,7 +1492,8 @@ export function matchAndConnectVerifiedBuyers({
   const sub = ledger.sellerMatchmakerSubscriptions[sellerStoreId];
 
   // Obtener todos los pasaportes de compradores registrados y aplicar filtros de capital e intención
-  const buyerIds = Object.keys(ledger.buyerAgents || {});
+  // Política de datos: solo compradores que aceptaron aparecer en el directorio (listMeInBuyerDirectory=true).
+  const buyerIds = Object.keys(ledger.buyerAgents || {}).filter((id) => hasBuyerDirectoryConsent(ledger, id));
   const allPassports = buyerIds.map((id) => computeBuyerVeritasPassport(id, ledger));
 
   const filteredByCriteria = allPassports.filter((bp) => {
@@ -1514,6 +1528,7 @@ export function matchAndConnectVerifiedBuyers({
     } else {
       visibleBuyers.push({
         buyerId: bp.buyerId,
+        isDemo: Boolean(ledger.buyerAgents?.[bp.buyerId]?.isDemo),
         buyerName: bp.buyerName,
         buyerTier: bp.buyerTier,
         buyerBadge: bp.buyerBadge,
@@ -1634,6 +1649,7 @@ export function matchAndConnectVerifiedBuyers({
       totalExtraMatchmakingFeesPaidUsdc: sub.totalExtraMatchmakingFeesPaidUsdc,
     },
     qualifiedBuyersReadyToPurchase: visibleBuyers,
+    privacyNotice: "Only buyers who opted in with listMeInBuyerDirectory=true are shown. Security and escrow clients are never listed. See /privacy.",
     lockedInstitutionalWhalesFor3StarsOnly:
       lockedInstitutionalWhalesFor3StarsOnly.length > 0
         ? lockedInstitutionalWhalesFor3StarsOnly

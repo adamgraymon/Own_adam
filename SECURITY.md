@@ -1,55 +1,77 @@
-# Security Policy, External Audit Receipts & Supply-Chain Governance (`VERITAS-8183`)
+# Security Policy — TrustGate / VERITAS (`io.github.adamgraymon/*`)
 
-[![LEGION Passport](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg)](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d)
-
-This document provides cryptographically verifiable answers and third-party audit receipts for AI safety evaluators, corporate CISOs, and autonomous agents inspecting `io.github.adamgraymon/*` (`TrustGate ERC-8183 & VERITAS-8183`).
-
----
-
-## 1. Independent Third-Party Cryptographic Audit Receipts (Publicly Verifiable)
-
-Unlike unverified community MCP scripts, this node holds **four independent, cryptographically signed external verifications**:
-
-| External Auditor / Registry | Verification Type | Public Receipt / Cryptographic Proof | Live Verification URL |
-| :--- | :--- | :--- | :--- |
-| **1. Sourcify v2 (Ethereum Foundation Ecosystem)** | Smart Contract Byte-for-Byte Source Audit (`solc 0.8.38`) | **`exact_match` (`Match ID #59283147`)** on Base Mainnet (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`) | https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e |
-| **2. LEGION RFC-9162 Transparency Log (Bitcoin-Anchored)** | `Ed25519` Signed MCP Tool Manifest Fingerprint (`JCS-RFC8785`) | **Merkle Leaf `#71826`** (`tools_sha256: 4e561f30bb499c2e66761b553da656b3fabe2baadd9a2f811f2703d25ea6708e`, `sig: RAjOmjNmwCKBra4Iy9eT+4taNuXYwKN/mdDr8bfcasp3+XgL9e7vZiAziyy4D9MMq1dfN6Kd9y+DEBIom8QIBQ==`) | https://tlog.legion-api.com/tlog/v0/records/71826 |
-| **3. LEGION Cryptographic Agent Passport (`Ed25519`)** | Key-Control & RFC-9162 Merkle Inclusion Proof | **Passport ID `lp0_a1990fc66ed863c9179d571a9db8a28d`** (`Merkle Leaf #797`, `root_sha256: 34e0b62eddf661f7c35bba19f8e2f67d24f2234ead41a07d9172b5c5355f4265`) | https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.json |
-| **4. SealKeeper A2A & MCP Endpoint Monitor** | Independent Continuous Uptime & Latency Audit | **`100% Uptime` (`151 ms` median latency)** | https://sealkeeper.run/agents/own-adam.onrender.com |
-
-Additionally, in its first 48 hours of operation (`18,447+` external M2M requests), the live endpoint passed **`759+` automated security checks with `0` vulnerabilities** across **15 independent security scanners**:
-- `atpp-scan/1.0` (*RedThread Security* — `80` checks)
-- `MCPWatch/0.1.0` (*Longitudinal MCP Security Research* — `200` checks)
-- `ToolVetProbe/1.0` (*ToolVet Methodology* — `93` checks)
-- `warden-survey/0.1` (`72` checks), `EndpointAudit/0.1` (`60` checks), `metano-radar/0.1` (`60` checks), `io.verifymcp/probe` (`30` auth-bypass probes), `ProofBench/0.1` (`26` checks), `Lazaretto-Scanner/0.1` (`24` checks), `trustrank-battery/0.1` (`24` checks), and `mcp2-research/1.0` (*Kyung Hee University SIFT Lab*).
+This page explains, in plain language, what this server can and cannot do, which keys it uses, and what is still pending.
+Privacy rules (who is private and who is public) are in [PRIVACY.md](./PRIVACY.md) and live at https://own-adam.onrender.com/privacy.
 
 ---
 
-## 2. Zero Local Execution Risk (`100% Remote streamable-http`)
+## 1. Facts that are often misreported
 
-- **No `npx` or Local Code Execution Required:** Clients connect via remote HTTPS (`https://own-adam.onrender.com/mcp`) using the official MCP `streamable-http` transport.
-- **Physically Impossible to Read User Local Files or `.env`:** Because the server runs inside an isolated cloud container on Render, it has **zero access** to the user's local filesystem, SSH keys, browser cookies, or local environment variables.
-
----
-
-## 3. Supply-Chain Security & Non-Root Docker Sandboxing
-
-- **Minimal Dependency Tree (`package.json`):** Contains **only 1 production dependency**: the official Ethereum Foundation Solidity compiler (`solc ^0.8.28`). Zero third-party HTTP frameworks, zero unverified npm transitive bloat.
-- **Non-Root Container Execution (`Dockerfile`):** Runs strictly under the unprivileged `USER node` account inside `node:20-alpine`.
-- **Granular Least-Privilege Tool Scoping (`MCP Annotations`):** All 19 tools explicitly declare `destructiveHint: false` and `openWorldHint: false` in their MCP JSON-RPC `annotations`.
+| Claim seen in third-party reviews | Fact (verifiable) |
+| :--- | :--- |
+| "No license" | **MIT** — see [LICENSE](./LICENSE) and `"license": "MIT"` in [package.json](./package.json). |
+| "Version 0.5.0" | Current server version is **0.7.0** ([server.json](./server.json), `serverInfo.version` in `initialize`). Some older registry listings still show 0.5.0 and are being republished. |
+| "No refunds" | The contract has `claimTimeoutRefund(jobId)`: after the deadline **anyone** can trigger a **100% refund to the buyer**, no evaluator needed ([contract](./contracts/TrustGateEscrow8183.sol)). It is exposed as the MCP tool `claim_escrow_timeout_refund`. Rejected deliveries are also refunded 100% (`submitVerdict(approved=false)`). |
+| "It reads your private keys" | **No.** `EVALUATOR_PRIVATE_KEY` and `GEMINI_API_KEY` are the **operator's own** keys, set in the server environment. Users never provide keys, and no tool asks for private keys or seed phrases. See section 3. |
+| "Contains malware" | The strings in [test/fixtures/malicious-samples.js](./test/fixtures/malicious-samples.js) are **deliberate attack samples** used as input data to prove the auditor rejects trojans. They are never imported by the server or executed. |
 
 ---
 
-## 4. Non-Custodial Smart Contract Invariants & Fee Transparency
+## 2. Current status — what is real and what is simulated
 
-- **Verified Contract (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e` on Base Mainnet):**
-  1. **Zero Owner Drain / Zero Backdoors:** Contains **no `ownerWithdraw`**, **no `selfdestruct`**, **no `delegatecall`**, and **no `tx.origin`** authentication.
-  2. **Restricted Evaluator Role (`0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4`):** The evaluator wallet can **only** call `resolveEscrow(jobId, approved)` to release funds to the seller (if `approved == true`) or refund `100%` to the buyer (if `approved == false`). It can never divert principal funds to a third party.
-  3. **Immutable Fee Ceiling & Liability Cap:** Protocol escrow fee is `1.5%` (`1.0%` on orders `>= 10 USDC`), hard-capped in Solidity at `<= 10%`. Broker referral fee on partner stores is `2.0%` (`+0.5%` matchmaking fee after 3 free matched clients). Evaluator liability is strictly capped at `100%` of the protocol fee collected on the specific job (`STRICT_CAP_100PCT_OF_PROTOCOL_FEE`).
+We prefer to say this clearly rather than let a reviewer discover it:
+
+| Component | Status |
+| :--- | :--- |
+| Escrow smart contract on Base (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`) | **Real**, deployed, source verified on Sourcify (`exact_match`, #59283147). |
+| On-chain payment verification (`paymentTxHash`) | **Real**: reads the Base receipt and checks a USDC transfer to the treasury, with anti-replay. |
+| MCP escrow tools (`open_escrow_job`, `submit_encrypted_deliverable`, `claim_escrow_timeout_refund`) | **Simulated ledger in server memory.** They demonstrate the flow and run the real audits, but do **not** move on-chain funds yet. On-chain settlement is done by separate operator scripts. |
+| Audit engines (Solidity via `solc`, skills, RAG, inference, GPU, backtests, datasets) | **Real** deterministic checks on the data you send. |
+| `check_mcp_server_trust` | **Real** live probe of the target MCP server. Methodology: `/trust/methodology`. |
+| Providers and buyers labeled `[DEMO]` | **Fictional**, used by the internal simulation. Real sellers appear only after `register_and_certify_store`. |
 
 ---
 
-## 5. Vulnerability Disclosure & Support Channels
+## 3. Server-side keys (operator only)
 
-- **GitHub Issues & Discussions:** https://github.com/adamgraymon/Own_adam/issues
-- **Machine-Readable Security Manifest:** `https://own-adam.onrender.com/.well-known/security.txt` and `https://own-adam.onrender.com/audit-receipts.json`
+| Variable | Purpose | Limits |
+| :--- | :--- | :--- |
+| `EVALUATOR_PRIVATE_KEY` | Signs verdicts on the escrow contract. | The contract only lets it **approve** (pay the seller the agreed amount minus fee) or **reject** (refund the buyer 100%). It cannot send funds to any other address or change recipients. |
+| `GEMINI_API_KEY` | Optional second-opinion review of up to 30 sampled dataset rows. | If absent, a local heuristic judge is used. Billed to the operator. |
+| `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Optional persistence of the public trust-check history. | Stores only public metadata of checked MCP servers. |
+| `OWNER_DASHBOARD_KEY` | Protects the operator's raw traffic view. | Without it, only anonymous aggregates are served. |
+
+---
+
+## 4. Known limitations (honest list)
+
+1. **Single evaluator.** One key decides approve/reject. Mitigations today: rejection always refunds 100%, the timeout refund needs no evaluator, verdicts carry an audit attestation hash, and the owner can rotate a compromised key (`rotateEvaluatorKey`). Not yet: multi-evaluator quorum or an independent dispute process. Roadmap item.
+2. **Owner can rotate the evaluator.** This is a trust assumption on the operator.
+3. **New project, single maintainer, no community review yet.** Issues and reviews are welcome.
+4. **Remote service.** Data you send to audit tools reaches the server. Don't send secrets or confidential code you are not allowed to share. Audit inputs are not stored after the response (see PRIVACY.md).
+5. **Some heuristics are sealed** (`veritasEncryptedVaultLoader.js`). We plan to publish the auditor rules so they can be reviewed.
+
+---
+
+## 5. Remote-only, no local access
+
+Clients connect over HTTPS (`https://own-adam.onrender.com/mcp`). The server runs in a cloud container and has no access to the user's machine, files, environment variables or wallets. It runs as unprivileged `USER node` ([Dockerfile](./Dockerfile)) with one production dependency (`solc`).
+
+---
+
+## 6. Independent, verifiable receipts
+
+| Receipt | Link |
+| :--- | :--- |
+| Sourcify contract verification (`exact_match`, #59283147) | https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e |
+| LEGION signed tool-manifest log (leaf #71826) | https://tlog.legion-api.com/tlog/v0/records/71826 |
+| LEGION agent passport | https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d |
+| SealKeeper uptime monitor | https://sealkeeper.run/agents/own-adam.onrender.com |
+
+Note: many security crawlers visit this endpoint. Visits are **not** audit passes, and we do not claim results we cannot link to.
+
+---
+
+## 7. Reporting a vulnerability
+
+Open a GitHub issue at https://github.com/adamgraymon/Own_adam/issues (title prefix `[security]`; do not post exploit details publicly — ask for a private channel in the issue).

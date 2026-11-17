@@ -922,3 +922,15 @@ export function registerAndCertifyExternalStore({
     auditScopeAndLiability: auditResult.auditScopeAndLiability,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Transparencia (política de datos v1.0.0): los proveedores sin endpoint real (mcp://*.base.eth) son
+// tiendas de DEMOSTRACIÓN que alimentan la simulación interna. Se marcan siempre como tales.
+// ---------------------------------------------------------------------------
+for (const s of Object.values(PREMIUM_CATALOG_STORES)) {
+  if (String(s.endpoint || "").startsWith("mcp://")) {
+    s.isDemo = true;
+    s.demoNotice = "DEMO provider used by the internal simulation. Not a real company and not reachable. Real sellers appear after register_and_certify_store.";
+    if (!String(s.name).startsWith("[DEMO]")) s.name = `[DEMO] ${s.name}`;
+  }
+}

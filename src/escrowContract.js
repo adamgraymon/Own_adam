@@ -64,6 +64,15 @@ export class AgenticEscrowLedger {
         balances: { SOL: 0.0, ETH: 0.65, VIRTUAL: 0.0, USDC: 30.0 },
       },
     };
+    // Los 3 compradores de arriba son agentes de DEMOSTRACIÓN (simulación interna del enjambre M2M).
+    // Aparecen en el directorio solo para que las herramientas puedan probarse, siempre marcados isDemo.
+    for (const b of Object.values(this.buyerAgents)) {
+      b.isDemo = true;
+      b.name = `[DEMO] ${b.name}`;
+    }
+    this.buyerDirectoryConsents = Object.fromEntries(
+      Object.keys(this.buyerAgents).map((id) => [id, { consentedAt: "seed", termsVersion: "demo", isDemo: true }])
+    );
 
     // Wallets del Protocolo
     this.wallets = {
@@ -173,6 +182,14 @@ export class AgenticEscrowLedger {
       },
       ...clonedPremiumStores,
     };
+    // Transparencia: toda tienda sin endpoint real (mcp://...) es de DEMOSTRACIÓN (simulación interna).
+    for (const s of Object.values(this.stores)) {
+      if (String(s.endpoint || "").startsWith("mcp://")) {
+        s.isDemo = true;
+        s.demoNotice = "DEMO provider used by the internal simulation. Not a real company and not reachable.";
+        if (!String(s.name).startsWith("[DEMO]")) s.name = `[DEMO] ${s.name}`;
+      }
+    }
 
     this.jobs = [];
     this.attestations = [];

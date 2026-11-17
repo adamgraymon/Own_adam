@@ -16,6 +16,7 @@ import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
 import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats, TRUST_METHODOLOGY, enableTrustPersistence } from "./freeTrustCheck.js";
+import { DATA_POLICY, renderPrivacyMarkdown } from "./dataPolicy.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
   CURATED_FIRST_PARTY_CATALOG,
@@ -157,7 +158,13 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/api/external-traffic" || url.pathname === "/api/market-intelligence")
       ) {
-        const isOwnerInspection = url.searchParams.get("ownerKey") === "veritas8183";
+        // La vista del operador exige OWNER_DASHBOARD_KEY (variable secreta del servidor). Sin ella, solo agregados.
+        const ownerKeyEnv = process.env.OWNER_DASHBOARD_KEY || "";
+        const providedOwnerKey = String(url.searchParams.get("ownerKey") || req.headers["x-owner-key"] || "");
+        const isOwnerInspection =
+          ownerKeyEnv.length >= 16 &&
+          providedOwnerKey.length === ownerKeyEnv.length &&
+          crypto.timingSafeEqual(Buffer.from(providedOwnerKey), Buffer.from(ownerKeyEnv));
         const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
           includeUnlockedRawIdentities: isOwnerInspection,
         });
@@ -182,9 +189,8 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           byUserAgent: isOwnerInspection
             ? externalTrafficRadar.byUserAgent
             : {
-                accessStatus: "LOCKED_PAY_PER_SECTOR_OR_1_TIME_REGISTRATION_TRIAL",
-                howToUnlockSingleSector:
-                  "Register in manage_buyer_finops_spend_passport for ONE (1) single-use sector/keyword unlock, or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel'). Full database dumps are never sold.",
+                accessStatus: "NOT_SHARED_INDIVIDUAL_AGENTS_ARE_PRIVATE",
+                policy: "Individual agents are never named in public or paid reports. Aggregated demand by sector is available. See /privacy.",
               },
           recentExternalEvents: isOwnerInspection ? externalTrafficRadar.recentExternalEvents : undefined,
         });
@@ -505,6 +511,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           `- **Coinbase x402 Bazaar**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
           `- **OpenAPI 3.1.0 Spec**: \`GET ${baseUrl}/openapi.json\``,
           `- **Free MCP Trust Badge**: \`GET ${baseUrl}/badge.svg?server=<mcp-url>\` · record: \`GET ${baseUrl}/trust?server=<mcp-url>\``,
+          `- **Data & Privacy Policy**: \`GET ${baseUrl}/privacy\` (JSON) · \`GET ${baseUrl}/privacy.md\`. Security & escrow clients: PRIVATE. Registered sellers: PUBLIC by consent. Traffic: anonymous aggregates only. Users never provide private keys.`,
           "",
           "## START HERE (FREE): Is this MCP server safe to connect?",
           "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check. 0.25 USDC on Base unlocks the full signed 7-question dossier.",
@@ -575,6 +582,17 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         ].join("\n");
         res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
         return res.end(robotsTxt);
+      }
+
+      // =====================================================================
+      // Política de datos y privacidad (3 niveles: privado / público por consentimiento / agregado anónimo)
+      // =====================================================================
+      if (req.method === "GET" && (url.pathname === "/privacy" || url.pathname === "/.well-known/privacy.json")) {
+        return sendJson(res, 200, DATA_POLICY, { "Access-Control-Allow-Origin": "*" });
+      }
+      if (req.method === "GET" && url.pathname === "/privacy.md") {
+        res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+        return res.end(renderPrivacyMarkdown());
       }
 
       // =====================================================================

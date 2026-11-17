@@ -33,6 +33,7 @@ import {
   EXTRA_CHECK_PRICE_USDC,
 } from "./freeTrustCheck.js";
 import { verifyOnChainBaseMainnetUsdcPayment, markOnChainPaymentTxHashUsed } from "./premiumCatalogBroker.js";
+import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
 
 /**
  * Pre-procesa herramientas que necesitan trabajo asíncrono (red / blockchain) antes del
@@ -81,7 +82,7 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
 export const MCP_TOOLS = [
   {
     "name": "check_mcp_server_trust",
-    "description": "Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
+    "description": "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
     "annotations": {
       "title": "Check if an MCP server is safe (free)",
       "readOnlyHint": true,
@@ -111,7 +112,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "discover_verified_stores",
-    "description": "Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
+    "description": "[Public registry] Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
     "annotations": {
       "title": "Find audited sellers",
       "readOnlyHint": true,
@@ -166,7 +167,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "quote_multitoken_escrow",
-    "description": "Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
+    "description": "[Private] Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
     "annotations": {
       "title": "Price quote in USDC (read-only)",
       "readOnlyHint": true,
@@ -204,7 +205,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "open_escrow_job",
-    "description": "Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
+    "description": "[Private] Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
     "annotations": {
       "title": "Lock a payment in escrow",
       "readOnlyHint": false,
@@ -255,7 +256,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "submit_encrypted_deliverable",
-    "description": "Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
+    "description": "[Private] Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
     "annotations": {
       "title": "Submit a delivery for audit",
       "readOnlyHint": false,
@@ -282,8 +283,34 @@ export const MCP_TOOLS = [
     }
   },
   {
+    "name": "claim_escrow_timeout_refund",
+    "description": "[Private] Buyer: the seller did not deliver before the deadline? Get 100% of your locked USDC back. No evaluator needed. Example: jobId='JOB-1001'.",
+    "annotations": {
+      "title": "Get a refund if the seller missed the deadline",
+      "readOnlyHint": false,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "jobId": {
+          "type": "string",
+          "description": "Escrow job id returned by open_escrow_job.",
+          "examples": [
+            "JOB-1001"
+          ]
+        }
+      },
+      "required": [
+        "jobId"
+      ]
+    }
+  },
+  {
     "name": "audit_quant_backtest_escrow",
-    "description": "Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
+    "description": "[Private] Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
     "annotations": {
       "title": "Audit a trading backtest",
       "readOnlyHint": false,
@@ -321,7 +348,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_smart_contract_escrow",
-    "description": "Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
+    "description": "[Private] Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
     "annotations": {
       "title": "Audit a Solidity contract",
       "readOnlyHint": false,
@@ -358,7 +385,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_api_sla_escrow",
-    "description": "Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
+    "description": "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
     "annotations": {
       "title": "Audit a paid API response",
       "readOnlyHint": false,
@@ -396,7 +423,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_agent_skill_escrow",
-    "description": "Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. Example: version='1.1.0'.",
+    "description": "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. Example: version='1.1.0'.",
     "annotations": {
       "title": "Audit an agent skill",
       "readOnlyHint": false,
@@ -438,7 +465,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_rag_embeddings_escrow",
-    "description": "Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
+    "description": "[Private] Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
     "annotations": {
       "title": "Audit RAG chunks and embeddings",
       "readOnlyHint": false,
@@ -472,7 +499,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_ai_inference_escrow",
-    "description": "Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
+    "description": "[Private] Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
     "annotations": {
       "title": "Audit an LLM output and its bill",
       "readOnlyHint": false,
@@ -517,7 +544,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_depin_gpu_sla_escrow",
-    "description": "Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
+    "description": "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
     "annotations": {
       "title": "Audit a rented GPU",
       "readOnlyHint": false,
@@ -556,7 +583,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "verify_onchain_escrow_status",
-    "description": "Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
+    "description": "[Public] Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
     "annotations": {
       "title": "Show on-chain proofs",
       "readOnlyHint": true,
@@ -579,7 +606,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "purchase_firstparty_catalog_item",
-    "description": "Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
+    "description": "[Private] Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
     "annotations": {
       "title": "Buy an official pack (USDC on Base)",
       "readOnlyHint": false,
@@ -630,7 +657,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "register_and_certify_store",
-    "description": "Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
+    "description": "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
     "annotations": {
       "title": "List your store",
       "readOnlyHint": false,
@@ -641,6 +668,10 @@ export const MCP_TOOLS = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "acceptPublicRegistryTerms": {
+          "type": "boolean",
+          "description": "Required: true. You accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy)."
+        },
         "storeId": {
           "type": "string",
           "description": "Unique slug identifier for the store."
@@ -689,13 +720,14 @@ export const MCP_TOOLS = [
         }
       },
       "required": [
+        "acceptPublicRegistryTerms",
         "storeId"
       ]
     }
   },
   {
     "name": "inspect_veritas_8183_seal",
-    "description": "Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
+    "description": "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
     "annotations": {
       "title": "Check a seller's trust seal",
       "readOnlyHint": true,
@@ -755,7 +787,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "submit_veritas_tier_upgrade_exam",
-    "description": "Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
+    "description": "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
     "annotations": {
       "title": "Take the seller star exam",
       "readOnlyHint": false,
@@ -820,7 +852,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "manage_buyer_finops_spend_passport",
-    "description": "Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
+    "description": "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
     "annotations": {
       "title": "Set your agent's spending limits",
       "readOnlyHint": false,
@@ -831,6 +863,10 @@ export const MCP_TOOLS = [
     "inputSchema": {
       "type": "object",
       "properties": {
+        "listMeInBuyerDirectory": {
+          "type": "boolean",
+          "description": "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
+        },
         "buyerId": {
           "type": "string",
           "description": "Unique buyer agent identifier.",
@@ -878,7 +914,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "notarize_and_witness_a2a_deal",
-    "description": "Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
+    "description": "[Public record, private content] Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
     "annotations": {
       "title": "Signed deal receipt / paid micro-service",
       "readOnlyHint": false,
@@ -938,7 +974,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "match_verified_buyers_by_intent",
-    "description": "Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
+    "description": "[Opt-in buyers only] Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
     "annotations": {
       "title": "Find buyers for your store",
       "readOnlyHint": false,
@@ -1142,6 +1178,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
 
       let output;
       switch (toolName) {
+        case "claim_escrow_timeout_refund":
+          try {
+            output = ledger.claimTimeoutRefund({ jobId: args.jobId });
+            if (output.ok) {
+              output.refundedTo = output.job?.buyerId;
+              output.onChainEquivalent = "TrustGateEscrow8183.claimTimeoutRefund(jobId) on Base (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e): callable by anyone after expiry, always pays the buyer.";
+            }
+          } catch (err) {
+            output = { ok: false, error: err.message };
+          }
+          break;
         case "check_mcp_server_trust":
           if (!args.serverUrl) {
             output = { ok: false, tool: "check_mcp_server_trust", reason: "serverUrl is required. Example: https://example.com/mcp" };
@@ -1402,6 +1449,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           });
           break;
         case "register_and_certify_store":
+          if (args.acceptPublicRegistryTerms !== true) {
+            output = {
+              ok: false,
+              status: 428,
+              error: "PUBLIC_REGISTRY_CONSENT_REQUIRED",
+              reason: "The VERITAS notary registry is public. Read the terms and call again with acceptPublicRegistryTerms=true.",
+              publicRegistryTerms: PUBLIC_REGISTRY_TERMS,
+              privacyPolicy: "https://own-adam.onrender.com/privacy",
+            };
+            break;
+          }
           output = ledger.registerAndCertifyStore({
             storeId: args.storeId,
             storeName: args.storeName,
@@ -1412,6 +1470,14 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             startingPriceUsdc: args.startingPriceUsdc,
             sampleDeliverable: args.sampleDeliverable || {},
           });
+          if (output?.ok !== false && ledger.stores?.[args.storeId]) {
+            ledger.stores[args.storeId].publicRegistryConsent = {
+              accepted: true,
+              termsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
+              acceptedAt: new Date().toISOString(),
+            };
+            output = { ...output, publicRegistryConsent: ledger.stores[args.storeId].publicRegistryConsent };
+          }
           break;
         case "inspect_veritas_8183_seal":
           output = ledger.inspectVeritasSeal({
@@ -1441,6 +1507,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           break;
         case "manage_buyer_finops_spend_passport":
           output = ledger.manageBuyerSpendPassport({
+            listMeInBuyerDirectory: typeof args.listMeInBuyerDirectory === "boolean" ? args.listMeInBuyerDirectory : null,
             buyerId: args.buyerId || "alphaquant-agent",
             buyerName: args.buyerName,
             walletAddress: args.walletAddress,

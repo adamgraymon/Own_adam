@@ -1,3 +1,4 @@
+import { anonymizeRadarRecords } from "./dataPolicy.js";
 /**
  * Motor Ultraligero de Inteligencia de Mercado, Rubros e Intención de Compra (< 40 KB RAM Fija)
  * - Pre-cargado con la base histórica consolidada (11664 visitas reales y 201 agentes únicos).
@@ -133,7 +134,7 @@ export function resolveSingleSectorOrKeywordSlice(queryOrSector = "") {
       sliceType: "SINGLE_INDUSTRY_SECTOR",
       unlockedTarget: exactSectorKey,
       totalSearchesInSlice,
-      exactAgentsAndKeywords: records,
+      exactAgentsAndKeywords: anonymizeRadarRecords(records),
     };
   }
 
@@ -143,8 +144,8 @@ export function resolveSingleSectorOrKeywordSlice(queryOrSector = "") {
   for (const [sectorKey, list] of Object.entries(SECTOR_KEYWORD_INTELLIGENCE_SEED)) {
     for (const item of list) {
       const kwMatch = item.exactKeywordsQueried.some((kw) => kw.toLowerCase().includes(lowerQuery));
-      const agentMatch = item.whoSearched.toLowerCase().includes(lowerQuery);
-      if (kwMatch || agentMatch) {
+      // Privacidad: ya no se permite buscar por nombre de agente (solo por palabra clave).
+      if (kwMatch) {
         matchedRecords.push({
           sector: sectorKey,
           whoSearched: item.whoSearched,
@@ -168,7 +169,7 @@ export function resolveSingleSectorOrKeywordSlice(queryOrSector = "") {
         (a, r) => a + r.searchFrequencyCount,
         0
       ),
-      exactAgentsAndKeywords: SECTOR_KEYWORD_INTELLIGENCE_SEED[fallbackSector],
+      exactAgentsAndKeywords: anonymizeRadarRecords(SECTOR_KEYWORD_INTELLIGENCE_SEED[fallbackSector]),
     };
   }
 
@@ -177,7 +178,7 @@ export function resolveSingleSectorOrKeywordSlice(queryOrSector = "") {
     sliceType: "SINGLE_KEYWORD_QUERY",
     unlockedTarget: norm,
     totalSearchesInSlice: matchedRecords.reduce((a, r) => a + r.searchFrequencyCount, 0),
-    exactAgentsAndKeywords: matchedRecords,
+    exactAgentsAndKeywords: anonymizeRadarRecords(matchedRecords),
   };
 }
 
@@ -312,7 +313,7 @@ export class MarketIntelligenceTracker {
           uniqueAgentsInSectorCount: countAgents,
           whoSearchedAndKeywordFrequencyStatus:
             "LOCKED_REGISTER_FOR_1_TIME_SINGLE_SECTOR_TRIAL_OR_PAY_0.25_USDC_PER_SECTOR",
-          lockedPreviewNote: `${countAgents} verified AI agents performed ${totalHits} queries in ${sector}. Exact agent identities (who searched), search frequency counts, and exact keywords are locked. Unlock 1 sector once by registering in manage_buyer_finops_spend_passport, or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').`,
+          lockedPreviewNote: `${countAgents} verified AI agents performed ${totalHits} queries in ${sector}. Aggregated search frequency counts and exact keywords are locked. Unlock 1 sector once by registering in manage_buyer_finops_spend_passport, or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').`,
         };
       }
     }
