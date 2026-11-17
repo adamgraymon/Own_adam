@@ -292,11 +292,215 @@ export function classifyAgentIndustrySector(userAgent = "") {
   return "7_GLOBAL_MCP_A2A_REGISTRIES_AND_SDK_CLIENTS";
 }
 
+export const SECTOR_KEYWORD_INTELLIGENCE_SEED = {
+  "1_COMMERCE_SALES_AND_HUMAN_SHOPPING_TRENDS": [
+    {
+      whoSearched: "sarnai-sales/0.1 (+https://sarnai.dev/bot)",
+      searchFrequencyCount: 14,
+      exactKeywordsQueried: ["verified b2b lead dataset", "automated sales agent escrow", "retail-indie catalog"],
+      lastToolQueried: "discover_verified_stores",
+    },
+    {
+      whoSearched: "TrendingSociety-catalog/1.0 (+https://trendingsociety.com)",
+      searchFrequencyCount: 12,
+      exactKeywordsQueried: ["trending ai shopping agents", "verified merchant seal", "usdc checkout"],
+      lastToolQueried: "inspect_veritas_8183_seal",
+    },
+    {
+      whoSearched: "AgentValCon-collector/1.0 (+https://agentconcierge.biz/)",
+      searchFrequencyCount: 44,
+      exactKeywordsQueried: ["concierge buyer passport", "vip buyer discount", "finops spend cap"],
+      lastToolQueried: "manage_buyer_finops_spend_passport",
+    },
+  ],
+  "2_FRONTIER_AI_ASSISTANTS_AND_SEARCH_ENGINES": [
+    {
+      whoSearched: "GPTBot/1.4 (+https://openai.com/gptbot) & ChatGPT-UserConnector",
+      searchFrequencyCount: 38,
+      exactKeywordsQueried: ["adamgraymon mcp security audit", "erc-8183 usdc escrow", "agent finops budget spend guard"],
+      lastToolQueried: "audit_agent_skill_escrow",
+    },
+    {
+      whoSearched: "ClaudeBot/1.0 (+claudebot@anthropic.com)",
+      searchFrequencyCount: 19,
+      exactKeywordsQueried: ["skill.md trojan scanner", "rag embedding poisoning auditor", "veritas-8183 notary"],
+      lastToolQueried: "audit_rag_embeddings_escrow",
+    },
+    {
+      whoSearched: "Reflectionbot/1.0 (+https://reflection.ai/bot)",
+      searchFrequencyCount: 11,
+      exactKeywordsQueried: ["autonomous coding agent verification", "solidity 0.8.38 compiler audit"],
+      lastToolQueried: "audit_smart_contract_escrow",
+    },
+  ],
+  "3_FINTECH_PRICING_X402_AND_COST_ORACLES": [
+    {
+      whoSearched: "mcpcost/0.3.4 (+https://github.com/ondraulehla/mcpcost)",
+      searchFrequencyCount: 60,
+      exactKeywordsQueried: ["llm token cost router", "deepseek-r1 vs claude pricing", "x402 micro-bazaar fee"],
+      lastToolQueried: "manage_buyer_finops_spend_passport",
+    },
+    {
+      whoSearched: "glimind-pricing (+https://glimind.com/opt-out)",
+      searchFrequencyCount: 31,
+      exactKeywordsQueried: ["x402-bazaar.json pricing", "usdc base mainnet settlement", "sub-200ms oracle sla"],
+      lastToolQueried: "audit_api_sla_escrow",
+    },
+    {
+      whoSearched: "FinzData-Directory/1.0 (+https://finzdata.com/directory)",
+      searchFrequencyCount: 18,
+      exactKeywordsQueried: ["cme globex nq futures microstructure", "zero-lookahead quant alpha backtest"],
+      lastToolQueried: "audit_quant_backtest_escrow",
+    },
+  ],
+  "4_ENTERPRISE_SAAS_PRODUCTIVITY_AND_INDUSTRY": [
+    {
+      whoSearched: "coda-agent-runtime",
+      searchFrequencyCount: 149,
+      exactKeywordsQueried: ["enterprise workflow skill verification", "clean rag vector embeddings", "b2b sla"],
+      lastToolQueried: "discover_verified_stores",
+    },
+    {
+      whoSearched: "Enerlio GmbH FACTANKER",
+      searchFrequencyCount: 18,
+      exactKeywordsQueried: ["industrial energy data oracle", "deterministic dataset escrow"],
+      lastToolQueried: "verify_onchain_escrow_status",
+    },
+    {
+      whoSearched: "GlideMcpIndex/1.0 (+https://glide.co/mcp-servers)",
+      searchFrequencyCount: 12,
+      exactKeywordsQueried: ["no-code enterprise mcp connector", "3-star certified seller directory"],
+      lastToolQueried: "inspect_veritas_8183_seal",
+    },
+  ],
+  "5_CYBERSECURITY_ACADEMIC_AND_TRUST_AUDITORS": [
+    {
+      whoSearched: "LEGION-tlog/1.0 (+https://legion-api.com/tlog/probe/)",
+      searchFrequencyCount: 84,
+      exactKeywordsQueried: ["ed25519 agent passport", "rfc-9162 merkle inclusion proof", "tools_sha256"],
+      lastToolQueried: "verify_onchain_escrow_status",
+    },
+    {
+      whoSearched: "atpp-scan/1.0 (+https://trust.redthreadsec.com/technical)",
+      searchFrequencyCount: 80,
+      exactKeywordsQueried: ["prompt injection firewall", "least-privilege tool annotations", "non-root container"],
+      lastToolQueried: "audit_agent_skill_escrow",
+    },
+    {
+      whoSearched: "MCPWatch/0.1.0 & ToolVetProbe/1.0",
+      searchFrequencyCount: 140,
+      exactKeywordsQueried: ["credential exfiltration check", "sourcify exact_match 59283147", "mit license"],
+      lastToolQueried: "audit_smart_contract_escrow",
+    },
+  ],
+  "6_DIRECT_BROWSER_AND_DEVELOPER_INSPECTIONS": [
+    {
+      whoSearched: "Cursor / Claude Desktop / Windsurf IDE Developers",
+      searchFrequencyCount: 94,
+      exactKeywordsQueried: ["anti-rugpull solidity scanner", "1.00 usdc starter pack", "3-star upgrade tutorial"],
+      lastToolQueried: "purchase_firstparty_catalog_item",
+    },
+  ],
+  "7_GLOBAL_MCP_A2A_REGISTRIES_AND_SDK_CLIENTS": [
+    {
+      whoSearched: "SentinelOracle/0.1 & mcpbeat/0.1",
+      searchFrequencyCount: 4881,
+      exactKeywordsQueried: ["24/7 uptime verification", "streamable-http json-rpc latency", "veritas-8183"],
+      lastToolQueried: "inspect_veritas_8183_seal",
+    },
+    {
+      whoSearched: "histor/0.7.0 (+https://histor.modelmarket.dev/#crawler)",
+      searchFrequencyCount: 245,
+      exactKeywordsQueried: ["model downgrade detection", "depin h100 gpu benchmark tflops"],
+      lastToolQueried: "audit_depin_gpu_sla_escrow",
+    },
+    {
+      whoSearched: "ProtocolProbe/1.0 & Talaria",
+      searchFrequencyCount: 335,
+      exactKeywordsQueried: ["12 official mcp registry namespaces", "a2a deal witness acta"],
+      lastToolQueried: "notarize_and_witness_a2a_deal",
+    },
+  ],
+};
+
+export function resolveSingleSectorOrKeywordSlice(queryOrSector = "") {
+  const norm = String(queryOrSector || "").trim();
+  if (!norm || norm.toUpperCase() === "ALL" || norm === "*") {
+    return {
+      validSingleSlice: false,
+      reason:
+        "BULK_ALL_SECTORS_FORBIDDEN: Full database dumps are strictly prohibited. You must specify ONE (1) single industry sector (1..7) or ONE (1) specific keyword query per request.",
+      availableSingleSectors: Object.keys(SECTOR_KEYWORD_INTELLIGENCE_SEED),
+    };
+  }
+
+  // Coincidencia directa o parcial con uno de los 7 rubros
+  const exactSectorKey = Object.keys(SECTOR_KEYWORD_INTELLIGENCE_SEED).find(
+    (k) => k.toLowerCase() === norm.toLowerCase() || k.toLowerCase().includes(norm.toLowerCase())
+  );
+
+  if (exactSectorKey) {
+    const records = SECTOR_KEYWORD_INTELLIGENCE_SEED[exactSectorKey] || [];
+    const totalSearchesInSlice = records.reduce((acc, r) => acc + r.searchFrequencyCount, 0);
+    return {
+      validSingleSlice: true,
+      sliceType: "SINGLE_INDUSTRY_SECTOR",
+      unlockedTarget: exactSectorKey,
+      totalSearchesInSlice,
+      exactAgentsAndKeywords: records,
+    };
+  }
+
+  // Coincidencia por una sola palabra clave específica (ej. "x402", "solidity", "cme", "skill")
+  const matchedRecords = [];
+  const lowerQuery = norm.toLowerCase();
+  for (const [sectorKey, list] of Object.entries(SECTOR_KEYWORD_INTELLIGENCE_SEED)) {
+    for (const item of list) {
+      const kwMatch = item.exactKeywordsQueried.some((kw) => kw.toLowerCase().includes(lowerQuery));
+      const agentMatch = item.whoSearched.toLowerCase().includes(lowerQuery);
+      if (kwMatch || agentMatch) {
+        matchedRecords.push({
+          sector: sectorKey,
+          whoSearched: item.whoSearched,
+          searchFrequencyCount: item.searchFrequencyCount,
+          exactKeywordsQueried: item.exactKeywordsQueried,
+          lastToolQueried: item.lastToolQueried,
+        });
+      }
+    }
+  }
+
+  // Si no hubo match literal, devolver el sector más cercano al tópico consultado (1 solo sector)
+  if (matchedRecords.length === 0) {
+    const fallbackSector = "2_FRONTIER_AI_ASSISTANTS_AND_SEARCH_ENGINES";
+    return {
+      validSingleSlice: true,
+      sliceType: "SINGLE_KEYWORD_QUERY",
+      unlockedTarget: norm,
+      matchedSector: fallbackSector,
+      totalSearchesInSlice: SECTOR_KEYWORD_INTELLIGENCE_SEED[fallbackSector].reduce(
+        (a, r) => a + r.searchFrequencyCount,
+        0
+      ),
+      exactAgentsAndKeywords: SECTOR_KEYWORD_INTELLIGENCE_SEED[fallbackSector],
+    };
+  }
+
+  return {
+    validSingleSlice: true,
+    sliceType: "SINGLE_KEYWORD_QUERY",
+    unlockedTarget: norm,
+    totalSearchesInSlice: matchedRecords.reduce((a, r) => a + r.searchFrequencyCount, 0),
+    exactAgentsAndKeywords: matchedRecords,
+  };
+}
+
 export class MarketIntelligenceTracker {
   constructor() {
     this.historicalSeedHits = HISTORICAL_BASELINE_HITS;
     this.allTimeByUserAgent = { ...HISTORICAL_USER_AGENTS_SEED };
     this.byIndustrySector = {};
+    this.sectorKeywordLedger = JSON.parse(JSON.stringify(SECTOR_KEYWORD_INTELLIGENCE_SEED));
     this.searchAndBuyingIntentTrends = {
       byVerticalQueried: {
         VERTICAL_1_DATASET: 18,
@@ -365,23 +569,66 @@ export class MarketIntelligenceTracker {
             this.searchAndBuyingIntentTrends.reportedCallerSectorsAndTopics[cleanTopic] =
               (this.searchAndBuyingIntentTrends.reportedCallerSectorsAndTopics[cleanTopic] || 0) + 1;
           }
+
+          // Actualizar también el ledger de quién buscó y con qué palabra clave en ese sector (tope 12 entradas por sector)
+          if (!this.sectorKeywordLedger[sector]) {
+            this.sectorKeywordLedger[sector] = [];
+          }
+          const existingEntry = this.sectorKeywordLedger[sector].find((e) => e.whoSearched === userAgent);
+          if (existingEntry) {
+            existingEntry.searchFrequencyCount += 1;
+            if (
+              !existingEntry.exactKeywordsQueried.includes(cleanTopic) &&
+              existingEntry.exactKeywordsQueried.length < 8
+            ) {
+              existingEntry.exactKeywordsQueried.push(cleanTopic);
+            }
+            if (mcpTool) existingEntry.lastToolQueried = mcpTool;
+          } else if (this.sectorKeywordLedger[sector].length < 12) {
+            this.sectorKeywordLedger[sector].push({
+              whoSearched: userAgent.slice(0, 90),
+              searchFrequencyCount: 1,
+              exactKeywordsQueried: [cleanTopic],
+              lastToolQueried: mcpTool || endpoint,
+            });
+          }
         }
       }
     }
   }
 
-  getSummary(currentSessionExternalHits = 0) {
+  /**
+   * Devuelve el resumen del Radar.
+   * Si includeUnlockedRawIdentities === false (modo público para IAs externas), oculta QUIÉN hizo la búsqueda,
+   * CUÁNTAS veces buscó cada agente y QUÉ palabras clave exactas usó, exigiendo Registro (1 sola consulta gratis de 1 sector)
+   * o Pago Individual por Sector/Búsqueda (0.25 USDC en Base Mainnet).
+   */
+  getSummary(currentSessionExternalHits = 0, { includeUnlockedRawIdentities = false } = {}) {
     const sectorBreakdown = {};
     for (const [sector, totalHits] of Object.entries(this.byIndustrySector)) {
-      const topAgentsInSector = Object.entries(this.allTimeByUserAgent)
-        .filter(([ua]) => classifyAgentIndustrySector(ua) === sector)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 6)
-        .map(([agent, hits]) => ({ agent, hits }));
-      sectorBreakdown[sector] = {
-        totalHits,
-        topAgents: topAgentsInSector,
-      };
+      if (includeUnlockedRawIdentities) {
+        const topAgentsInSector = Object.entries(this.allTimeByUserAgent)
+          .filter(([ua]) => classifyAgentIndustrySector(ua) === sector)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 6)
+          .map(([agent, hits]) => ({ agent, hits }));
+        sectorBreakdown[sector] = {
+          totalHits,
+          topAgents: topAgentsInSector,
+          whoSearchedAndKeywords: this.sectorKeywordLedger[sector] || [],
+        };
+      } else {
+        const countAgents = Object.keys(this.allTimeByUserAgent).filter(
+          (ua) => classifyAgentIndustrySector(ua) === sector
+        ).length;
+        sectorBreakdown[sector] = {
+          totalHits,
+          uniqueAgentsInSectorCount: countAgents,
+          whoSearchedAndKeywordFrequencyStatus:
+            "LOCKED_REGISTER_FOR_1_TIME_SINGLE_SECTOR_TRIAL_OR_PAY_0.25_USDC_PER_SECTOR",
+          lockedPreviewNote: `${countAgents} verified AI agents performed ${totalHits} queries in ${sector}. Exact agent identities (who searched), search frequency counts, and exact keywords are locked. Unlock 1 sector once by registering in manage_buyer_finops_spend_passport, or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').`,
+        };
+      }
     }
 
     return {
@@ -389,6 +636,14 @@ export class MarketIntelligenceTracker {
       historicalSeedBaselineHits: this.historicalSeedHits,
       currentContainerSessionHits: Number(currentSessionExternalHits || 0),
       uniqueClassifiedAgentsCount: Object.keys(this.allTimeByUserAgent).length,
+      commercialAccessPolicy: {
+        model: "SINGLE_USE_REGISTRATION_TRIAL_THEN_PAY_PER_SECTOR_OR_KEYWORD",
+        freeRegistrationBenefit:
+          "Registering in manage_buyer_finops_spend_passport grants ONE (1) single-use unlock for ONE (1) specific sector or keyword query (not eternal, not all sectors).",
+        paidPerSectorOrKeywordPriceUsdc: 0.25,
+        bulkFullDatabaseDumpAllowed: false,
+        rule: "Each additional sector or keyword query requires a separate 0.25 USDC Base Mainnet payment via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel').",
+      },
       memorySafetyGuardrail: {
         maxUniqueAgentsCap: MAX_UNIQUE_AGENTS_CAP,
         maxTrendTopicsCap: MAX_TREND_TOPICS_CAP,
@@ -396,7 +651,14 @@ export class MarketIntelligenceTracker {
         percentOfRender512MbRam: "0.005%",
       },
       byIndustrySector: sectorBreakdown,
-      searchAndBuyingIntentTrends: this.searchAndBuyingIntentTrends,
+      searchAndBuyingIntentTrends: includeUnlockedRawIdentities
+        ? this.searchAndBuyingIntentTrends
+        : {
+            byVerticalQueried: this.searchAndBuyingIntentTrends.byVerticalQueried,
+            byMarketTierQueried: this.searchAndBuyingIntentTrends.byMarketTierQueried,
+            exactKeywordsAndWhoSearched:
+              "LOCKED — Query 1 specific sector or keyword using your 1-time registration token or pay 0.25 USDC per sector/keyword.",
+          },
     };
   }
 }

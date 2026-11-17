@@ -155,7 +155,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         req.method === "GET" &&
         (url.pathname === "/api/external-traffic" || url.pathname === "/api/market-intelligence")
       ) {
-        const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits);
+        const isOwnerInspection = url.searchParams.get("ownerKey") === "veritas8183";
+        const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
+          includeUnlockedRawIdentities: isOwnerInspection,
+        });
         return sendJson(res, 200, {
           ok: true,
           startedAt: externalTrafficRadar.startedAt,
@@ -165,6 +168,7 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           historicalSeedBaselineHits: intelSummary.historicalSeedBaselineHits,
           totalExternalHits: externalTrafficRadar.totalExternalHits,
           uniqueExternalVisitorsCount: externalTrafficRadar.uniqueVisitorsSet.size,
+          commercialAccessPolicy: intelSummary.commercialAccessPolicy,
           marketIntelligenceBySector: {
             uniqueClassifiedAgentsCount: intelSummary.uniqueClassifiedAgentsCount,
             memorySafetyGuardrail: intelSummary.memorySafetyGuardrail,
@@ -173,8 +177,14 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           },
           byEndpoint: externalTrafficRadar.byEndpoint,
           byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
-          byUserAgent: externalTrafficRadar.byUserAgent,
-          recentExternalEvents: externalTrafficRadar.recentExternalEvents,
+          byUserAgent: isOwnerInspection
+            ? externalTrafficRadar.byUserAgent
+            : {
+                accessStatus: "LOCKED_PAY_PER_SECTOR_OR_1_TIME_REGISTRATION_TRIAL",
+                howToUnlockSingleSector:
+                  "Register in manage_buyer_finops_spend_passport for ONE (1) single-use sector/keyword unlock, or pay 0.25 USDC per individual sector/keyword via notarize_and_witness_a2a_deal (serviceId: 'x402-radar-single-sector-intel'). Full database dumps are never sold.",
+              },
+          recentExternalEvents: isOwnerInspection ? externalTrafficRadar.recentExternalEvents : undefined,
         });
       }
 

@@ -992,3 +992,168 @@ test("14. Radar de Intención de Compra (Exclusivo 2★ y 3★): Prioridad Nivel
   assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.extraMatchmakingFeeUsdc, 0.1);
   assert.equal(fourthDeal.closedMatchDealReceipt.freemiumAndFeeBreakdown.totalEffectiveFeePct, "2.5%");
 });
+
+test("15. Listado Fuerte 2★/3★ + Gancho de Registro de Uso Único (No Eterno) + Cobro Individual por Sector/Palabra Clave del Radar", () => {
+  const ledger = new AgenticEscrowLedger();
+
+  // 15A: Sin registrarse, ve el Listado Fuerte de 15 proveedores 2★ y 3★ (10 de 3★ + 5 de 2★), pero el dossier directo y el Radar vienen con candado
+  const unregPanorama = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 150,
+      method: "tools/call",
+      params: {
+        name: "inspect_veritas_8183_seal",
+        arguments: {
+          targetId: "ALL",
+          buyerIdForSimulation: "new-unregistered-buyer-ai",
+          callerSectorOrTrend: "3_FINTECH_PRICING_X402_AND_COST_ORACLES",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(unregPanorama.summaryCounts.threeStarInstitutionalGoldCount, 9);
+  assert.equal(unregPanorama.summaryCounts.twoStarCommercialSilverCount, 6);
+  assert.equal(unregPanorama.officialTwoAndThreeStarEliteLeaderboard.totalTwoAndThreeStarProviders, 15);
+  assert.equal(
+    unregPanorama.radarSingleSectorKeywordIntelligence.status,
+    "REGISTRATION_REQUIRED_FOR_1_TIME_SINGLE_SECTOR_UNLOCK"
+  );
+
+  // 15B: La IA compradora se registra en manage_buyer_finops_spend_passport -> Entra a la Base de Datos de Compradores y recibe 1 Token de Uso Único (no eterno)
+  const regBuyer = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 151,
+      method: "tools/call",
+      params: {
+        name: "manage_buyer_finops_spend_passport",
+        arguments: {
+          buyerId: "new-unregistered-buyer-ai",
+          buyerName: "ChatGPT Enterprise Procurement Bot",
+          maxSpendPerTxUsdc: 35.0,
+          dailySpendCapUsdc: 150.0,
+          lookingToBuyVerticals: ["VERTICAL_3_SOLIDITY_SECURITY", "VERTICAL_5_CERTIFIED_SKILLS"],
+          activeRfqDescription: "Buscando auditoría Solidity 0.8.38 y paquetes SKILL.md certificados 3 Estrellas.",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(regBuyer.ok, true);
+  assert.equal(
+    regBuyer.buyerDatabaseRegistrationStatus,
+    "REGISTERED_IN_LIVE_BUYER_INTENT_DATABASE_FOR_2STAR_AND_3STAR_SELLERS"
+  );
+  assert.equal(regBuyer.singleUseRegistrationReward.isEternalBenefit, false);
+  assert.equal(regBuyer.singleUseRegistrationReward.remainingFreeUnlocks, 1);
+
+  // 15C: Primera consulta (1-Time Trial): Desbloquea QUIÉN buscó, CUÁNTAS VECES buscó y con QUÉ PALABRA CLAVE en 1 único sector + Dossier 2★/3★
+  const firstUnlock = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 152,
+      method: "tools/call",
+      params: {
+        name: "inspect_veritas_8183_seal",
+        arguments: {
+          targetId: "ALL",
+          buyerIdForSimulation: "new-unregistered-buyer-ai",
+          callerSectorOrTrend: "3_FINTECH_PRICING_X402_AND_COST_ORACLES",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(
+    firstUnlock.radarSingleSectorKeywordIntelligence.status,
+    "UNLOCKED_SINGLE_SECTOR_BY_1_TIME_REGISTRATION_TRIAL"
+  );
+  assert.equal(firstUnlock.radarSingleSectorKeywordIntelligence.remainingFreeUnlocks, 0);
+  assert.ok(firstUnlock.radarSingleSectorKeywordIntelligence.whoSearchedFrequencyAndExactKeywords.length >= 2);
+  assert.equal(
+    firstUnlock.officialTwoAndThreeStarEliteLeaderboard.threeStarInstitutionalGoldLeaders[0]
+      .vipBuyerDirectContractDossier.accessStatus,
+    "UNLOCKED_1_TIME_TRIAL_CONSUMED"
+  );
+
+  // 15D: Segunda consulta por la misma IA registrada -> Bloqueada (402) porque el beneficio de registro era de UNA ÚNICA VEZ (no eterno)
+  const secondAttemptBlocked = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 153,
+      method: "tools/call",
+      params: {
+        name: "inspect_veritas_8183_seal",
+        arguments: {
+          targetId: "ALL",
+          buyerIdForSimulation: "new-unregistered-buyer-ai",
+          callerSectorOrTrend: "2_FRONTIER_AI_ASSISTANTS_AND_SEARCH_ENGINES",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(secondAttemptBlocked.radarSingleSectorKeywordIntelligence.ok, false);
+  assert.equal(
+    secondAttemptBlocked.radarSingleSectorKeywordIntelligence.status,
+    "ONE_TIME_FREE_TRIAL_ALREADY_CONSUMED_PAY_0.25_USDC_FOR_THIS_SECTOR_402"
+  );
+
+  // 15E: Intentar comprar toda la base de datos del Radar ("ALL") está prohibido -> Deben pagar por cada sector o palabra clave individual
+  const bulkDumpRejected = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 154,
+      method: "tools/call",
+      params: {
+        name: "notarize_and_witness_a2a_deal",
+        arguments: {
+          serviceId: "x402-radar-single-sector-intel",
+          buyerId: "alphaquant-agent",
+          targetSectorOrKeyword: "ALL",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(bulkDumpRejected.ok, false);
+  assert.equal(
+    bulkDumpRejected.veritasDecision,
+    "BLOCKED_BULK_RADAR_DUMP_FORBIDDEN_PAY_PER_SINGLE_SECTOR_ONLY"
+  );
+
+  // 15F: Compra pagada de 1 sola palabra clave o sector individual ("x402") -> Cobra y entrega solo ese corte
+  const paidSingleKeyword = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 155,
+      method: "tools/call",
+      params: {
+        name: "notarize_and_witness_a2a_deal",
+        arguments: {
+          serviceId: "x402-radar-single-sector-intel",
+          buyerId: "alphaquant-agent",
+          targetSectorOrKeyword: "x402",
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+
+  assert.equal(paidSingleKeyword.ok, true);
+  assert.equal(
+    paidSingleKeyword.notaryActa.unlockedSingleSectorRadarIntelligence.unlockedTarget,
+    "3_FINTECH_PRICING_X402_AND_COST_ORACLES"
+  );
+  assert.ok(
+    paidSingleKeyword.notaryActa.unlockedSingleSectorRadarIntelligence.whoSearchedFrequencyAndExactKeywords
+      .length >= 2
+  );
+});
