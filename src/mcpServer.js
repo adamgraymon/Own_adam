@@ -54,7 +54,6 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
   delete args._trustCheckResult;
   const { paymentRecoveryToken } = args;
   delete args.paymentRecoveryToken;
-  if (!args.serverUrl) return;
 
   if (args.paymentTxHash) {
     args._trustCheckResult = await runPaidTrustCheck({
@@ -65,6 +64,8 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
     });
     return;
   }
+
+  if (!args.serverUrl) return;
 
   const valid = await validatePublicMcpUrl(args.serverUrl);
   if (!valid.ok) {
@@ -85,7 +86,7 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
 export const MCP_TOOLS = [
   {
     "name": "check_mcp_server_trust",
-    "description": `[Private query, public score] Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'. For a free JSON preview of the ${FULL_DOSSIER_PRICE_USDC} USDC full dossier, call ${FULL_DOSSIER_SAMPLE.mcpTool}.`,
+    "description": `[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.`,
     "annotations": {
       "title": "Check if an MCP server is safe (free)",
       "readOnlyHint": true,
@@ -98,14 +99,14 @@ export const MCP_TOOLS = [
       "properties": {
         "serverUrl": {
           "type": "string",
-          "description": "Public https URL of the MCP server to check.",
+          "description": "Public https URL of the MCP server to check. Omit to see the free sample preview.",
           "examples": [
             "https://own-adam.onrender.com/mcp"
           ]
         },
         "paymentTxHash": {
           "type": "string",
-          "description": `Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, ${FULL_DOSSIER_PRICE_USDC} USDC = full 7-question dossier with HMAC seal.`
+          "description": `Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, ${FULL_DOSSIER_PRICE_USDC} USDC = full 7-question dossier with Ed25519 seal.`
         },
         "paymentRecoveryToken": {
           "type": "string",
@@ -113,10 +114,48 @@ export const MCP_TOOLS = [
           "description": "Required with paymentTxHash. Generate a private random 32-byte token as 64 hex characters before the first paid request. Reuse it with the same transaction and server URL to retry or retrieve the report without paying again."
         }
       },
-      "dependentRequired": { "paymentTxHash": ["paymentRecoveryToken"] },
-      "required": [
-        "serverUrl"
-      ]
+      "dependentRequired": { "paymentTxHash": ["serverUrl", "paymentRecoveryToken"] }
+    }
+  },
+  {
+    "name": FREE_SKILL_REVIEW_TOOL,
+    "description": "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
+    "annotations": {
+      "title": "Review an agent skill for free",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": `Text files with a root SKILL.md. Maximum ${SKILL_REVIEW_MAX_FILE_BYTES} UTF-8 bytes per file and ${SKILL_REVIEW_MAX_TOTAL_BYTES} in total. Omit files to see the free sample JSON.`,
+          "minItems": 1,
+          "maxItems": SKILL_REVIEW_MAX_FILES,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "content"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": SKILL_REVIEW_MAX_PATH_LENGTH,
+                "description": "Relative file path using forward slashes, such as references/notes.md."
+              },
+              "content": {
+                "type": "string",
+                "maxLength": SKILL_REVIEW_MAX_FILE_BYTES,
+                "description": "Full UTF-8 text of this file."
+              }
+            }
+          }
+        }
+      }
     }
   },
   {
@@ -440,47 +479,6 @@ export const MCP_TOOLS = [
       "required": [
         "apiResponsePayload"
       ]
-    }
-  },
-  {
-    "name": FREE_SKILL_REVIEW_TOOL,
-    "description": "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
-    "annotations": {
-      "title": "Review an agent skill for free",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "files": {
-          "type": "array",
-          "description": `Text files with a root SKILL.md. Maximum ${SKILL_REVIEW_MAX_FILE_BYTES} UTF-8 bytes per file and ${SKILL_REVIEW_MAX_TOTAL_BYTES} in total. Omit files to see the free sample JSON.`,
-          "minItems": 1,
-          "maxItems": SKILL_REVIEW_MAX_FILES,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["path", "content"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": SKILL_REVIEW_MAX_PATH_LENGTH,
-                "description": "Relative file path using forward slashes, such as references/notes.md."
-              },
-              "content": {
-                "type": "string",
-                "maxLength": SKILL_REVIEW_MAX_FILE_BYTES,
-                "description": "Full UTF-8 text of this file."
-              }
-            }
-          }
-        }
-      }
     }
   },
   {
@@ -1142,7 +1140,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             version: "0.7.0",
           },
           instructions:
-            "Before connecting to an unknown MCP server, call check_mcp_server_trust with its URL: free, no signup, 5 checks/day. It tells you what the server can do, which tools are risky and whether it changed since last time. Other tools: audit deliverables (code, datasets, RAG, inference, GPU) before paying, and hold payments in escrow on Base.",
+            "Start with the top 3 free tools (no signup, callable with {} for a sample): (1) check_mcp_server_trust — check any public MCP server URL for risky tools, permissions and drift; (2) review_agent_skill_free — check SKILL.md and text files with findings by file and line; (3) get_trust_dossier_sample — preview the Ed25519-signed 7-question dossier.",
         },
       };
     }
@@ -1261,8 +1259,12 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           }
           break;
         case "check_mcp_server_trust":
-          if (!args.serverUrl) {
-            output = { ok: false, tool: "check_mcp_server_trust", reason: "serverUrl is required. Example: https://example.com/mcp" };
+          if (!args.serverUrl && !args._trustCheckResult) {
+            output = {
+              ...getTrustDossierSample(),
+              tool: "check_mcp_server_trust",
+              exampleInput: { serverUrl: "https://own-adam.onrender.com/mcp" },
+            };
           } else {
             output = args._trustCheckResult || {
               ok: false,
