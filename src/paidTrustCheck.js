@@ -65,9 +65,9 @@ async function fulfillOrder({ ledger, txHash, serverUrl, serverUrlHash, tokenHas
     };
   }
 
-  const report = buildMcpTrustReport({ ledger, probe, mode: order.mode, paymentTxHash: txHash });
+  const report = buildMcpTrustReport({ ledger, probe, mode: order.mode, paymentTxHash: txHash, orderId: order.orderId });
   // Commit the result before replying. Retrying a lost response returns this exact report.
-  return saveTrustPaymentReport(txHash, { ...report, orderId: order.orderId });
+  return saveTrustPaymentReport(txHash, report);
 }
 
 export async function runPaidTrustCheck({ ledger, serverUrl, paymentTxHash, paymentRecoveryToken }) {

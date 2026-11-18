@@ -1,6 +1,7 @@
 import {
   buildMcpTrustReport,
   FULL_DOSSIER_PRICE_USDC,
+  sealFinalPaidTrustReport,
 } from "./freeTrustCheck.js";
 
 export function getTrustDossierSample() {
@@ -46,9 +47,13 @@ export function getTrustDossierSample() {
     },
     mode: "FULL",
     paymentTxHash: "0x" + "0".repeat(64),
+    orderId: "00000000-0000-4000-8000-000000000000",
   });
-  example.notarySeal.signer = "0x" + "0".repeat(40);
-  example.orderId = "00000000-0000-4000-8000-000000000000";
+  sealFinalPaidTrustReport(example, {
+    secretMaterial: ledger.evaluatorSecretKey,
+    signerAddress: "0x" + "0".repeat(40),
+    paymentTxHash: "0x" + "0".repeat(64),
+  });
 
   return {
     ok: true,

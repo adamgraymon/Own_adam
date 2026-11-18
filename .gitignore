@@ -11,3 +11,6 @@ telegram_mt5_bridge/
 data/trust-snapshots.json
 data/trust-snapshots.json.tmp
 data/trust-orders/
+
+data/seller-registry.json
+data/seller-registry.json.tmp

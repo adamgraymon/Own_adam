@@ -10,6 +10,7 @@ import { extractDiscoveryInfo, validateDiscoveryExtension } from "@x402/extensio
 import { x402Client, x402HTTPClient, wrapFetchWithPayment } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
+import { sealFinalPaidTrustReport, verifyTrustReportEd25519 } from "../src/reportSignature.js";
 
 const projectDir = fileURLToPath(new URL("..", import.meta.url));
 const serverUrl = "https://93.184.216.34/mcp";
@@ -599,7 +600,11 @@ test("a dropped CDP settlement and HTTP response recover the same dossier after 
   assert.equal(files.some(file => file.startsWith("report-")), false);
   assert.equal(files.some(file => /^settlement-0x/.test(file)), false);
   const expected = JSON.parse(await fs.readFile(path.join(sandbox.x402CdpOrderDir, drafts[0]), "utf8"));
-  expected.notarySeal.paymentTxHash = transfer.transactionHash;
+  sealFinalPaidTrustReport(expected, {
+    secretMaterial: "veritas-8183-deterministic-evaluator-seed",
+    signerAddress: expected.notarySeal?.signer,
+    paymentTxHash: transfer.transactionHash,
+  });
 
   const restarted = await sandbox.start("fail", { x402Cdp: true, port: first.port });
   const recovered = await requestDossier(restarted);
@@ -669,6 +674,18 @@ test("agents can discover a free dossier sample in the paid report format", { ti
   assert.deepEqual(Object.keys(sample.example.notarySeal).sort(), Object.keys(paid.notarySeal).sort());
   assert.notEqual(sample.example.orderId, paid.orderId);
   assert.notEqual(sample.example.notarySeal.paymentTxHash, paid.notarySeal.paymentTxHash);
+  assert.equal(verifyTrustReportEd25519(sample.example).valid, true);
+  assert.equal(verifyTrustReportEd25519(paid).valid, true);
+  // Tampering with report content, orderId, or paymentTxHash must invalidate the Ed25519 signature.
+  const tamperedScore = structuredClone(paid);
+  tamperedScore.trustScore = paid.trustScore === 100 ? 0 : 100;
+  assert.equal(verifyTrustReportEd25519(tamperedScore).valid, false);
+  const tamperedOrder = structuredClone(paid);
+  tamperedOrder.orderId = "00000000-0000-4000-8000-000000000999";
+  assert.equal(verifyTrustReportEd25519(tamperedOrder).valid, false);
+  const tamperedTx = structuredClone(paid);
+  tamperedTx.notarySeal.paymentTxHash = "0x" + "ff".repeat(32);
+  assert.equal(verifyTrustReportEd25519(tamperedTx).valid, false);
 });
 
 test("a lost paid response is recoverable after restarting the HTTP server", { timeout: 30_000 }, async t => {

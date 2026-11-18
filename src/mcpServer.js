@@ -1525,7 +1525,28 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             onChainVerificationResult: args._onChainVerificationResult || null,
           });
           break;
-        case "register_and_certify_store":
+        case "register_and_certify_store": {
+          const normStoreId = String(args.storeId || "")
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9-_]/g, "-");
+          if (args.acceptPublicRegistryTerms === false && normStoreId && ledger.stores?.[normStoreId]?.publicRegistryConsent) {
+            delete ledger.stores[normStoreId];
+            const tombstone = {
+              id: normStoreId,
+              withdrawn: true,
+              withdrawnAt: new Date().toISOString(),
+            };
+            ledger.persistSellerRecord?.(normStoreId, tombstone);
+            output = {
+              ok: true,
+              status: 200,
+              certificationStatus: "PUBLIC_LISTING_WITHDRAWN",
+              storeId: normStoreId,
+              withdrawnAt: tombstone.withdrawnAt,
+            };
+            break;
+          }
           if (args.acceptPublicRegistryTerms !== true) {
             output = {
               ok: false,
@@ -1547,15 +1568,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             startingPriceUsdc: args.startingPriceUsdc,
             sampleDeliverable: args.sampleDeliverable || {},
           });
-          if (output?.ok !== false && ledger.stores?.[args.storeId]) {
-            ledger.stores[args.storeId].publicRegistryConsent = {
+          if (output?.ok !== false && ledger.stores?.[normStoreId]) {
+            ledger.stores[normStoreId].publicRegistryConsent = {
               accepted: true,
               termsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
               acceptedAt: new Date().toISOString(),
             };
-            output = { ...output, publicRegistryConsent: ledger.stores[args.storeId].publicRegistryConsent };
+            ledger.persistSellerRecord?.(normStoreId, ledger.stores[normStoreId]);
+            output = { ...output, publicRegistryConsent: ledger.stores[normStoreId].publicRegistryConsent };
           }
           break;
+        }
         case "inspect_veritas_8183_seal":
           output = ledger.inspectVeritasSeal({
             targetId: args.targetId || "ALL",

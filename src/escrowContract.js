@@ -28,8 +28,12 @@ function round6(n) {
 
 export class AgenticEscrowLedger {
   constructor() {
-    this.evaluatorSecretKey = crypto.randomBytes(32).toString("hex");
     this.realWallets = initOrLoadAgentWallets();
+    this.evaluatorSecretKey =
+      process.env.REPORT_SIGNING_SEED_HEX ||
+      process.env.EVALUATOR_PRIVATE_KEY ||
+      this.realWallets?.evaluatorPrivateKey ||
+      "veritas-8183-deterministic-evaluator-seed";
     this.pendingX402Challenges = new Map();
     this.reset();
   }
@@ -252,15 +256,19 @@ export class AgenticEscrowLedger {
       return true;
     };
 
+    const meetsReputationOrNewCertified = (s) =>
+      s.reputationScore >= minReputation ||
+      (s.technicalAuditPassed === true && (s.failedJobs || 0) === 0 && (s.completedJobs || 0) === 0);
+
     const eligible = allStores
-      .filter((s) => s.reputationScore >= minReputation && matchesTierAndVertical(s))
+      .filter((s) => meetsReputationOrNewCertified(s) && matchesTierAndVertical(s))
       .sort((a, b) => b.reputationScore - a.reputationScore);
     const blacklisted = allStores.filter(
-      (s) => (hasCatalogFilter || s.isCoreSimStore) && s.reputationScore < minReputation
+      (s) => (hasCatalogFilter || s.isCoreSimStore) && !meetsReputationOrNewCertified(s)
     );
 
     const verifiedCatalogPartners = allStores
-      .filter((s) => !s.isCoreSimStore && s.reputationScore >= minReputation)
+      .filter((s) => !s.isCoreSimStore && meetsReputationOrNewCertified(s))
       .sort((a, b) => b.reputationScore - a.reputationScore);
 
     const allFirstPartyItems = Object.values(CURATED_FIRST_PARTY_CATALOG).filter((item) => {

@@ -101,20 +101,21 @@ const STORE_VERITAS_TELEMETRY_DEFAULTS = _UNSEALED_VERITAS_DIRECTORY.STORE_VERIT
  * para cualquier tienda o contrato inteligente.
  */
 export function computeSellerVeritasSeal(store, ledger) {
+  const isNewTechnicalCertified = Boolean(store.technicalAuditPassed && (store.completedJobs || 0) === 0);
   const defaults = STORE_VERITAS_TELEMETRY_DEFAULTS[store.id] || {
     publicReserveWallet: store.address || "0xUnverifiedReserveWallet",
     lockedOrPublicReserveUsdc: store.reputationScore >= 90 ? 85.0 : store.reputationScore >= 75 ? 20.0 : 0.0,
-    activeOperationalVolumeUsdc: 500.0,
-    uniqueClientsServed: Math.max(1, store.completedJobs || 1),
-    repeatClientRatePct: store.reputationScore >= 90 ? 74.0 : 35.0,
-    verifiedClientRating5: store.reputationScore >= 90 ? 4.72 : store.reputationScore >= 70 ? 4.15 : 2.1,
-    verifiedReviewsCount: Math.max(1, store.completedJobs || 1),
-    contentQualityScorePct: store.reputationScore >= 90 ? 96.5 : store.reputationScore >= 70 ? 88.0 : 42.0,
+    activeOperationalVolumeUsdc: isNewTechnicalCertified ? 0.0 : 500.0,
+    uniqueClientsServed: isNewTechnicalCertified ? 0 : Math.max(1, store.completedJobs || 1),
+    repeatClientRatePct: isNewTechnicalCertified ? 0.0 : store.reputationScore >= 90 ? 74.0 : 35.0,
+    verifiedClientRating5: isNewTechnicalCertified ? null : store.reputationScore >= 90 ? 4.72 : store.reputationScore >= 70 ? 4.15 : 2.1,
+    verifiedReviewsCount: isNewTechnicalCertified ? 0 : Math.max(1, store.completedJobs || 1),
+    contentQualityScorePct: store.reputationScore >= 90 ? 96.5 : store.reputationScore >= 70 || isNewTechnicalCertified ? 88.0 : 42.0,
     responseTimeP95Ms: store.reputationScore >= 90 ? 64 : 185,
     uptimePct: store.reputationScore >= 90 ? 99.8 : 96.5,
-    disputeLossRatePct: (store.failedJobs || 0) > 0 ? round6((store.failedJobs / Math.max(1, store.completedJobs + store.failedJobs)) * 100) : 0.0,
+    disputeLossRatePct: (store.failedJobs || 0) > 0 ? round6((store.failedJobs / Math.max(1, (store.completedJobs || 0) + store.failedJobs)) * 100) : 0.0,
     sourcifyVerified: store.reputationScore >= 95,
-    lastWitnessedTxHash: "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
+    lastWitnessedTxHash: isNewTechnicalCertified ? null : "0x7c4948927968573c9df1ef788bd1fe7872ffb2d8908e61010f4d24496dbdf6d5",
   };
 
   const telemetry = store.veritasTelemetry || defaults;
@@ -139,7 +140,12 @@ export function computeSellerVeritasSeal(store, ledger) {
   let institutionalVerdict =
     "DO NOT CONTRACT: Node failed deterministic integrity checks or lacks solvency reserves.";
 
-  if (store.reputationScore < 70 || store.behaviorProfile === "malicious" || store.behaviorProfile === "sneaky_filler") {
+  if (
+    (!isNewTechnicalCertified && store.reputationScore < 70) ||
+    (store.failedJobs || 0) > (store.completedJobs || 0) ||
+    store.behaviorProfile === "malicious" ||
+    store.behaviorProfile === "sneaky_filler"
+  ) {
     starLevel = 0;
     sealBadge = "🚫 VERITAS-8183 SLASHED / BLACKLISTED";
     tierCode = "SLASHED_BLACKLIST";

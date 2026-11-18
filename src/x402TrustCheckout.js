@@ -14,6 +14,7 @@ import {
   FULL_DOSSIER_SAMPLE,
   parsePublicMcpUrl,
   probeMcpServerLive,
+  sealFinalPaidTrustReport,
 } from "./freeTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
 import { createTrustOrderLocalStore } from "./trustOrderStore.js";
@@ -173,11 +174,14 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
     ) {
       throw new Error("Invalid Base Sepolia settlement receipt");
     }
+    const finalReport = structuredClone(draft);
+    sealFinalPaidTrustReport(finalReport, {
+      secretMaterial: ledger?.evaluatorSecretKey,
+      signerAddress: draft.notarySeal?.signer,
+      paymentTxHash: receipt.transaction,
+    });
     return delivered(await store.insert("report", orderKey, {
-      report: {
-        ...draft,
-        notarySeal: { ...draft.notarySeal, paymentTxHash: receipt.transaction },
-      },
+      report: finalReport,
       receipt,
     }));
   }
@@ -264,9 +268,15 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
       if (!probe.ok) {
         return failure(503, "CHECK_RETRYABLE", "The check did not complete. Retry with the original PAYMENT-SIGNATURE and recovery token.");
       }
-      const report = buildMcpTrustReport({ ledger, probe, mode: "FULL" });
-      if (!cdp) report.notarySeal.signer = X402_SANDBOX_RECIPIENT;
-      draft = await store.insert("draft", orderKey, { ...report, orderId: order.orderId });
+      const report = buildMcpTrustReport({ ledger, probe, mode: "FULL", orderId: order.orderId });
+      if (!cdp) {
+        sealFinalPaidTrustReport(report, {
+          secretMaterial: ledger?.evaluatorSecretKey,
+          signerAddress: X402_SANDBOX_RECIPIENT,
+          paymentTxHash: null,
+        });
+      }
+      draft = await store.insert("draft", orderKey, report);
     }
 
     const receipt = await resourceServer.settlePayment(payment, requirement);

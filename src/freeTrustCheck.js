@@ -14,6 +14,13 @@
 import crypto from "node:crypto";
 import dns from "node:dns/promises";
 import net from "node:net";
+import {
+  sealFinalPaidTrustReport,
+  getTrustReportPublicKeyHex,
+  verifyTrustReportEd25519,
+} from "./reportSignature.js";
+
+export { sealFinalPaidTrustReport, getTrustReportPublicKeyHex, verifyTrustReportEd25519 };
 
 export const FREE_CHECKS_PER_DAY = 5;
 export const FULL_DOSSIER_PRICE_USDC = 0.25;
@@ -443,6 +450,7 @@ function ensureStore(ledger) {
  */
 export async function enableTrustPersistence(ledger) {
   const { loadTrustSnapshots, saveTrustSnapshot, trustStoreStatus } = await import("./trustStore.js");
+  const { enableSellerRegistryPersistence } = await import("./sellerRegistryStore.js");
   const store = ensureStore(ledger);
   const entries = await loadTrustSnapshots();
   for (const [url, snap] of entries) {
@@ -450,6 +458,7 @@ export async function enableTrustPersistence(ledger) {
   }
   store.persist = saveTrustSnapshot;
   store.persistStatus = trustStoreStatus;
+  await enableSellerRegistryPersistence(ledger);
   return trustStoreStatus;
 }
 
@@ -553,7 +562,7 @@ export function renderTrustBadgeSvg(ledger, serverUrl) {
  * Construye el informe (síncrono). `probe` viene de probeMcpServerLive().
  * `mode`: "FREE" (3/7 preguntas) o "FULL" (7/7 + firma).
  */
-export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null, paymentTxHash = null }) {
+export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null, paymentTxHash = null, orderId = null }) {
   const store = ensureStore(ledger);
   store.stats.totalChecks += 1;
   if (mode === "FULL") store.stats.paidChecks += 1;
@@ -744,13 +753,11 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
     q6_whichAuditsHasItPassed: q6,
     q7_whatVulnerabilitiesRemainPending: q7,
   };
-  const reportHash = sha256(JSON.stringify(base.answers) + base.checkedAt);
-  base.notarySeal = {
-    reportSha256: reportHash,
-    signatureHmacSha256: crypto.createHmac("sha256", ledger.evaluatorSecretKey || "veritas").update(`MCP_TRUST|${probe.serverUrl}|${reportHash}`).digest("hex"),
-    signer: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
+  if (orderId) base.orderId = orderId;
+  sealFinalPaidTrustReport(base, {
+    secretMaterial: ledger?.evaluatorSecretKey,
     paymentTxHash,
-  };
+  });
   return base;
 }
 
@@ -759,6 +766,7 @@ export function getFreeTrustCheckStats(ledger) {
   return {
     ...store.stats,
     serversTracked: store.snapshots.size,
+    reportSignerPublicKeyEd25519: getTrustReportPublicKeyHex(ledger?.evaluatorSecretKey),
     persistence: store.persistStatus
       ? { backend: store.persistStatus.backend, loadedOnStartup: store.persistStatus.loadedSnapshots, lastSaveAt: store.persistStatus.lastSaveAt, saveErrors: store.persistStatus.saveErrors }
       : { backend: "memory" },

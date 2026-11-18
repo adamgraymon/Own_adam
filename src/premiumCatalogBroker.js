@@ -872,8 +872,9 @@ export function registerAndCertifyExternalStore({
     startingPriceUsdc: Number(startingPriceUsdc) || 5.0,
     slaGuarantee: `ERC-8004 Certified on ${vertical} (Live Deterministic Audit Passed)`,
     usdcBalance: 0.0,
-    reputationScore: 88, // ReputaciÃ³n inicial tras pasar auditorÃ­a determinista
-    completedJobs: 1,
+    technicalAuditPassed: true,
+    reputationScore: 0, // Historial comercial real empieza en 0
+    completedJobs: 0,
     failedJobs: 0,
     certifiedAt: new Date().toISOString(),
   };
@@ -928,8 +929,8 @@ export function registerAndCertifyExternalStore({
 }
 
 // ---------------------------------------------------------------------------
-// Transparencia (política de datos v1.0.0): los proveedores sin endpoint real (mcp://*.base.eth) son
-// tiendas de DEMOSTRACIÓN que alimentan la simulación interna. Se marcan siempre como tales.
+// Transparencia (polï¿½tica de datos v1.0.0): los proveedores sin endpoint real (mcp://*.base.eth) son
+// tiendas de DEMOSTRACIï¿½N que alimentan la simulaciï¿½n interna. Se marcan siempre como tales.
 // ---------------------------------------------------------------------------
 for (const s of Object.values(PREMIUM_CATALOG_STORES)) {
   if (String(s.endpoint || "").startsWith("mcp://")) {

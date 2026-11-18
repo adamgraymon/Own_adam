@@ -82,3 +82,87 @@ test("upstash backend: HSET on save, HGETALL on load", async () => {
     srv.close();
   }
 });
+
+test("seller onboarding starts commercial history at zero and persists registration + withdrawal across restarts", async () => {
+  const { AgenticEscrowLedger } = await import("../src/escrowContract.js");
+  const { handleMcpJsonRpc } = await import("../src/mcpServer.js");
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "veritas-seller-"));
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  process.env.TRUST_DATA_DIR = dir;
+
+  try {
+    const ledgerA = new AgenticEscrowLedger();
+    await enableTrustPersistence(ledgerA);
+
+    const registered = handleMcpJsonRpc(
+      {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "register_and_certify_store",
+          arguments: {
+            acceptPublicRegistryTerms: true,
+            storeId: "honest-zero-start-node",
+            storeName: "Honest Zero Start Node",
+            walletAddress: "0x111122223333444455556666777788889999AAAA",
+            endpointUrl: "https://honest-zero.example/mcp",
+            vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+            marketTier: "RETAIL_INDIE",
+            startingPriceUsdc: 5.0,
+            sampleDeliverable: {
+              contractName: "SafeVaultSample",
+              soliditySourceCode:
+                "// SPDX-License-Identifier: MIT\npragma solidity 0.8.38;\ncontract SafeVaultSample { uint256 public total; function add(uint256 a) external { total += a; } }",
+            },
+          },
+        },
+      },
+      ledgerA
+    ).result.structuredContent;
+
+    assert.equal(registered.ok, true);
+    assert.equal(registered.storeProfile.technicalAuditPassed, true);
+    assert.equal(registered.storeProfile.completedJobs, 0);
+    assert.equal(registered.storeProfile.reputationScore, 0);
+    assert.equal(registered.publicRegistryConsent.accepted, true);
+    await flush();
+
+    // Simulated restart 1: registration and consent survive
+    const ledgerB = new AgenticEscrowLedger();
+    await enableTrustPersistence(ledgerB);
+    assert.ok(ledgerB.stores["honest-zero-start-node"]);
+    assert.equal(ledgerB.stores["honest-zero-start-node"].completedJobs, 0);
+    assert.equal(ledgerB.stores["honest-zero-start-node"].reputationScore, 0);
+    assert.equal(ledgerB.stores["honest-zero-start-node"].publicRegistryConsent.accepted, true);
+
+    // Withdraw consent: removes store and persists tombstone across restart
+    const withdrawn = handleMcpJsonRpc(
+      {
+        jsonrpc: "2.0",
+        id: 2,
+        method: "tools/call",
+        params: {
+          name: "register_and_certify_store",
+          arguments: {
+            storeId: "honest-zero-start-node",
+            acceptPublicRegistryTerms: false,
+          },
+        },
+      },
+      ledgerB
+    ).result.structuredContent;
+    assert.equal(withdrawn.ok, true);
+    assert.equal(withdrawn.certificationStatus, "PUBLIC_LISTING_WITHDRAWN");
+    assert.equal(ledgerB.stores["honest-zero-start-node"], undefined);
+    await flush();
+
+    // Simulated restart 2: withdrawn store stays removed
+    const ledgerC = new AgenticEscrowLedger();
+    await enableTrustPersistence(ledgerC);
+    assert.equal(ledgerC.stores["honest-zero-start-node"], undefined);
+  } finally {
+    delete process.env.TRUST_DATA_DIR;
+  }
+});
