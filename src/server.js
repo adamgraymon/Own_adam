@@ -55,7 +55,7 @@ const OWNER_POST_PATHS = new Set(["/api/swarm/toggle", "/api/swarm/step", "/api/
 const PRIVATE_RESPONSE_HEADERS = { "Cache-Control": "private, no-store" };
 const MCP_METHODS = new Set([
   "initialize", "notifications/initialized", "notifications/cancelled", "ping", "server/discover",
-  "resources/list", "resources/templates/list", "prompts/list", "tools/list", "tools/call",
+  "resources/list", "resources/read", "resources/templates/list", "prompts/list", "tools/list", "tools/call",
 ]);
 const MARKET_TELEMETRY_FIELDS = {
   discover_verified_stores: ["vertical", "marketTier"],

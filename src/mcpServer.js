@@ -29,6 +29,8 @@ import {
   consumeFreeCheckQuota,
   buildQuotaExhaustedResponse,
   validatePublicMcpUrl,
+  listPublicTrustRecords,
+  getFreeTrustCheckStats,
   FULL_DOSSIER_PRICE_USDC,
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
@@ -37,6 +39,7 @@ import { getTrustDossierSample } from "./trustDossierSample.js";
 import {
   FREE_SKILL_REVIEW_TOOL,
   reviewAgentSkillFree,
+  listEvaluatedSkills,
   SKILL_REVIEW_MAX_FILES,
   SKILL_REVIEW_MAX_FILE_BYTES,
   SKILL_REVIEW_MAX_PATH_LENGTH,
@@ -1184,6 +1187,20 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
         result: {
           resources: [
             {
+              uri: "https://own-adam.onrender.com/trust",
+              name: "VERITAS Audited MCP Servers Index (40+ Live-Probed MCP Servers)",
+              description:
+                "Public index of 40+ audited MCP servers with trust scores (0-100), DO_NOT_CONNECT alerts, badge URLs, and drift history.",
+              mimeType: "application/json",
+            },
+            {
+              uri: "https://own-adam.onrender.com/skills/review",
+              name: "VERITAS Evaluated Agent Skills Catalog (41+ Audited SKILL.md Files)",
+              description:
+                "Public catalog of 41+ evaluated agent skills (SKILL.md) with static security verdicts and line-by-line findings.",
+              mimeType: "application/json",
+            },
+            {
               uri: "https://own-adam.onrender.com/notary.json",
               name: "VERITAS-8183 Public M2M Notary Registry",
               description:
@@ -1203,6 +1220,38 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
               description:
                 "On-chain Base Mainnet contract address (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) and Sourcify proofs.",
               mimeType: "application/json",
+            },
+          ],
+        },
+      };
+    }
+
+    if (method === "resources/read") {
+      const uri = String(params?.uri || "");
+      let payload;
+      if (uri.endsWith("/skills/review")) {
+        const allSkills = listEvaluatedSkills(ledger);
+        payload = {
+          service: "VERITAS Public Skill Review Catalog",
+          skillsReviewedCount: allSkills.length,
+          auditedSkills: allSkills,
+        };
+      } else {
+        payload = {
+          service: "VERITAS MCP Trust Check",
+          stats: getFreeTrustCheckStats(ledger),
+          auditedServers: listPublicTrustRecords(ledger),
+        };
+      }
+      return {
+        jsonrpc,
+        id,
+        result: {
+          contents: [
+            {
+              uri: uri || "https://own-adam.onrender.com/trust",
+              mimeType: "application/json",
+              text: JSON.stringify(payload),
             },
           ],
         },
@@ -1260,10 +1309,24 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           break;
         case "check_mcp_server_trust":
           if (!args.serverUrl && !args._trustCheckResult) {
+            const allAudited = listPublicTrustRecords(ledger, { limit: 100 });
+            const allSkills = listEvaluatedSkills(ledger, { limit: 100 });
             output = {
               ...getTrustDossierSample(),
               tool: "check_mcp_server_trust",
               exampleInput: { serverUrl: "https://own-adam.onrender.com/mcp" },
+              publicAuditedMcpCatalog: {
+                serversTrackedCount: allAudited.length,
+                catalogUrl: "https://own-adam.onrender.com/trust",
+                doNotConnectAlerts: allAudited.filter((s) => s.verdict === "DO_NOT_CONNECT").slice(0, 5),
+                topRatedServers: allAudited.filter((s) => s.verdict === "LOW_RISK").slice(0, 10),
+              },
+              publicEvaluatedSkillsCatalog: {
+                skillsReviewedCount: allSkills.length,
+                catalogUrl: "https://own-adam.onrender.com/skills/review",
+                reviewRequiredAlerts: allSkills.filter((s) => s.verdict === "REVIEW_REQUIRED"),
+                cleanSkillsSample: allSkills.filter((s) => s.verdict === "NO_FINDINGS").slice(0, 10),
+              },
             };
           } else {
             output = args._trustCheckResult || {
@@ -1286,13 +1349,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
               sourceTool: "discover_verified_stores",
             });
           }
-          output = ledger.discoverStoresErc8004({
-            minReputation: args.minReputation ?? 70,
-            marketTier: args.marketTier || "ALL",
-            vertical: args.vertical || "ALL",
-            maxPriceUsdc: args.maxPriceUsdc ?? null,
-            firstPartyOnly: Boolean(args.firstPartyOnly),
-          });
+          output = {
+            ...ledger.discoverStoresErc8004({
+              minReputation: args.minReputation ?? 70,
+              marketTier: args.marketTier || "ALL",
+              vertical: args.vertical || "ALL",
+              maxPriceUsdc: args.maxPriceUsdc ?? null,
+              firstPartyOnly: Boolean(args.firstPartyOnly),
+            }),
+            publicAuditedMcpServers: listPublicTrustRecords(ledger, { limit: 20 }),
+            publicEvaluatedSkillsCount: listEvaluatedSkills(ledger, { limit: 100 }).length,
+          };
           break;
         case "quote_multitoken_escrow":
           if (args.buyerId) {
