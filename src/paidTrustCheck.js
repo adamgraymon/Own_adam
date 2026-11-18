@@ -13,6 +13,7 @@ import {
   reserveTrustPaymentOrder,
   saveTrustPaymentReport,
 } from "./trustOrderStore.js";
+import { getTrustReportPublicKeyHex, sealFinalPaidTrustReport } from "./reportSignature.js";
 
 const inProgress = new Map();
 
@@ -55,6 +56,12 @@ async function fulfillOrder({ ledger, txHash, serverUrl, serverUrlHash, tokenHas
 
   const savedReport = await readTrustPaymentReport(txHash);
   if (savedReport) return savedReport;
+  if (order.mode === "FULL" && !getTrustReportPublicKeyHex()) {
+    return {
+      ...paymentError("REPORT_SIGNING_UNAVAILABLE", "The dedicated report signer is unavailable. Retry with the same payment and recovery token.", 503),
+      orderId: order.orderId,
+    };
+  }
 
   const probe = await probeMcpServerLive(serverUrl);
   if (!probe.ok) {
@@ -66,6 +73,7 @@ async function fulfillOrder({ ledger, txHash, serverUrl, serverUrlHash, tokenHas
   }
 
   const report = buildMcpTrustReport({ ledger, probe, mode: order.mode, paymentTxHash: txHash, orderId: order.orderId });
+  if (order.mode === "FULL") sealFinalPaidTrustReport(report, { secretMaterial: ledger.evaluatorSecretKey });
   // Commit the result before replying. Retrying a lost response returns this exact report.
   return saveTrustPaymentReport(txHash, report);
 }

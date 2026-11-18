@@ -33,9 +33,13 @@ To review a skill, submit `{ "files": [{ "path": "SKILL.md", "content": "..." }]
 
 The `skillReviewPilot` section of `GET /api/external-traffic` counts completed actions in `httpSamples`, `mcpSamples`, `skillReviews` and `tests` from the time measurement begins. To count a request as an operator test, send `x-trustgate-test: 1` with the existing `x-owner-key` header. Each action contributes to one counter. The counters store totals only. Local runs use memory. Production uses Upstash when configured, so totals survive restarts. A `null` total means storage could not be read, and `writeErrors` counts unconfirmed increments in the current process.
 
+`GET /api/external-traffic` also exposes `catalogReads` for the audited servers, evaluated skills and commercial catalogs. The `http` and `mcp` counters track completed reads of each full catalog via direct GET and MCP `resources/read` over HTTP. Marked operator requests count only in `tests`. These totals use the same local memory and configured production Upstash policy as the pilot counters.
+
 ### Preview the full dossier
 
-The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, HMAC seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.
+The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, illustrative seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.
+
+For paid dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedicated Ed25519 PKCS#8 private PEM outside the repository and restart the server. `GET /trust/methodology` and `GET /.well-known/agent.json` publish the matching `reportSigning` descriptor. Use that public key as the expected key when verifying a dossier. When the key is absent, new full dossiers and x402 checkout are unavailable. Saved dossiers are returned as originally issued.
 
 ### Local paid-order recovery
 

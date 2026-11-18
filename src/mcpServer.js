@@ -31,11 +31,13 @@ import {
   validatePublicMcpUrl,
   listPublicTrustRecords,
   getFreeTrustCheckStats,
+  PUBLIC_BASE_URL,
   FULL_DOSSIER_PRICE_USDC,
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
 import { runPaidTrustCheck } from "./paidTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
+import { getTrustReportSigningMetadata } from "./reportSignature.js";
 import {
   FREE_SKILL_REVIEW_TOOL,
   reviewAgentSkillFree,
@@ -1115,10 +1117,64 @@ function logMcpToolCall(ledger, toolName, outcome, started) {
   });
 }
 
+const MCP_RESOURCES = [
+  {
+    uri: PUBLIC_BASE_URL + "/trust",
+    catalog: "auditedServers",
+    name: "VERITAS Audited MCP Servers Index (40+ Live-Probed MCP Servers)",
+    description: "Public index of 40+ audited MCP servers with trust scores (0-100), DO_NOT_CONNECT alerts, badge URLs, and drift history.",
+    read: ledger => ({
+      service: "VERITAS MCP Trust Check",
+      stats: getFreeTrustCheckStats(ledger),
+      auditedServers: listPublicTrustRecords(ledger),
+    }),
+  },
+  {
+    uri: PUBLIC_BASE_URL + "/skills/review",
+    catalog: "evaluatedSkills",
+    name: "VERITAS Evaluated Agent Skills Catalog (41+ Audited SKILL.md Files)",
+    description: "Public catalog of 41+ evaluated agent skills (SKILL.md) with static security verdicts and line-by-line findings.",
+    read(ledger) {
+      const auditedSkills = listEvaluatedSkills(ledger);
+      return {
+        service: "VERITAS Public Skill Review Catalog",
+        skillsReviewedCount: auditedSkills.length,
+        auditedSkills,
+      };
+    },
+  },
+  {
+    uri: PUBLIC_BASE_URL + "/notary.json",
+    name: "VERITAS-8183 Public M2M Notary Registry",
+    description: "Live registry of 1-to-3 Star Seller Seals, Proof-of-Reserve ratios, and Buyer FinOps Spend Passports.",
+    read: (ledger, baseUrl) => ledger.getVeritasNotaryManifest(baseUrl),
+  },
+  {
+    uri: PUBLIC_BASE_URL + "/catalog.json",
+    catalog: "commercialCatalog",
+    name: "TrustGate Dual-Tier AI Marketplace Catalog",
+    description: "Institutional B2B and Retail/Indie audited packages, partner stores, and x402 micro-bazaar services.",
+    read: (ledger, baseUrl) => ledger.getFullCatalogManifest(baseUrl),
+  },
+  {
+    uri: PUBLIC_BASE_URL + "/.well-known/agent.json",
+    name: "ERC-8004 Agent Identity & Base Mainnet Contract Manifest",
+    description: "On-chain Base Mainnet contract address (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) and Sourcify proofs.",
+    read: (ledger, baseUrl, signingMetadata = getTrustReportSigningMetadata()) => ({
+      ...ledger.getAgentCardManifest(baseUrl),
+      ...signingMetadata,
+    }),
+  },
+];
+
+export function getMcpResourceCatalog(uri) {
+  return MCP_RESOURCES.find(resource => resource.uri === uri)?.catalog;
+}
+
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.
  */
-export function handleMcpJsonRpc(rpcRequest, ledger) {
+export function handleMcpJsonRpc(rpcRequest, ledger, { baseUrl = PUBLIC_BASE_URL, signingMetadata } = {}) {
   const { jsonrpc = "2.0", id = null, method, params = {} } = rpcRequest || {};
   const started = performance.now();
   ledger.wallets.protocol_treasury.stats.mcpCallsHandled += 1;
@@ -1185,75 +1241,31 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
         jsonrpc,
         id,
         result: {
-          resources: [
-            {
-              uri: "https://own-adam.onrender.com/trust",
-              name: "VERITAS Audited MCP Servers Index (40+ Live-Probed MCP Servers)",
-              description:
-                "Public index of 40+ audited MCP servers with trust scores (0-100), DO_NOT_CONNECT alerts, badge URLs, and drift history.",
-              mimeType: "application/json",
-            },
-            {
-              uri: "https://own-adam.onrender.com/skills/review",
-              name: "VERITAS Evaluated Agent Skills Catalog (41+ Audited SKILL.md Files)",
-              description:
-                "Public catalog of 41+ evaluated agent skills (SKILL.md) with static security verdicts and line-by-line findings.",
-              mimeType: "application/json",
-            },
-            {
-              uri: "https://own-adam.onrender.com/notary.json",
-              name: "VERITAS-8183 Public M2M Notary Registry",
-              description:
-                "Live registry of 1-to-3 Star Seller Seals, Proof-of-Reserve ratios, and Buyer FinOps Spend Passports.",
-              mimeType: "application/json",
-            },
-            {
-              uri: "https://own-adam.onrender.com/catalog.json",
-              name: "TrustGate Dual-Tier AI Marketplace Catalog",
-              description:
-                "Institutional B2B and Retail/Indie audited packages, partner stores, and x402 micro-bazaar services.",
-              mimeType: "application/json",
-            },
-            {
-              uri: "https://own-adam.onrender.com/.well-known/agent.json",
-              name: "ERC-8004 Agent Identity & Base Mainnet Contract Manifest",
-              description:
-                "On-chain Base Mainnet contract address (0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) and Sourcify proofs.",
-              mimeType: "application/json",
-            },
-          ],
+          resources: MCP_RESOURCES.map(({ uri, name, description }) => ({
+            uri, name, description, mimeType: "application/json",
+          })),
         },
       };
     }
 
     if (method === "resources/read") {
-      const uri = String(params?.uri || "");
-      let payload;
-      if (uri.endsWith("/skills/review")) {
-        const allSkills = listEvaluatedSkills(ledger);
-        payload = {
-          service: "VERITAS Public Skill Review Catalog",
-          skillsReviewedCount: allSkills.length,
-          auditedSkills: allSkills,
-        };
-      } else {
-        payload = {
-          service: "VERITAS MCP Trust Check",
-          stats: getFreeTrustCheckStats(ledger),
-          auditedServers: listPublicTrustRecords(ledger),
-        };
+      const uri = params?.uri;
+      if (typeof uri !== "string" || !URL.canParse(uri)) {
+        return { jsonrpc, id, error: { code: -32602, message: "A valid resource URI is required." } };
+      }
+      const resource = MCP_RESOURCES.find(candidate => candidate.uri === uri);
+      if (!resource) {
+        return { jsonrpc, id, error: { code: -32002, message: "Resource not found" } };
       }
       return {
         jsonrpc,
         id,
         result: {
-          contents: [
-            {
-              uri: uri || "https://own-adam.onrender.com/trust",
-              mimeType: "application/json",
-              text: JSON.stringify(payload),
-            },
-          ],
+          contents: [{
+            uri,
+            mimeType: "application/json",
+            text: JSON.stringify(resource.read(ledger, baseUrl, signingMetadata)),
+          }],
         },
       };
     }

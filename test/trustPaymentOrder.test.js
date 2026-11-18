@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { createHash, generateKeyPairSync, webcrypto } from "node:crypto";
 import { EventEmitter, once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -10,7 +11,7 @@ import { extractDiscoveryInfo, validateDiscoveryExtension } from "@x402/extensio
 import { x402Client, x402HTTPClient, wrapFetchWithPayment } from "@x402/fetch";
 import { ExactEvmScheme } from "@x402/evm/exact/client";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
-import { sealFinalPaidTrustReport, verifyTrustReportEd25519 } from "../src/reportSignature.js";
+import { verifyTrustReportEd25519 } from "../src/reportSignature.js";
 
 const projectDir = fileURLToPath(new URL("..", import.meta.url));
 const serverUrl = "https://93.184.216.34/mcp";
@@ -242,6 +243,7 @@ async function createSandbox(t) {
   const dir = await fs.mkdtemp(path.join(tempRoot, "trust-payment-orders-"));
   const dependencies = path.join(dir, "node_modules");
   const ordersDir = path.join(dir, "orders");
+  const signingKeyFile = path.join(dir, "report-signing-key.pem");
   const children = [];
   t.after(async () => {
     await Promise.all(children.map(({ stop }) => stop()));
@@ -271,11 +273,18 @@ async function createSandbox(t) {
     "",
   ].join("\n"), { mode: 0o600 });
 
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  await fs.writeFile(signingKeyFile, privateKey.export({ type: "pkcs8", format: "pem" }), { flag: "wx", mode: 0o600 });
+  const publicKeyHex = Buffer.from(publicKey.export({ format: "jwk" }).x, "base64url").toString("hex");
+
   return {
+    publicKeyHex,
     x402OrderDir: path.join(ordersDir, "x402-sandbox"),
     x402CdpOrderDir: path.join(ordersDir, "x402-cdp-sepolia"),
     cdpChainFile: path.join(ordersDir, "cdp-fixture-chain.json"),
-    async start(probeMode = "ok", { x402Sandbox = false, x402Cdp = false, port: listenPort = 0 } = {}) {
+    async start(probeMode = "ok", {
+      x402Sandbox = false, x402Cdp = false, signing = true, port: listenPort = 0,
+    } = {}) {
       const env = Object.fromEntries(
         Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP)$/i.test(key)),
       );
@@ -289,6 +298,9 @@ async function createSandbox(t) {
           TEST_PORT: String(listenPort),
           TRUST_PERSIST_FILE: "0",
           TRUST_ORDER_DATA_DIR: ordersDir,
+          REPORT_SIGNING_SEED_HEX: "34".repeat(32),
+          EVALUATOR_PRIVATE_KEY: "0x" + "12".repeat(32),
+          ...(signing ? { TRUST_REPORT_SIGNING_KEY_FILE: signingKeyFile } : {}),
           OWNER_DASHBOARD_KEY: ownerDashboardKey,
         },
         stdio: ["ignore", "ignore", "pipe", "ipc"],
@@ -360,6 +372,34 @@ async function check(client, params = {}, options = {}) {
     arguments: { paymentRecoveryToken, serverUrl, paymentTxHash, ...params },
   }, options);
   return result.structuredContent;
+}
+
+async function publicSigningDescriptor(client, resource) {
+  const response = await fetch(client.origin + resource, { signal: AbortSignal.timeout(10_000) });
+  assert.equal(response.status, 200);
+  return (await response.json()).reportSigning;
+}
+
+// Verify with the published protocol and WebCrypto, independently of the server signer.
+async function verifyAsBuyer(report, expectedPublicKeyHex) {
+  const seal = report.notarySeal;
+  if (seal?.algorithm !== "Ed25519" || seal.publicKeyHex !== expectedPublicKeyHex) return false;
+  const payload = {
+    server: report.server ?? null,
+    checkedAt: report.checkedAt ?? null,
+    trustScore: report.trustScore ?? null,
+    verdict: report.verdict ?? null,
+    findingsCount: report.findingsCount ?? null,
+    answers: report.answers ?? null,
+  };
+  const hash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  if (seal.reportSha256 !== hash) return false;
+  const message = ["MCP_TRUST_V1", report.server.url, hash, report.orderId ?? "",
+    (seal.paymentTxHash ?? "").toLowerCase()].join("|");
+  const publicKey = await webcrypto.subtle.importKey(
+    "raw", Buffer.from(expectedPublicKeyHex, "hex"), "Ed25519", false, ["verify"],
+  );
+  return webcrypto.subtle.verify("Ed25519", publicKey, Buffer.from(seal.signatureEd25519Hex, "hex"), Buffer.from(message));
 }
 
 const x402Network = "eip155:84532";
@@ -489,7 +529,12 @@ test("an independent x402 v2 client discovers the Bazaar dossier, buys it, and r
   assert.equal(receipt.network, x402Network);
   assert.equal(receipt.payer.toLowerCase(), payer.address.toLowerCase());
   assert.match(receipt.transaction, /^0x[0-9a-f]{64}$/i);
-  const report = await purchased.json();
+  const reportBody = await purchased.text();
+  const report = JSON.parse(reportBody);
+  const descriptor = await publicSigningDescriptor(first, "/trust/methodology");
+  assert.deepEqual(descriptor, { algorithm: "Ed25519", publicKeyHex: sandbox.publicKeyHex, format: "MCP_TRUST_V1" });
+  assert.deepEqual(await publicSigningDescriptor(first, "/.well-known/agent.json"), descriptor);
+  assert.equal(await verifyAsBuyer(report, descriptor.publicKeyHex), true);
   assert.equal(report.ok, true);
   assert.equal(report.mode, "FULL");
   assert.equal(report.server.url, serverUrl);
@@ -503,13 +548,13 @@ test("an independent x402 v2 client discovers the Bazaar dossier, buys it, and r
   assert.equal(settlements.length, 1);
   await first.stop();
 
-  const restarted = await sandbox.start("fail", { x402Sandbox: true, port: first.port });
+  const restarted = await sandbox.start("fail", { x402Sandbox: true, signing: false, port: first.port });
   const conflicting = await checkout({ serverUrl: serverUrl + "/other" });
   assert.equal(conflicting.status, 409);
   await conflicting.body.cancel();
   const recovered = await checkout();
   assert.equal(recovered.status, 200);
-  assert.deepEqual(await recovered.json(), report);
+  assert.equal(await recovered.text(), reportBody);
   assert.deepEqual(httpBuyer.getPaymentSettleResponse(name => recovered.headers.get(name)), receipt);
   assert.deepEqual(restarted.upstream, []);
   assert.deepEqual(await x402OrderFiles(sandbox, "settlement"), settlements);
@@ -523,7 +568,7 @@ test("an independent x402 v2 client discovers the Bazaar dossier, buys it, and r
   const afterInterruptedWrite = await sandbox.start("fail", { x402Sandbox: true, port: first.port });
   const finalized = await checkout();
   assert.equal(finalized.status, 200);
-  assert.deepEqual(await finalized.json(), report);
+  assert.equal(await finalized.text(), reportBody);
   assert.deepEqual(httpBuyer.getPaymentSettleResponse(name => finalized.headers.get(name)), receipt);
   assert.deepEqual(afterInterruptedWrite.upstream, []);
   assert.deepEqual(await x402OrderFiles(sandbox, "settlement"), settlements);
@@ -599,12 +644,11 @@ test("a dropped CDP settlement and HTTP response recover the same dossier after 
   assert.equal(drafts.length, 1);
   assert.equal(files.some(file => file.startsWith("report-")), false);
   assert.equal(files.some(file => /^settlement-0x/.test(file)), false);
-  const expected = JSON.parse(await fs.readFile(path.join(sandbox.x402CdpOrderDir, drafts[0]), "utf8"));
-  sealFinalPaidTrustReport(expected, {
-    secretMaterial: "veritas-8183-deterministic-evaluator-seed",
-    signerAddress: expected.notarySeal?.signer,
-    paymentTxHash: transfer.transactionHash,
-  });
+  const { notarySeal: draftSeal, ...draftReport } = JSON.parse(
+    await fs.readFile(path.join(sandbox.x402CdpOrderDir, drafts[0]), "utf8"),
+  );
+  assert.equal(Object.hasOwn(draftSeal, "signatureEd25519Hex"), false);
+  assert.equal(draftSeal.paymentTxHash, null);
 
   const restarted = await sandbox.start("fail", { x402Cdp: true, port: first.port });
   const recovered = await requestDossier(restarted);
@@ -616,7 +660,11 @@ test("a dropped CDP settlement and HTTP response recover the same dossier after 
   assert.equal(receipt.payer.toLowerCase(), payer.address.toLowerCase());
   assert.equal(receipt.transaction, transfer.transactionHash);
   const report = await recovered.json();
-  assert.deepEqual(report, expected);
+  const { notarySeal, ...finalReport } = report;
+  assert.deepEqual(finalReport, draftReport);
+  assert.equal(notarySeal.signer, draftSeal.signer);
+  assert.equal(notarySeal.paymentTxHash, transfer.transactionHash);
+  assert.equal(await verifyAsBuyer(report, sandbox.publicKeyHex), true);
   assert.equal(report.mode, "FULL");
   assert.equal(Object.keys(report.answers).length, 7);
 
@@ -674,18 +722,21 @@ test("agents can discover a free dossier sample in the paid report format", { ti
   assert.deepEqual(Object.keys(sample.example.notarySeal).sort(), Object.keys(paid.notarySeal).sort());
   assert.notEqual(sample.example.orderId, paid.orderId);
   assert.notEqual(sample.example.notarySeal.paymentTxHash, paid.notarySeal.paymentTxHash);
-  assert.equal(verifyTrustReportEd25519(sample.example).valid, true);
-  assert.equal(verifyTrustReportEd25519(paid).valid, true);
+  assert.equal(verifyTrustReportEd25519(sample.example, sandbox.publicKeyHex).valid, false);
+  assert.equal(verifyTrustReportEd25519(paid).valid, false);
+  assert.equal(verifyTrustReportEd25519(paid, "ff".repeat(32)).valid, false);
+  assert.equal(verifyTrustReportEd25519(paid, sandbox.publicKeyHex).valid, true);
+  assert.equal(await verifyAsBuyer(paid, sandbox.publicKeyHex), true);
   // Tampering with report content, orderId, or paymentTxHash must invalidate the Ed25519 signature.
   const tamperedScore = structuredClone(paid);
   tamperedScore.trustScore = paid.trustScore === 100 ? 0 : 100;
-  assert.equal(verifyTrustReportEd25519(tamperedScore).valid, false);
+  assert.equal(verifyTrustReportEd25519(tamperedScore, sandbox.publicKeyHex).valid, false);
   const tamperedOrder = structuredClone(paid);
   tamperedOrder.orderId = "00000000-0000-4000-8000-000000000999";
-  assert.equal(verifyTrustReportEd25519(tamperedOrder).valid, false);
+  assert.equal(verifyTrustReportEd25519(tamperedOrder, sandbox.publicKeyHex).valid, false);
   const tamperedTx = structuredClone(paid);
   tamperedTx.notarySeal.paymentTxHash = "0x" + "ff".repeat(32);
-  assert.equal(verifyTrustReportEd25519(tamperedTx).valid, false);
+  assert.equal(verifyTrustReportEd25519(tamperedTx, sandbox.publicKeyHex).valid, false);
 });
 
 test("a lost paid response is recoverable after restarting the HTTP server", { timeout: 30_000 }, async t => {
@@ -704,11 +755,11 @@ test("a lost paid response is recoverable after restarting the HTTP server", { t
   const original = delivery.body.result?.structuredContent;
   assert.equal(original?.ok, true);
   assert.ok(original.orderId);
-  assert.ok(original.notarySeal);
+  assert.equal(await verifyAsBuyer(original, sandbox.publicKeyHex), true);
   assert.equal(first.upstream.filter(call => call.service === "base").length, 1);
   await first.stop();
 
-  const restarted = await sandbox.start();
+  const restarted = await sandbox.start("ok", { signing: false });
   const wrongToken = await check(restarted, { paymentRecoveryToken: "ef".repeat(32) });
   assert.equal(wrongToken.status, "PAYMENT_ORDER_MISMATCH");
   const wrongServer = await check(restarted, { serverUrl: serverUrl + "/different" });
@@ -723,6 +774,34 @@ test("a lost paid response is recoverable after restarting the HTTP server", { t
   });
   assert.equal(telemetry.status, 200);
   assert.equal((await telemetry.text()).includes(paymentRecoveryToken), false);
+});
+
+test("an unconfigured signer never uses legacy secrets for Ed25519", { timeout: 30_000 }, async t => {
+  const sandbox = await createSandbox(t);
+  const client = await sandbox.start("ok", { x402Cdp: true, signing: false });
+
+  assert.equal(await publicSigningDescriptor(client, "/trust/methodology"), undefined);
+  assert.equal(await publicSigningDescriptor(client, "/.well-known/agent.json"), undefined);
+  const trust = await fetch(client.origin + "/trust", { signal: AbortSignal.timeout(10_000) });
+  assert.equal(trust.status, 200);
+  assert.equal((await trust.json()).stats.reportSignerPublicKeyEd25519, null);
+
+  const discovery = await fetch(client.origin + "/discovery/resources", { signal: AbortSignal.timeout(10_000) });
+  const checkout = await requestDossier(client);
+  for (const response of [discovery, checkout]) {
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.has("payment-required"), false);
+    assert.equal(response.headers.has("payment-response"), false);
+    assert.equal((await response.json()).status, "REPORT_SIGNING_UNAVAILABLE");
+  }
+  assert.deepEqual(client.upstream, []);
+
+  const paid = await check(client);
+  assert.equal(paid.ok, false);
+  assert.equal(paid.httpStatus, 503);
+  assert.equal(paid.status, "REPORT_SIGNING_UNAVAILABLE");
+  assert.equal(Object.hasOwn(paid, "notarySeal"), false);
+  assert.equal(client.upstream.some(({ service }) => service === "target"), false);
 });
 
 test("a confirmed payment can resume after a failed probe and restart", { timeout: 30_000 }, async t => {

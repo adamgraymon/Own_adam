@@ -14,7 +14,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
-import { getKnownMcpToolName, handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
+import {
+  getKnownMcpToolName, getMcpResourceCatalog, handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall,
+} from "./mcpServer.js";
 import {
   renderTrustBadgeSvg,
   getPublicTrustRecord,
@@ -26,6 +28,7 @@ import {
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
+import { getTrustReportSigningMetadata } from "./reportSignature.js";
 import {
   FREE_SKILL_REVIEW_SAMPLE_PATH,
   FREE_SKILL_REVIEW_TOOL,
@@ -47,6 +50,7 @@ import { X402_MICRO_BAZAAR_SERVICES } from "./veritas8183NotaryEngine.js";
 import { MarketIntelligenceTracker } from "./marketIntelligenceEngine.js";
 import { activeBackend } from "./trustStore.js";
 import { createSkillPilotCounters } from "./skillPilotCounters.js";
+import { createCatalogReadCounters } from "./catalogReadCounters.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -161,6 +165,10 @@ function ownerAccessStatus(req) {
   return received.length === expected.length && crypto.timingSafeEqual(received, expected) ? 200 : 401;
 }
 
+function isOperatorTest(req) {
+  return req.headers["x-trustgate-test"] === "1" && ownerAccessStatus(req) === 200;
+}
+
 function marketTelemetry(toolName, args) {
   const fields = MARKET_TELEMETRY_FIELDS[toolName];
   if (!fields || !args || typeof args !== "object") return null;
@@ -188,12 +196,20 @@ export function createLabServer({
   autoStartSwarm = false, x402Sandbox = false, x402Cdp, persistSkillPilotCounters = false,
 } = {}) {
   if (x402Sandbox && x402Cdp) throw new Error("Select one local x402 mode.");
-  const skillPilotCounters = createSkillPilotCounters({
-    useUpstash: persistSkillPilotCounters && activeBackend() === "upstash-redis",
-  });
+  const signingMetadata = getTrustReportSigningMetadata();
+  const useUpstash = persistSkillPilotCounters && activeBackend() === "upstash-redis";
+  const skillPilotCounters = createSkillPilotCounters({ useUpstash });
+  const catalogReadCounters = createCatalogReadCounters({ useUpstash });
+
   function countSkillPilotAction(req, action) {
-    const isTest = req.headers["x-trustgate-test"] === "1" && ownerAccessStatus(req) === 200;
-    return skillPilotCounters.record(isTest ? "tests" : action);
+    return skillPilotCounters.record(isOperatorTest(req) ? "tests" : action);
+  }
+
+  function countCompletedCatalogRead(req, res, catalog, transport) {
+    const channel = isOperatorTest(req) ? "tests" : transport;
+    res.once("finish", () => {
+      if (res.statusCode === 200) void catalogReadCounters.record(catalog, channel);
+    });
   }
   const x402Checkout = x402Sandbox || x402Cdp ? createX402TrustCheckout({ cdp: x402Cdp, reportLedger: ledger }) : null;
   const x402Dossier = {
@@ -274,6 +290,10 @@ export function createLabServer({
         const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
           includeUnlockedRawIdentities: isOwnerInspection,
         });
+        const [skillReviewPilot, catalogReads] = await Promise.all([
+          skillPilotCounters.snapshot(),
+          catalogReadCounters.snapshot(),
+        ]);
         return sendJson(res, 200, {
           ok: true,
           startedAt: externalTrafficRadar.startedAt,
@@ -292,7 +312,8 @@ export function createLabServer({
           },
           byEndpoint: externalTrafficRadar.byEndpoint,
           byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
-          skillReviewPilot: await skillPilotCounters.snapshot(),
+          skillReviewPilot,
+          catalogReads,
           byUserAgent: isOwnerInspection
             ? externalTrafficRadar.byUserAgent
             : {
@@ -331,7 +352,7 @@ export function createLabServer({
           status: 200,
           payloadSummary: "Agent Card manifest served to autonomous peer",
         });
-        return sendJson(res, 200, ledger.getAgentCardManifest(baseUrl));
+        return sendJson(res, 200, { ...ledger.getAgentCardManifest(baseUrl), ...signingMetadata });
       }
 
       // =====================================================================
@@ -537,7 +558,9 @@ export function createLabServer({
           status: 200,
           payloadSummary: "Served Dual-Tier Institutional & Retail AI Marketplace catalog",
         });
-        return sendJson(res, 200, ledger.getFullCatalogManifest(baseUrl));
+        const catalog = ledger.getFullCatalogManifest(baseUrl);
+        countCompletedCatalogRead(req, res, "commercialCatalog", "http");
+        return sendJson(res, 200, catalog);
       }
 
       // =====================================================================
@@ -724,7 +747,7 @@ export function createLabServer({
       }
       if (req.method === "GET" && url.pathname === "/trust/methodology") {
         recordExternalVisit(req, "/trust/methodology");
-        return sendJson(res, 200, TRUST_METHODOLOGY);
+        return sendJson(res, 200, { ...TRUST_METHODOLOGY, ...signingMetadata });
       }
       if (req.method === "GET" && url.pathname === FULL_DOSSIER_SAMPLE.path) {
         return sendJson(res, 200, getTrustDossierSample());
@@ -742,6 +765,7 @@ export function createLabServer({
           const found = allSkills.find((s) => s.skillId === skillId);
           return sendJson(res, found ? 200 : 404, found || { ok: false, skillId, status: "NOT_REVIEWED_YET" });
         }
+        countCompletedCatalogRead(req, res, "evaluatedSkills", "http");
         return sendJson(res, 200, {
           service: "VERITAS Public Skill Review Catalog",
           howTo: `Call MCP tool ${FREE_SKILL_REVIEW_TOOL} at https://own-adam.onrender.com/mcp with { files } (free), or view sample at ${FREE_SKILL_REVIEW_SAMPLE_PATH}.`,
@@ -753,6 +777,7 @@ export function createLabServer({
         recordExternalVisit(req, "/trust");
         const target = url.searchParams.get("server");
         if (!target) {
+          countCompletedCatalogRead(req, res, "auditedServers", "http");
           return sendJson(res, 200, {
             service: "VERITAS MCP Trust Check",
             fullDossier,
@@ -850,7 +875,7 @@ export function createLabServer({
         const callerKey = "v_" + crypto.createHash("sha256").update(`${callerIp}|${req.headers["user-agent"] || ""}`).digest("hex").slice(0, 10);
         await prepareAsyncToolCall(rpcPayload, ledger, { callerKey });
 
-        const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger);
+        const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger, { baseUrl, signingMetadata });
         if (!rpcResponse) {
           res.writeHead(202);
           return res.end();
@@ -858,6 +883,10 @@ export function createLabServer({
         const result = rpcResponse.result?.structuredContent;
         if (mcpTool === FREE_SKILL_REVIEW_TOOL && result?.ok === true) {
           await countSkillPilotAction(req, result.sample ? "mcpSamples" : "skillReviews");
+        }
+        if (mcpMethod === "resources/read") {
+          const catalog = getMcpResourceCatalog(rpcResponse.result?.contents?.[0]?.uri);
+          if (catalog) countCompletedCatalogRead(req, res, catalog, "mcp");
         }
         return sendJson(res, 200, rpcResponse);
       }

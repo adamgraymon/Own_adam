@@ -3,17 +3,24 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import { once } from "node:events";
 import { createSkillPilotCounters } from "../src/skillPilotCounters.js";
+import { createCatalogReadCounters } from "../src/catalogReadCounters.js";
 
 const fields = ["httpSamples", "mcpSamples", "skillReviews", "tests"];
 const pilotKey = "veritas:skill-review-pilot:v1";
+const catalogKey = "veritas:catalog-reads:v1";
+const catalogFields = [
+  "auditedServers:http", "auditedServers:mcp", "auditedServers:tests",
+  "evaluatedSkills:http", "evaluatedSkills:mcp", "evaluatedSkills:tests",
+  "commercialCatalog:http", "commercialCatalog:mcp", "commercialCatalog:tests",
+];
 const fakeToken = "loopback-pilot-test-token";
 
 function counts(snapshot) {
   return fields.map(field => snapshot[field]);
 }
 
-test("pilot counters store only fixed aggregates in Redis and survive store recreation", async t => {
-  const hash = new Map();
+test("pilot and catalog counters store separate fixed aggregates in Redis and survive store recreation", async t => {
+  const hashes = new Map([[pilotKey, new Map()], [catalogKey, new Map()]]);
   const requests = [];
   let unavailableCommand;
   const redis = http.createServer(async (req, res) => {
@@ -22,7 +29,8 @@ test("pilot counters store only fixed aggregates in Redis and survive store recr
     const command = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     requests.push({ method: req.method, authorization: req.headers.authorization, command });
     const [operation, key, ...args] = command;
-    if (operation === unavailableCommand || key !== pilotKey) {
+    const hash = hashes.get(key);
+    if (operation === unavailableCommand || !hash) {
       res.writeHead(503);
       return res.end();
     }
@@ -54,6 +62,11 @@ test("pilot counters store only fixed aggregates in Redis and survive store recr
   const local = createSkillPilotCounters();
   await local.record("tests");
   assert.deepEqual(counts(await local.snapshot()), [0, 0, 0, 1]);
+  const localCatalog = createCatalogReadCounters();
+  await localCatalog.record("auditedServers", "http");
+  const localCatalogTotals = await localCatalog.snapshot();
+  assert.equal(localCatalogTotals.storage, "memory");
+  assert.deepEqual(localCatalogTotals.auditedServers, { http: 1, mcp: 0, tests: 0 });
   assert.equal(requests.length, 0, "local mode must never use the configured Redis");
 
   const first = createSkillPilotCounters({ useUpstash: true });
@@ -92,16 +105,52 @@ test("pilot counters store only fixed aggregates in Redis and survive store recr
   unavailableCommand = undefined;
   assert.deepEqual(counts(await restarted.snapshot()), [2, 1, 2, 1]);
 
-  for (const request of requests) {
-    assert.equal(request.method, "POST");
-    assert.equal(request.authorization, "Bearer " + fakeToken);
-    if (request.command[0] === "HINCRBY") {
-      assert.ok(fields.includes(request.command[2]));
-      assert.deepEqual(request.command, ["HINCRBY", pilotKey, request.command[2], 1]);
+  const catalog = createCatalogReadCounters({ useUpstash: true });
+  const initialCatalog = await catalog.snapshot();
+  assert.deepEqual(initialCatalog, {
+    auditedServers: { http: 0, mcp: 0, tests: 0 },
+    evaluatedSkills: { http: 0, mcp: 0, tests: 0 },
+    commercialCatalog: { http: 0, mcp: 0, tests: 0 },
+    storage: "upstash-redis",
+    writeErrors: 0,
+  });
+
+  await Promise.all([
+    catalog.record("auditedServers", "http"),
+    catalog.record("auditedServers", "http"),
+    catalog.record("auditedServers", "mcp"),
+    catalog.record("evaluatedSkills", "tests"),
+    catalog.record("commercialCatalog", "mcp"),
+    catalog.record("commercialCatalog", "http"),
+    catalog.record("commercialCatalog", "tests"),
+    catalog.record("unknown", "http"),
+    catalog.record("auditedServers", "unknown"),
+  ]);
+  const restartedCatalog = createCatalogReadCounters({ useUpstash: true });
+  assert.deepEqual(await restartedCatalog.snapshot(), {
+    auditedServers: { http: 2, mcp: 1, tests: 0 },
+    evaluatedSkills: { http: 0, mcp: 0, tests: 1 },
+    commercialCatalog: { http: 1, mcp: 1, tests: 1 },
+    storage: "upstash-redis",
+    writeErrors: 0,
+  });
+  assert.deepEqual(counts(await restarted.snapshot()), [2, 1, 2, 1]);
+
+  for (const { method, authorization, command } of requests) {
+    assert.equal(method, "POST");
+    assert.equal(authorization, "Bearer " + fakeToken);
+    const [operation, key, field] = command;
+    assert.ok(hashes.has(key));
+    const expectedFields = key === pilotKey ? fields : catalogFields;
+    if (operation === "HINCRBY") {
+      assert.ok(expectedFields.includes(field));
+      assert.deepEqual(command, ["HINCRBY", key, field, 1]);
     } else {
-      assert.deepEqual(request.command, ["HMGET", pilotKey, ...fields]);
+      assert.deepEqual(command, ["HMGET", key, ...expectedFields]);
     }
   }
-  assert.equal(requests.filter(({ command }) => command[0] === "HINCRBY").length, 7);
+  for (const key of hashes.keys()) {
+    assert.equal(requests.filter(({ command }) => command[0] === "HINCRBY" && command[1] === key).length, 7);
+  }
 });
 

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { generateKeyPairSync } from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -91,11 +92,12 @@ const ownerRoutes = [
   ["POST", "/api/reset"],
 ];
 
-async function isolatedServer(t, configuredOwnerKey) {
+async function isolatedServer(t, configuredOwnerKey, signingKey) {
   const projectDir = fileURLToPath(new URL("..", import.meta.url));
   const tempRoot = path.resolve(os.tmpdir());
   const dir = await fs.mkdtemp(path.join(tempRoot, "trustgate-privacy-"));
   const dependencies = path.join(dir, "node_modules");
+  const signingKeyFile = path.join(dir, "report-signing.pem");
   let child;
   let exited;
   t.after(async () => {
@@ -116,6 +118,9 @@ async function isolatedServer(t, configuredOwnerKey) {
   await fs.symlink(path.join(projectDir, "node_modules"), dependencies, process.platform === "win32" ? "junction" : "dir");
   await fs.writeFile(path.join(dir, "package.json"), '{"type":"module"}\n');
   await fs.writeFile(path.join(dir, ".env.example"), "# test fixture\n");
+  if (signingKey) {
+    await fs.writeFile(signingKeyFile, signingKey.export({ format: "pem", type: "pkcs8" }), { flag: "wx", mode: 0o600 });
+  }
 
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([name]) => /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP)$/i.test(name)),
@@ -131,6 +136,7 @@ async function isolatedServer(t, configuredOwnerKey) {
       ...env,
       EVALUATOR_SIGNER_HEX: "0x" + "12".repeat(32),
       ...(configuredOwnerKey === undefined ? {} : { OWNER_DASHBOARD_KEY: configuredOwnerKey }),
+      ...(signingKey ? { TRUST_REPORT_SIGNING_KEY_FILE: signingKeyFile } : {}),
     },
     stdio: ["ignore", "ignore", "pipe", "ipc"],
   });
@@ -156,14 +162,18 @@ async function assertOwnerResponse(response, status) {
   return body;
 }
 
-async function requestMcp(origin, method, params = {}, headers = {}) {
+async function postMcp(origin, method, params = {}, headers = {}) {
   const response = await fetch(origin + "/mcp", {
     method: "POST",
     headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...headers },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
   assert.equal(response.status, 200);
-  const rpc = await response.json();
+  return response.json();
+}
+
+async function requestMcp(origin, method, params, headers) {
+  const rpc = await postMcp(origin, method, params, headers);
   assert.ok(rpc.result, "expected MCP result for " + method);
   return rpc.result;
 }
@@ -422,5 +432,184 @@ test("skill review pilot counts completed public actions and authorized tests se
   const telemetry = JSON.stringify([publicRadar, ownerRadar, ownerState.wireLogs]);
   for (const secretOrInput of [ownerKey, invalidKey, payloadMarker, pathMarker, "x-trustgate-test"]) {
     assert.ok(!telemetry.includes(secretOrInput), "telemetry omitted pilot request details");
+  }
+});
+
+test("MCP resources return their advertised public documents", { timeout: 30_000 }, async t => {
+  const { privateKey, publicKey } = generateKeyPairSync("ed25519");
+  const origin = await isolatedServer(t, undefined, privateKey);
+  const { resources } = await requestMcp(origin, "resources/list");
+  const expectedPaths = ["/trust", "/skills/review", "/notary.json", "/catalog.json", "/.well-known/agent.json"];
+  assert.deepEqual(resources.map(({ uri }) => new URL(uri).pathname).sort(), [...expectedPaths].sort());
+  const documents = new Map();
+
+  for (const { uri, mimeType } of resources) {
+    const resourcePath = new URL(uri).pathname;
+    const { contents } = await requestMcp(origin, "resources/read", { uri });
+    assert.equal(contents.length, 1);
+    const [content] = contents;
+    assert.equal(content.uri, uri);
+    assert.equal(mimeType, "application/json");
+    assert.equal(content.mimeType, mimeType);
+    const mcpDocument = JSON.parse(content.text);
+    const response = await fetch(origin + resourcePath);
+    assert.equal(response.status, 200, resourcePath);
+    const httpDocument = await response.json();
+    const sharedFields = resourcePath === "/trust" ? ["service", "stats", "auditedServers"]
+      : resourcePath === "/skills/review" ? ["service", "skillsReviewedCount", "auditedSkills"]
+        : null;
+    if (sharedFields) {
+      for (const field of sharedFields) {
+        assert.ok(Object.hasOwn(mcpDocument, field), resourcePath + " missing " + field);
+        assert.deepEqual(mcpDocument[field], httpDocument[field], resourcePath + " " + field);
+      }
+    } else if (resourcePath === "/notary.json") {
+      // The notary stamps each passport and attestation when the document is built.
+      const withoutReadTimestamps = document => JSON.parse(JSON.stringify(document, (key, value) =>
+        key === "issuedAtMs" || key === "verifiedAtMs" ? undefined : value,
+      ));
+      assert.deepEqual(withoutReadTimestamps(mcpDocument), withoutReadTimestamps(httpDocument), resourcePath);
+    } else {
+      assert.deepEqual(mcpDocument, httpDocument, resourcePath);
+    }
+    documents.set(resourcePath, mcpDocument);
+  }
+
+  assert.equal(documents.get("/trust").service, "VERITAS MCP Trust Check");
+  assert.ok(Array.isArray(documents.get("/trust").auditedServers));
+  assert.equal(documents.get("/skills/review").service, "VERITAS Public Skill Review Catalog");
+  assert.ok(Array.isArray(documents.get("/skills/review").auditedSkills));
+  assert.equal(documents.get("/notary.json").standard, "VERITAS-8183");
+  assert.ok(Array.isArray(documents.get("/notary.json").certifiedSellerStarRegistry));
+  assert.ok(Array.isArray(documents.get("/catalog.json").curatedFirstPartyPackages));
+  assert.equal(documents.get("/.well-known/agent.json").identity.standard, "ERC-8004");
+  assert.equal(documents.get("/.well-known/agent.json").reportSigning.publicKeyHex,
+    Buffer.from(publicKey.export({ format: "jwk" }).x, "base64url").toString("hex"));
+
+  for (const params of [{}, { uri: null }, { uri: 42 }, { uri: "" }, { uri: "not a URI" }]) {
+    const invalid = await postMcp(origin, "resources/read", params);
+    assert.equal(invalid.error?.code, -32602);
+    assert.equal(Object.hasOwn(invalid, "result"), false);
+  }
+  for (const uri of [new URL("/unknown", resources[0].uri).href, "https://unadvertised.invalid/skills/review"]) {
+    const unknown = await postMcp(origin, "resources/read", { uri });
+    assert.equal(unknown.error?.code, -32002);
+    assert.equal(Object.hasOwn(unknown, "result"), false);
+  }
+});
+
+test("successful catalog reads count each catalog's HTTP, MCP, and authorized tests separately", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t, ownerKey);
+  const ownerHeaders = { "x-owner-key": ownerKey };
+  const testHeaders = { ...ownerHeaders, "x-trustgate-test": "1" };
+  const wrongKey = "incorrect-catalog-reader-key";
+  const catalogMarker = "synthetic-catalog-read-not-stored";
+  const catalogPaths = {
+    auditedServers: ["/trust", "auditedServers"],
+    evaluatedSkills: ["/skills/review", "auditedSkills"],
+    commercialCatalog: ["/catalog.json", "curatedFirstPartyPackages"],
+  };
+  const expected = { storage: "memory", writeErrors: 0 };
+  for (const catalog of Object.keys(catalogPaths)) {
+    expected[catalog] = { http: 0, mcp: 0, tests: 0 };
+  }
+
+  async function checkCounters() {
+    const response = await fetch(origin + "/api/external-traffic");
+    assert.equal(response.status, 200);
+    const radar = await response.json();
+    assert.deepEqual(radar.catalogReads, expected);
+    return radar;
+  }
+
+  async function readCatalogHttp(path, field, headers) {
+    const response = await fetch(origin + path, { headers });
+    assert.equal(response.status, 200, path);
+    assert.ok(Array.isArray((await response.json())[field]), path + " must serve its catalog");
+  }
+
+  async function readCatalogMcp(path, field, headers) {
+    const result = await requestMcp(origin, "resources/read", {
+      uri: "https://own-adam.onrender.com" + path,
+    }, headers);
+    assert.ok(Array.isArray(JSON.parse(result.contents[0].text)[field]), path + " MCP catalog");
+  }
+
+  const baseline = await checkCounters();
+  assert.equal((await requestMcp(origin, "resources/list", {}, testHeaders)).resources.length, 5);
+  await checkCounters();
+
+  for (const [catalog, [path, field]] of Object.entries(catalogPaths)) {
+    await readCatalogHttp(path, field);
+    expected[catalog].http += 1;
+    await checkCounters();
+
+    await readCatalogMcp(path, field, ownerHeaders);
+    expected[catalog].mcp += 1;
+    await checkCounters();
+
+    await readCatalogHttp(path, field, testHeaders);
+    expected[catalog].tests += 1;
+    await checkCounters();
+
+    await readCatalogMcp(path, field, testHeaders);
+    expected[catalog].tests += 1;
+    await checkCounters();
+  }
+
+  for (const path of ["/market.json", "/.well-known/ai-catalog.json", "/discovery/resources"]) {
+    await readCatalogHttp(path, "curatedFirstPartyPackages");
+  }
+  expected.commercialCatalog.http += 3;
+  await readCatalogHttp("/trust", "auditedServers", { "x-trustgate-test": "1" });
+  expected.auditedServers.http += 1;
+  await readCatalogMcp("/skills/review", "auditedSkills", {
+    ...testHeaders, "x-owner-key": wrongKey,
+  });
+  expected.evaluatedSkills.mcp += 1;
+  await checkCounters();
+
+  for (const path of ["/notary.json", "/.well-known/agent.json"]) {
+    const response = await fetch(origin + path, { headers: testHeaders });
+    assert.equal(response.status, 200);
+    await response.json();
+    const mcp = await requestMcp(origin, "resources/read", { uri: "https://own-adam.onrender.com" + path }, testHeaders);
+    assert.equal(mcp.contents.length, 1);
+  }
+
+  const individualTrust = await fetch(origin + "/trust?server=" + encodeURIComponent("https://" + catalogMarker + ".invalid/mcp"));
+  assert.equal(individualTrust.status, 200);
+  await individualTrust.json();
+  const individualSkill = await fetch(origin + "/skills/review?skill=" + catalogMarker);
+  assert.equal(individualSkill.status, 404);
+  await individualSkill.json();
+  const wrongMethod = await fetch(origin + "/catalog.json", { method: "POST", headers: testHeaders });
+  assert.equal(wrongMethod.status, 404);
+  await wrongMethod.json();
+  for (const [uri, code] of [
+    [null, -32602],
+    ["https://" + catalogMarker + ".invalid/skills/review", -32002],
+    ["https://own-adam.onrender.com/skills/review?skill=" + catalogMarker, -32002],
+  ]) {
+    const rejected = await postMcp(origin, "resources/read", { uri }, testHeaders);
+    assert.equal(rejected.error?.code, code);
+  }
+
+  const dossierSample = await requestMcp(origin, "tools/call", { name: "check_mcp_server_trust", arguments: {} });
+  assert.equal(dossierSample.structuredContent.sample, true);
+  const skillSample = await fetch(origin + "/skills/review/sample.json");
+  assert.equal((await skillSample.json()).sample, true);
+  const finalRadar = await checkCounters();
+  assert.deepEqual(finalRadar.skillReviewPilot, {
+    ...baseline.skillReviewPilot, httpSamples: baseline.skillReviewPilot.httpSamples + 1,
+  });
+
+  const ownerRadarResponse = await fetch(origin + "/api/market-intelligence", { headers: ownerHeaders });
+  const ownerRadar = await assertOwnerResponse(ownerRadarResponse, 200);
+  assert.deepEqual(ownerRadar.catalogReads, finalRadar.catalogReads);
+  const ownerState = await assertOwnerResponse(await fetch(origin + statePath, { headers: ownerHeaders }), 200);
+  const telemetry = JSON.stringify([finalRadar, ownerRadar, ownerState.wireLogs]);
+  for (const marker of [catalogMarker, ownerKey, wrongKey, "x-trustgate-test"]) {
+    assert.ok(!telemetry.includes(marker), "catalog telemetry omitted request data");
   }
 });

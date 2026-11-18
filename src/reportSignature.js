@@ -8,30 +8,38 @@
  */
 
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 
-// RFC 8410 DER prefixes for raw 32-byte Ed25519 seed (PKCS#8) and raw 32-byte public key (SPKI)
-const ED25519_PKCS8_PREFIX = Buffer.from("302e020100300506032b657004220420", "hex");
-const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
+export const TRUST_REPORT_SIGNATURE_FORMAT = "MCP_TRUST_V1";
+let cachedSigner;
 
-function deriveKeyPair(secretMaterial) {
-  const source =
-    secretMaterial ||
-    process.env.REPORT_SIGNING_SEED_HEX ||
-    process.env.EVALUATOR_PRIVATE_KEY ||
-    "veritas-default-ed25519-seed";
-  const seed32 = crypto.createHash("sha256").update(`VERITAS_ED25519_REPORT_SIGNER_V1|${source}`).digest();
-  const privateKey = crypto.createPrivateKey({
-    key: Buffer.concat([ED25519_PKCS8_PREFIX, seed32]),
-    format: "der",
-    type: "pkcs8",
-  });
-  const publicKey = crypto.createPublicKey(privateKey);
-  const publicKeyHex = publicKey.export({ format: "der", type: "spki" }).subarray(12).toString('hex');
-  return { privateKey, publicKey, publicKeyHex };
+function loadSigner() {
+  const filename = process.env.TRUST_REPORT_SIGNING_KEY_FILE?.trim();
+  if (!filename) return null;
+  if (cachedSigner?.filename === filename) return cachedSigner;
+
+  let privateKey;
+  try {
+    privateKey = crypto.createPrivateKey({ key: readFileSync(filename), format: "pem" });
+    if (privateKey.asymmetricKeyType !== "ed25519") throw new Error("Unexpected key type.");
+  } catch {
+    throw new Error("TRUST_REPORT_SIGNING_KEY_FILE must point to a readable Ed25519 private PEM.");
+  }
+  const { x } = crypto.createPublicKey(privateKey).export({ format: "jwk" });
+  const publicKeyHex = Buffer.from(x, "base64url").toString("hex");
+  cachedSigner = { filename, privateKey, publicKeyHex };
+  return cachedSigner;
 }
 
-export function getTrustReportPublicKeyHex(secretMaterial) {
-  return deriveKeyPair(secretMaterial).publicKeyHex;
+export function getTrustReportPublicKeyHex() {
+  return loadSigner()?.publicKeyHex ?? null;
+}
+
+export function getTrustReportSigningMetadata() {
+  const publicKeyHex = getTrustReportPublicKeyHex();
+  return publicKeyHex ? {
+    reportSigning: { algorithm: "Ed25519", publicKeyHex, format: TRUST_REPORT_SIGNATURE_FORMAT },
+  } : {};
 }
 
 export function computeTrustReportSha256(report) {
@@ -49,28 +57,22 @@ export function computeTrustReportSha256(report) {
 export function buildCanonicalTrustSealMessage({ serverUrl, reportSha256, orderId = "", paymentTxHash = "" }) {
   const normTx = String(paymentTxHash || "").toLowerCase();
   const normOrder = String(orderId || "");
-  return Buffer.from(`MCP_TRUST_V1|${serverUrl}|${reportSha256}|${normOrder}|${normTx}`, "utf8");
+  return Buffer.from(`${TRUST_REPORT_SIGNATURE_FORMAT}|${serverUrl}|${reportSha256}|${normOrder}|${normTx}`, "utf8");
 }
 
-/**
- * Computes and attaches `notarySeal` (including Ed25519 public key and signature) to a FULL report.
- * Covers the final report content, `report.orderId`, and `paymentTxHash`.
- */
-export function sealFinalPaidTrustReport(report, { secretMaterial, signerAddress, paymentTxHash } = {}) {
+function attachTrustReportSeal(report, { secretMaterial, signerAddress, paymentTxHash } = {}, signer) {
   const effectiveTxHash = paymentTxHash !== undefined ? paymentTxHash : report?.notarySeal?.paymentTxHash ?? null;
   const effectiveSigner =
     signerAddress || report?.notarySeal?.signer || "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
   const serverUrl = report?.server?.url || "";
   const orderId = report?.orderId || "";
   const reportSha256 = computeTrustReportSha256(report);
-  const { privateKey, publicKeyHex } = deriveKeyPair(secretMaterial);
   const message = buildCanonicalTrustSealMessage({
     serverUrl,
     reportSha256,
     orderId,
     paymentTxHash: effectiveTxHash,
   });
-  const signatureEd25519Hex = crypto.sign(null, message, privateKey).toString("hex");
   const signatureHmacSha256 = crypto
     .createHmac("sha256", secretMaterial || "veritas")
     .update(message)
@@ -78,9 +80,11 @@ export function sealFinalPaidTrustReport(report, { secretMaterial, signerAddress
 
   report.notarySeal = {
     reportSha256,
-    algorithm: "Ed25519",
-    publicKeyHex,
-    signatureEd25519Hex,
+    ...(signer && {
+      algorithm: "Ed25519",
+      publicKeyHex: signer.publicKeyHex,
+      signatureEd25519Hex: crypto.sign(null, message, signer.privateKey).toString("hex"),
+    }),
     signatureHmacSha256,
     signer: effectiveSigner,
     paymentTxHash: effectiveTxHash,
@@ -88,11 +92,24 @@ export function sealFinalPaidTrustReport(report, { secretMaterial, signerAddress
   return report;
 }
 
+export function prepareTrustReportSeal(report, options) {
+  return attachTrustReportSeal(report, options);
+}
+
+export function sealFinalPaidTrustReport(report, options) {
+  const signer = loadSigner();
+  if (!signer) throw new Error("Dedicated TrustGate report signing key is not configured.");
+  return attachTrustReportSeal(report, options, signer);
+}
+
 /**
- * Verifies a full dossier's Ed25519 signature (`notarySeal`) against the final report,
- * `orderId`, and `paymentTxHash` using only public information.
+ * Verifies the signature using the public key obtained from the trusted service.
  */
-export function verifyTrustReportEd25519(report, expectedPublicKeyHex = null) {
+export function verifyTrustReportEd25519(report, expectedPublicKeyHex) {
+  const expectedKey = String(expectedPublicKeyHex || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(expectedKey)) {
+    return { valid: false, reason: "Expected Ed25519 public key is required." };
+  }
   try {
     const seal = report?.notarySeal;
     const serverUrl = report?.server?.url;
@@ -108,13 +125,12 @@ export function verifyTrustReportEd25519(report, expectedPublicKeyHex = null) {
     if (!/^[0-9a-f]{64}$/.test(pubHex) || !/^[0-9a-f]{128}$/.test(sigHex)) {
       return { valid: false, reason: "Invalid Ed25519 public key or signature format." };
     }
-    if (expectedPublicKeyHex && pubHex !== String(expectedPublicKeyHex).toLowerCase()) {
+    if (pubHex !== expectedKey) {
       return { valid: false, reason: "Report publicKeyHex does not match expected signer public key." };
     }
     const publicKey = crypto.createPublicKey({
-      key: Buffer.concat([ED25519_SPKI_PREFIX, Buffer.from(pubHex, "hex")]),
-      format: "der",
-      type: "spki",
+      key: { kty: "OKP", crv: "Ed25519", x: Buffer.from(expectedKey, "hex").toString("base64url") },
+      format: "jwk",
     });
     const message = buildCanonicalTrustSealMessage({
       serverUrl,

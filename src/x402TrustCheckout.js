@@ -14,8 +14,8 @@ import {
   FULL_DOSSIER_SAMPLE,
   parsePublicMcpUrl,
   probeMcpServerLive,
-  sealFinalPaidTrustReport,
 } from "./freeTrustCheck.js";
+import { getTrustReportPublicKeyHex, sealFinalPaidTrustReport } from "./reportSignature.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
 import { createTrustOrderLocalStore } from "./trustOrderStore.js";
 import { createX402CdpFacilitator } from "./x402CdpFacilitator.js";
@@ -49,6 +49,10 @@ function failure(status, code, reason, headers) {
 
 function mismatch() {
   return failure(409, "ORDER_MISMATCH", "Use the original target, recovery token, and payment authorization.");
+}
+
+function signingUnavailable() {
+  return failure(503, "REPORT_SIGNING_UNAVAILABLE", "Report signing is temporarily unavailable. Retry with the same order credentials.");
 }
 
 function delivered({ report, receipt }) {
@@ -142,6 +146,7 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
   }
 
   async function listResources(resourceUrl) {
+    if (!getTrustReportPublicKeyHex()) return withEnvironment(signingUnavailable());
     const { x402Version, accepts, extensions, resource } = await getPaymentTerms(resourceUrl);
     return withEnvironment(reply(200, {
       x402Version,
@@ -188,6 +193,7 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
 
   async function fulfill({ body, paymentSignature, resourceUrl }) {
     async function paymentRequired(reason) {
+      if (!getTrustReportPublicKeyHex()) return signingUnavailable();
       const challenge = await getPaymentTerms(resourceUrl, reason);
       return failure(402, "PAYMENT_REQUIRED", reason, {
         "PAYMENT-REQUIRED": encodePaymentRequiredHeader(challenge),
@@ -209,11 +215,15 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
     const targetHash = digest(target);
     const orderKey = digest(Buffer.from(paymentRecoveryToken, "hex"));
     let order = await store.read("order", orderKey);
-    let draft;
     if (order) {
       if (order.targetHash !== targetHash) return mismatch();
       const saved = await store.read("report", orderKey);
       if (saved) return delivered(saved);
+    }
+    if (!getTrustReportPublicKeyHex()) return signingUnavailable();
+
+    let draft;
+    if (order) {
       draft = await store.read("draft", orderKey);
       // A settlement may have been recorded just before a restart or failed response.
       const settled = draft && await facilitator.getSettlement(order.authorizationId);
@@ -269,13 +279,7 @@ export function createX402TrustCheckout({ cdp, reportLedger } = {}) {
         return failure(503, "CHECK_RETRYABLE", "The check did not complete. Retry with the original PAYMENT-SIGNATURE and recovery token.");
       }
       const report = buildMcpTrustReport({ ledger, probe, mode: "FULL", orderId: order.orderId });
-      if (!cdp) {
-        sealFinalPaidTrustReport(report, {
-          secretMaterial: ledger?.evaluatorSecretKey,
-          signerAddress: X402_SANDBOX_RECIPIENT,
-          paymentTxHash: null,
-        });
-      }
+      if (!cdp) report.notarySeal.signer = X402_SANDBOX_RECIPIENT;
       draft = await store.insert("draft", orderKey, report);
     }
 

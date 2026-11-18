@@ -16,6 +16,7 @@ import dns from "node:dns/promises";
 import net from "node:net";
 import {
   sealFinalPaidTrustReport,
+  prepareTrustReportSeal,
   getTrustReportPublicKeyHex,
   verifyTrustReportEd25519,
 } from "./reportSignature.js";
@@ -779,7 +780,7 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
     q7_whatVulnerabilitiesRemainPending: q7,
   };
   if (orderId) base.orderId = orderId;
-  sealFinalPaidTrustReport(base, {
+  prepareTrustReportSeal(base, {
     secretMaterial: ledger?.evaluatorSecretKey,
     paymentTxHash,
   });
@@ -791,7 +792,7 @@ export function getFreeTrustCheckStats(ledger) {
   return {
     ...store.stats,
     serversTracked: store.snapshots.size,
-    reportSignerPublicKeyEd25519: getTrustReportPublicKeyHex(ledger?.evaluatorSecretKey),
+    reportSignerPublicKeyEd25519: getTrustReportPublicKeyHex(),
     persistence: store.persistStatus
       ? { backend: store.persistStatus.backend, loadedOnStartup: store.persistStatus.loadedSnapshots, lastSaveAt: store.persistStatus.lastSaveAt, saveErrors: store.persistStatus.saveErrors }
       : { backend: "memory" },
