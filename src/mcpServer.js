@@ -1048,11 +1048,29 @@ export const MCP_TOOLS = [
   }
 ];
 
+const knownToolNames = new Set(MCP_TOOLS.map(({ name }) => name));
+
+export function getKnownMcpToolName(name) {
+  return knownToolNames.has(name) ? name : null;
+}
+
+function logMcpToolCall(ledger, toolName, outcome, started) {
+  ledger.logWirePacket({
+    protocol: "MCP-JSONRPC",
+    from: "AI-Agent",
+    to: "MCP-Server",
+    action: `tools/call:${getKnownMcpToolName(toolName) || "unknown"}`,
+    status: 200,
+    payloadSummary: `${outcome} (${Math.round(performance.now() - started)} ms)`,
+  });
+}
+
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.
  */
 export function handleMcpJsonRpc(rpcRequest, ledger) {
   const { jsonrpc = "2.0", id = null, method, params = {} } = rpcRequest || {};
+  const started = performance.now();
   ledger.wallets.protocol_treasury.stats.mcpCallsHandled += 1;
 
   try {
@@ -1163,7 +1181,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
     if (method === "tools/list") {
       ledger.logWirePacket({
         protocol: "MCP-JSONRPC",
-        from: params.callerAgent || "External-AI-Agent",
+        from: "AI-Agent",
         to: "MCP-Server",
         action: "tools/list",
         status: 200,
@@ -1179,15 +1197,6 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
     if (method === "tools/call") {
       const toolName = params.name;
       const args = params.arguments || {};
-
-      ledger.logWirePacket({
-        protocol: "MCP-JSONRPC",
-        from: args.buyerId || args.callerAgent || "AI-Agent",
-        to: "MCP-Server",
-        action: `tools/call:${toolName}`,
-        status: 200,
-        payloadSummary: toolName === "check_mcp_server_trust" ? "Private trust check" : JSON.stringify(args).slice(0, 110),
-      });
 
       let output;
       switch (toolName) {
@@ -1562,6 +1571,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           });
           break;
         default:
+          logMcpToolCall(ledger, toolName, "Unknown tool rejected", started);
           return {
             jsonrpc,
             id,
@@ -1569,13 +1579,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
           };
       }
 
+      const isError = output?.ok === false || output?.viable === false;
+      const outcome = isError || output?.approved === false ? "Tool rejected" : "Tool completed";
+      logMcpToolCall(ledger, toolName, outcome, started);
+
       return {
         jsonrpc,
         id,
         result: {
           content: [{ type: "text", text: JSON.stringify(output) }],
           structuredContent: output,
-          isError: output?.ok === false || output?.viable === false,
+          isError,
         },
       };
     }
@@ -1586,6 +1600,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
       error: { code: -32601, message: `Método JSON-RPC no soportado: ${method}` },
     };
   } catch (err) {
+    if (method === "tools/call") logMcpToolCall(ledger, params?.name, "Tool failed", started);
     return {
       jsonrpc,
       id,

@@ -45,7 +45,6 @@ export function recordContinuousAgentVersionAudit({
   vertical = "VERTICAL_5_CERTIFIED_SKILLS",
   auditApproved = true,
   stageFailed = null,
-  findings = [],
   declaredTools = null,
   declaredPermissions = null,
   codeOrDeliverableSha256 = null,
@@ -78,7 +77,7 @@ export function recordContinuousAgentVersionAudit({
   if (!existing) {
     // Primera versión registrada (Baseline v1)
     const pendingList = !auditApproved
-      ? [`UNRESOLVED (in v${version}): ${stageFailed || "FAILED_AUDIT"} — ${(findings || [])[0] || "Violation detected"}`]
+      ? [`UNRESOLVED (in v${version}): ${stageFailed || "FAILED_AUDIT"}`]
       : [];
 
     profiles[cleanId] = {
@@ -251,9 +250,6 @@ export function buildContinuousTrustAndPreExecutionReport({
       vertical: simulatedUpdateBehavior.vertical || "VERTICAL_5_CERTIFIED_SKILLS",
       auditApproved: !hasSecretLeak,
       stageFailed: hasSecretLeak ? "ENV_OR_PRIVATE_KEY_EXFILTRATION_INTRODUCED_IN_UPDATE" : null,
-      findings: hasSecretLeak
-        ? ["Update introduced unauthorized credential/backdoor access compared to baseline version."]
-        : [],
       declaredTools: simulatedUpdateBehavior.declaredTools || ["read_file", "analyze_data"],
     });
   }

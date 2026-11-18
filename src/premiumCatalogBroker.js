@@ -665,11 +665,11 @@ export function executeFirstPartyCatalogPurchase({
 
   ledger.logWirePacket({
     protocol: "ERC-8183",
-    from: buyer.id,
+    from: "Buyer",
     to: "ProtocolTreasury",
     action: "FIRST_PARTY_CATALOG_PURCHASE_100PCT_MARGIN",
     status: 200,
-    payloadSummary: `Sold ${item.itemId} (${item.marketTier}) -> +${priceUsdc} USDC (100% Treasury Margin)`,
+    payloadSummary: "Catalog purchase completed",
   });
 
   return {
@@ -838,11 +838,11 @@ export function registerAndCertifyExternalStore({
     const reasonText = auditResult.summary || auditResult.reason || "Failed deterministic security audit";
     ledger.logWirePacket({
       protocol: "ERC-8004",
-      from: normalizedId,
+      from: "Seller",
       to: "EvaluatorNode",
       action: "STORE_CERTIFICATION_REJECTED",
       status: 422,
-      payloadSummary: `Rejected store '${normalizedId}' (${vertical}): ${reasonText}`,
+      payloadSummary: "Seller certification rejected",
     });
     return {
       ok: false,
@@ -891,10 +891,10 @@ export function registerAndCertifyExternalStore({
   ledger.logWirePacket({
     protocol: "ERC-8004",
     from: "EvaluatorNode",
-    to: normalizedId,
+    to: "Seller",
     action: "STORE_CERTIFIED_AND_LISTED",
     status: 200,
-    payloadSummary: `Listed '${normalizedId}' in ${newStore.marketTier} (${vertical}) | Broker Fee: 2.0% + Escrow Fee`,
+    payloadSummary: "Seller certification completed",
   });
 
   return {

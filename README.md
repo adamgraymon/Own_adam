@@ -61,6 +61,8 @@ After a cut, submit the original JSON body to recover the report and receipt. Wh
 
 ## Privacy in one table
 
+The owner console unlocks with the existing server-side `OWNER_DASHBOARD_KEY`. Use the password field on the local home page, or send the key in the `x-owner-key` header when calling the owner status API. Keep the key out of URLs. Audit and registration logs record operational metadata only.
+
 | Who you are | What happens to your data |
 | :--- | :--- |
 | Security / escrow client, trust-check user, buyer | **Private.** Never published, never sold, never turned into leads. Audit inputs are not stored after the response. |

@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
-import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
+import { getKnownMcpToolName, handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
 import {
   renderTrustBadgeSvg,
   getPublicTrustRecord,
@@ -42,6 +42,17 @@ import { MarketIntelligenceTracker } from "./marketIntelligenceEngine.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const PORT = Number(process.env.PORT) || 3402;
+const OWNER_POST_PATHS = new Set(["/api/swarm/toggle", "/api/swarm/step", "/api/reset"]);
+const PRIVATE_RESPONSE_HEADERS = { "Cache-Control": "private, no-store" };
+const MCP_METHODS = new Set([
+  "initialize", "notifications/initialized", "notifications/cancelled", "ping", "server/discover",
+  "resources/list", "resources/templates/list", "prompts/list", "tools/list", "tools/call",
+]);
+const MARKET_TELEMETRY_FIELDS = {
+  discover_verified_stores: ["vertical", "marketTier"],
+  match_verified_buyers_by_intent: ["targetVertical"],
+  inspect_veritas_8183_seal: ["callerSectorOrTrend"],
+};
 
 const fullDossier = { priceUsdc: FULL_DOSSIER_PRICE_USDC, sample: FULL_DOSSIER_SAMPLE };
 const ledger = new AgenticEscrowLedger();
@@ -132,6 +143,29 @@ function sendJson(res, statusCode, data, extraHeaders = {}) {
   res.end(JSON.stringify(data, null, 2));
 }
 
+function ownerAccessStatus(req) {
+  const expected = Buffer.from(process.env.OWNER_DASHBOARD_KEY || "");
+  if (expected.length < 16) return 503;
+  const header = req.headers["x-owner-key"];
+  if (typeof header !== "string") return 401;
+  const received = Buffer.from(header);
+  return received.length === expected.length && crypto.timingSafeEqual(received, expected) ? 200 : 401;
+}
+
+function marketTelemetry(toolName, args) {
+  const fields = MARKET_TELEMETRY_FIELDS[toolName];
+  if (!fields || !args || typeof args !== "object") return null;
+  const schema = MCP_TOOLS.find(tool => tool.name === toolName).inputSchema.properties;
+  const result = {};
+  for (const field of fields) {
+    const value = args[field];
+    if (typeof value === "string" && (!schema[field].enum || schema[field].enum.includes(value))) {
+      result[field] = value.slice(0, 60);
+    }
+  }
+  return result;
+}
+
 async function readJsonBody(req) {
   const chunks = [];
   for await (const chunk of req) {
@@ -162,6 +196,18 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
     try {
       const baseUrl = `http://${req.headers.host || `localhost:${PORT}`}`;
       const url = new URL(req.url, baseUrl);
+      const ownerRoute = (req.method === "GET" && url.pathname === "/api/state") ||
+        (req.method === "POST" && OWNER_POST_PATHS.has(url.pathname));
+      if (ownerRoute) {
+        res.setHeader("Cache-Control", PRIVATE_RESPONSE_HEADERS["Cache-Control"]);
+        const status = ownerAccessStatus(req);
+        if (status === 503) return sendJson(res, status, { ok: false, status: "OWNER_ACCESS_NOT_CONFIGURED" });
+        if (status === 401) {
+          return sendJson(res, status, { ok: false, status: "OWNER_AUTH_REQUIRED" }, {
+            "WWW-Authenticate": 'OwnerKey realm="TrustGate owner console"',
+          });
+        }
+      }
       const sandboxOrigin = x402Checkout && req.socket.remoteAddress === "127.0.0.1" && req.socket.localAddress === "127.0.0.1"
         ? `http://127.0.0.1:${req.socket.localPort}`
         : null;
@@ -206,12 +252,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
         (url.pathname === "/api/external-traffic" || url.pathname === "/api/market-intelligence")
       ) {
         // La vista del operador exige OWNER_DASHBOARD_KEY (variable secreta del servidor). Sin ella, solo agregados.
-        const ownerKeyEnv = process.env.OWNER_DASHBOARD_KEY || "";
-        const providedOwnerKey = String(url.searchParams.get("ownerKey") || req.headers["x-owner-key"] || "");
-        const isOwnerInspection =
-          ownerKeyEnv.length >= 16 &&
-          providedOwnerKey.length === ownerKeyEnv.length &&
-          crypto.timingSafeEqual(Buffer.from(providedOwnerKey), Buffer.from(ownerKeyEnv));
+        const isOwnerInspection = ownerAccessStatus(req) === 200;
         const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
           includeUnlockedRawIdentities: isOwnerInspection,
         });
@@ -240,11 +281,11 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
                 policy: "Individual agents are never named in public or paid reports. Aggregated demand by sector is available. See /privacy.",
               },
           recentExternalEvents: isOwnerInspection ? externalTrafficRadar.recentExternalEvents : undefined,
-        });
+        }, PRIVATE_RESPONSE_HEADERS);
       }
 
       // Registrar cualquier visita externa real (excluyendo polling interno /api/state)
-      if (!url.pathname.startsWith("/api/state") && !url.pathname.startsWith("/api/swarm") && url.pathname !== "/mcp") {
+      if (!ownerRoute && !url.pathname.startsWith("/api/state") && !url.pathname.startsWith("/api/swarm") && url.pathname !== "/mcp") {
         recordExternalVisit(req, url.pathname);
       }
 
@@ -265,7 +306,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
       ) {
         ledger.logWirePacket({
           protocol: "ERC-8004",
-          from: req.headers["user-agent"]?.slice(0, 22) || "Crawler-Agent",
+          from: "External-Agent",
           to: "EvaluatorNode",
           action: `GET ${url.pathname}`,
           status: 200,
@@ -285,7 +326,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
       ) {
         ledger.logWirePacket({
           protocol: "VERITAS-8183",
-          from: req.headers["user-agent"]?.slice(0, 22) || "Notary-Auditor",
+          from: "External-Agent",
           to: "EvaluatorNode",
           action: `GET ${url.pathname}`,
           status: 200,
@@ -310,7 +351,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
       ) {
         ledger.logWirePacket({
           protocol: "x402-BAZAAR",
-          from: req.headers["user-agent"]?.slice(0, 22) || "Bazaar-Indexer",
+          from: "External-Agent",
           to: "EvaluatorNode",
           action: `GET ${url.pathname}`,
           status: 200,
@@ -471,7 +512,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
       ) {
         ledger.logWirePacket({
           protocol: "ERC-8004-CATALOG",
-          from: req.headers["user-agent"]?.slice(0, 22) || "Catalog-Buyer",
+          from: "External-Agent",
           to: "EvaluatorNode",
           action: `GET ${url.pathname}`,
           status: 200,
@@ -698,10 +739,12 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
           url.pathname === "/mcp/v1/message:send")
       ) {
         const rpcPayload = await readJsonBody(req);
+        const mcpMethod = MCP_METHODS.has(rpcPayload?.method) ? rpcPayload.method : "unknown";
+        const mcpTool = mcpMethod === "tools/call" ? getKnownMcpToolName(rpcPayload.params?.name) : null;
         recordExternalVisit(req, "/mcp", {
-          mcpMethod: rpcPayload?.method || "unknown",
-          mcpTool: rpcPayload?.params?.name || null,
-          rpcArgs: rpcPayload?.params?.arguments || null,
+          mcpMethod,
+          mcpTool,
+          rpcArgs: marketTelemetry(mcpTool, rpcPayload?.params?.arguments),
         });
 
         // Responder al probe de autorización de VerifyMCP con el desafío RFC 9728 OAuth 2.1

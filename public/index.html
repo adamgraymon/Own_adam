@@ -67,6 +67,18 @@
     }
     button:hover, a.btn-link:hover { background: #1e2d54; }
     .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    [hidden] { display: none !important; }
+    #ownerUnlock { margin-bottom: 12px; }
+    #ownerUnlock label { display: block; margin-bottom: 6px; }
+    #ownerKey {
+      font: inherit;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      width: min(100%, 320px);
+    }
 
     .kpi-grid {
       display: grid;
@@ -140,17 +152,30 @@
 <body>
   <header>
     <div>
-      <h1>CONSOLA PASIVA DEL DUEÑO — NODO INTERVENTOR M2M <span id="liveBadge" class="pill-live">ENJAMBRE ACTIVO</span></h1>
-      <div class="sub">Cero formularios humanos: Agentes IA negocian solos vía <b>MCP JSON-RPC</b> + <b>HTTP 402</b> + <b>ERC-8183/8004</b></div>
+      <h1>CONSOLA DEL DUEÑO — NODO INTERVENTOR M2M <span id="liveBadge" class="pill-live" hidden></span></h1>
+      <div class="sub">Agentes IA negocian vía <b>MCP JSON-RPC</b> + <b>HTTP 402</b> + <b>ERC-8183/8004</b></div>
     </div>
     <div class="controls">
       <a class="btn-link" href="/.well-known/agent.json" target="_blank">Ver /.well-known/agent.json</a>
-      <button onclick="stepOnce()">Forzar 1 Ciclo M2M</button>
-      <button id="toggleBtn" onclick="toggleSwarm()">Pausar Enjambre</button>
-      <button onclick="resetAll()">Reiniciar Red</button>
+      <div class="controls" id="ownerControls" hidden>
+        <button id="stepBtn" type="button">Forzar 1 Ciclo M2M</button>
+        <button id="toggleBtn" type="button">Pausar Enjambre</button>
+        <button id="resetBtn" type="button">Reiniciar Red</button>
+        <button id="lockBtn" type="button">Bloquear</button>
+      </div>
     </div>
   </header>
 
+  <form id="ownerUnlock" method="post" autocomplete="off">
+    <label for="ownerKey">Clave del dueño</label>
+    <div class="controls">
+      <input id="ownerKey" type="password" required autocomplete="off" spellcheck="false" autocapitalize="none" />
+      <button id="unlockBtn" type="submit">Desbloquear consola</button>
+    </div>
+  </form>
+  <p id="ownerStatus" class="sub" role="status"></p>
+
+  <main id="ownerDashboard" hidden>
   <div class="kpi-grid">
     <div class="card">
       <h3>Tu Tesorería Pasiva (USDC Neto)</h3>
@@ -195,8 +220,24 @@
       <div id="storesBox"></div>
     </div>
   </div>
+  </main>
 
   <script>
+    const ownerUnlock = document.getElementById("ownerUnlock");
+    const ownerKeyInput = document.getElementById("ownerKey");
+    const unlockBtn = document.getElementById("unlockBtn");
+    const ownerControls = document.getElementById("ownerControls");
+    const ownerDashboard = document.getElementById("ownerDashboard");
+    const ownerStatus = document.getElementById("ownerStatus");
+    const liveBadge = document.getElementById("liveBadge");
+    let ownerSession = null;
+    let refreshTimer;
+
+    function escapeHtml(value) {
+      const entities = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+      return String(value ?? "").replace(/[&<>"']/g, character => entities[character]);
+    }
+
     function tagClass(pkt) {
       if (pkt.action.includes("REFUND") || pkt.action.includes("REJECT")) return "t-err";
       if (pkt.action.includes("SETTLE")) return "t-ok";
@@ -205,9 +246,7 @@
       return "t-erc";
     }
 
-    async function refreshTelemetry() {
-      const res = await fetch("/api/state");
-      const s = await res.json();
+    function renderTelemetry(s) {
       const st = s.wallets.protocol_treasury.stats;
 
       const badge = document.getElementById("liveBadge");
@@ -234,7 +273,7 @@
       document.getElementById("buyersList").innerHTML = s.buyerAgents
         .map((b) => {
           const tok = b.preferredToken;
-          return `<div class="kv"><span>${b.id} (minRep:${b.minStoreReputation})</span><b>${b.balances[tok].toFixed(2)} ${tok} | ${b.balances.USDC.toFixed(1)} USDC</b></div>`;
+          return `<div class="kv"><span>${escapeHtml(b.id)} (minRep:${escapeHtml(b.minStoreReputation)})</span><b>${b.balances[tok].toFixed(2)} ${escapeHtml(tok)} | ${b.balances.USDC.toFixed(1)} USDC</b></div>`;
         })
         .join("");
 
@@ -243,10 +282,10 @@
           (p) => `
           <div class="pkt">
             <div class="pkt-top">
-              <span><span class="tag ${tagClass(p)}">${p.protocol}</span> <b>${p.from}</b> → <b>${p.to}</b></span>
-              <span style="color:#64748b">${p.timestamp.slice(11, 19)} [HTTP ${p.status}]</span>
+              <span><span class="tag ${tagClass(p)}">${escapeHtml(p.protocol)}</span> <b>${escapeHtml(p.from)}</b> → <b>${escapeHtml(p.to)}</b></span>
+              <span style="color:#64748b">${escapeHtml(p.timestamp.slice(11, 19))} [HTTP ${escapeHtml(p.status)}]</span>
             </div>
-            <div style="color:#cbd5e1"><b>${p.action}</b> — ${p.payloadSummary}</div>
+            <div style="color:#cbd5e1"><b>${escapeHtml(p.action)}</b> — ${escapeHtml(p.payloadSummary)}</div>
           </div>`
         )
         .join("");
@@ -258,41 +297,122 @@
           return `
             <div class="store-row ${exiled ? 'exiled' : ''}">
               <div class="kv">
-                <b>${st.name}</b>
+                <b>${escapeHtml(st.name)}</b>
                 <span style="color:${exiled ? '#ef4444' : '#10b981'}; font-weight:700;">
-                  ${exiled ? 'EXILIADA POR BOTS (<65)' : `ACTIVA (${st.reputationScore}/100)`}
+                  ${exiled ? 'EXILIADA POR BOTS (&lt;65)' : `ACTIVA (${escapeHtml(st.reputationScore)}/100)`}
                 </span>
               </div>
               <div class="kv" style="color:#94a3b8;">
-                <span>Endpoint: ${st.endpoint}</span>
+                <span>Endpoint: ${escapeHtml(st.endpoint)}</span>
                 <span>Ganado: <b style="color:#e2e8f0">${st.usdcBalance.toFixed(2)} USDC</b></span>
               </div>
               <div class="kv" style="color:#94a3b8;">
-                <span>Éxitos: ${st.completedJobs} | Fallos/Ataques: ${st.failedJobs}</span>
-                <span>Score ERC-8004: <b>${st.reputationScore}</b></span>
+                <span>Éxitos: ${escapeHtml(st.completedJobs)} | Fallos/Ataques: ${escapeHtml(st.failedJobs)}</span>
+                <span>Score ERC-8004: <b>${escapeHtml(st.reputationScore)}</b></span>
               </div>
             </div>`;
         })
         .join("");
     }
 
-    async function toggleSwarm() {
-      await fetch("/api/swarm/toggle", { method: "POST" });
-      refreshTelemetry();
+    function lockConsole(message = "", focus = true) {
+      const session = ownerSession;
+      ownerSession = null;
+      if (session) {
+        session.key = "";
+        session.controller.abort();
+      }
+      clearInterval(refreshTimer);
+      ownerControls.hidden = true;
+      ownerDashboard.hidden = true;
+      liveBadge.hidden = true;
+      liveBadge.textContent = "";
+      for (const id of ["netProfit", "grossFees", "opCosts", "mcpCount", "x402Count", "auditCount", "attackCount", "buyersList", "wireBox", "storesBox"]) {
+        document.getElementById(id).replaceChildren();
+      }
+      ownerUnlock.hidden = false;
+      ownerKeyInput.value = "";
+      unlockBtn.disabled = false;
+      ownerStatus.textContent = message;
+      if (focus) ownerKeyInput.focus();
     }
 
-    async function stepOnce() {
-      await fetch("/api/swarm/step", { method: "POST" });
-      refreshTelemetry();
+    async function requestOwner(session, path, method = "GET") {
+      const response = await fetch(path, {
+        method,
+        headers: { "x-owner-key": session.key },
+        signal: session.controller.signal,
+        cache: "no-store",
+        credentials: "omit",
+        redirect: "error",
+      });
+      if (session !== ownerSession) return null;
+      if (response.status === 401 || response.status === 403) {
+        lockConsole("Clave del dueño inválida o acceso revocado.");
+        return null;
+      }
+      if (response.status === 503) {
+        lockConsole("El acceso de dueño no está disponible.");
+        return null;
+      }
+      if (!response.ok) throw new Error("Falló la solicitud a la consola.");
+      return response;
     }
 
-    async function resetAll() {
-      await fetch("/api/reset", { method: "POST" });
-      refreshTelemetry();
+    async function refreshTelemetry(session) {
+      if (!session || session !== ownerSession || session.refreshing) return false;
+      session.refreshing = true;
+      try {
+        const response = await requestOwner(session, "/api/state");
+        if (!response) return false;
+        const state = await response.json();
+        if (session !== ownerSession) return false;
+        renderTelemetry(state);
+        ownerStatus.textContent = "";
+        return true;
+      } catch {
+        if (session === ownerSession) ownerStatus.textContent = "No se pudo consultar el estado de la consola.";
+        return false;
+      } finally {
+        session.refreshing = false;
+      }
     }
 
-    refreshTelemetry();
-    setInterval(refreshTelemetry, 1600);
+    ownerUnlock.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (ownerSession || !ownerKeyInput.value) return;
+      const session = { key: ownerKeyInput.value, controller: new AbortController(), refreshing: false };
+      ownerSession = session;
+      ownerKeyInput.value = "";
+      unlockBtn.disabled = true;
+      if (await refreshTelemetry(session)) {
+        ownerUnlock.hidden = true;
+        ownerControls.hidden = false;
+        ownerDashboard.hidden = false;
+        liveBadge.hidden = false;
+        document.getElementById("lockBtn").focus();
+        refreshTimer = setInterval(() => refreshTelemetry(session), 1600);
+      } else if (session === ownerSession) {
+        lockConsole(ownerStatus.textContent);
+      }
+    });
+
+    async function runOwnerCommand(path) {
+      const session = ownerSession;
+      if (!session || ownerDashboard.hidden) return;
+      try {
+        const response = await requestOwner(session, path, "POST");
+        if (response) await refreshTelemetry(session);
+      } catch {
+        if (session === ownerSession) ownerStatus.textContent = "No se pudo ejecutar el comando.";
+      }
+    }
+
+    document.getElementById("toggleBtn").addEventListener("click", () => runOwnerCommand("/api/swarm/toggle"));
+    document.getElementById("stepBtn").addEventListener("click", () => runOwnerCommand("/api/swarm/step"));
+    document.getElementById("resetBtn").addEventListener("click", () => runOwnerCommand("/api/reset"));
+    document.getElementById("lockBtn").addEventListener("click", () => lockConsole());
+    window.addEventListener("pagehide", () => lockConsole("", false));
   </script>
 </body>
 </html>

@@ -1276,11 +1276,11 @@ export function notarizeAndWitnessA2ADealOrBazaarCall({
 
   ledger.logWirePacket({
     protocol: "VERITAS-8183",
-    from: buyerId,
-    to: store.id,
+    from: "Buyer",
+    to: "Seller",
     action: "NOTARY_ACTA_WITNESSED_AND_SIGNED",
     status: 200,
-    payloadSummary: `${actaId} | ${sellerSeal.sealBadge} | Fee: +${netNotaryFeeUsdc} USDC`,
+    payloadSummary: "Notary receipt signed",
   });
 
   return {
@@ -1336,7 +1336,6 @@ export function attachVeritasForensicGateAndAutoCaptureBuyer({
     vertical,
     auditApproved: Boolean(auditResult.approved),
     stageFailed: auditResult.stageFailed || null,
-    findings: auditResult.findings || [],
     declaredTools: declaredTools || [toolName],
     codeOrDeliverableSha256: auditResult.encryptedVault?.plaintextSha256 || null,
   });

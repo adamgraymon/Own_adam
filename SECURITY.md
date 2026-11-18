@@ -39,7 +39,7 @@ We prefer to say this clearly rather than let a reviewer discover it:
 | `EVALUATOR_PRIVATE_KEY` | Signs verdicts on the escrow contract. | The contract only lets it **approve** (pay the seller the agreed amount minus fee) or **reject** (refund the buyer 100%). It cannot send funds to any other address or change recipients. |
 | `GEMINI_API_KEY` | Optional second-opinion review of up to 30 sampled dataset rows. | If absent, a local heuristic judge is used. Billed to the operator. |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | Optional persistence for trust-check history and paid trust orders. | Public metadata and private paid order records use separate keys. The raw recovery token is never stored. |
-| `OWNER_DASHBOARD_KEY` | Protects the operator's raw traffic view. | Without it, only anonymous aggregates are served. |
+| `OWNER_DASHBOARD_KEY` | Protects the owner console state, simulator controls and detailed traffic. Send via `x-owner-key`. | Owner status and controls are locked without a configured key. Public traffic aggregates remain available. |
 
 ---
 

@@ -1,5 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { handleMcpJsonRpc } from "../src/mcpServer.js";
 import { AgenticEscrowLedger } from "../src/escrowContract.js";
 import { anonymizeRadarRecords } from "../src/dataPolicy.js";
@@ -74,4 +80,195 @@ test("refund tool: buyer gets USDC back after deadline without the evaluator", (
   const refunded = call(ledger, "claim_escrow_timeout_refund", { jobId });
   assert.equal(refunded.ok, true);
   assert.equal(refunded.job.status, "REFUNDED_TIMEOUT");
+});
+
+const ownerKey = "local-test-owner-01-not-a-credential";
+const statePath = "/api/state";
+const ownerRoutes = [
+  ["GET", statePath],
+  ["POST", "/api/swarm/step"],
+  ["POST", "/api/swarm/toggle"],
+  ["POST", "/api/reset"],
+];
+
+async function isolatedServer(t, configuredOwnerKey) {
+  const projectDir = fileURLToPath(new URL("..", import.meta.url));
+  const tempRoot = path.resolve(os.tmpdir());
+  const dir = await fs.mkdtemp(path.join(tempRoot, "trustgate-privacy-"));
+  const dependencies = path.join(dir, "node_modules");
+  let child;
+  let exited;
+  t.after(async () => {
+    if (child) {
+      child.kill();
+      await exited;
+    }
+    // Remove the test junction before recursively cleaning the temporary checkout.
+    await fs.unlink(dependencies).catch(error => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    if (path.dirname(dir) === tempRoot && path.basename(dir).startsWith("trustgate-privacy-")) {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  await fs.cp(path.join(projectDir, "src"), path.join(dir, "src"), { recursive: true });
+  await fs.symlink(path.join(projectDir, "node_modules"), dependencies, process.platform === "win32" ? "junction" : "dir");
+  await fs.writeFile(path.join(dir, "package.json"), '{"type":"module"}\n');
+  await fs.writeFile(path.join(dir, ".env.example"), "# test fixture\n");
+
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP)$/i.test(name)),
+  );
+  child = spawn(process.execPath, ["--input-type=module", "-e", `
+    globalThis.fetch = async () => { throw new Error("Outbound network disabled in privacy test"); };
+    const { createLabServer } = await import("./src/server.js");
+    const server = createLabServer();
+    server.listen(0, "127.0.0.1", () => process.send(server.address().port));
+  `], {
+    cwd: dir,
+    env: {
+      ...env,
+      EVALUATOR_SIGNER_HEX: "0x" + "12".repeat(32),
+      ...(configuredOwnerKey === undefined ? {} : { OWNER_DASHBOARD_KEY: configuredOwnerKey }),
+    },
+    stdio: ["ignore", "ignore", "pipe", "ipc"],
+  });
+  let stderr = "";
+  child.stderr.setEncoding("utf8").on("data", chunk => { stderr += chunk; });
+  exited = new Promise(resolve => child.once("close", resolve));
+  const [port] = await Promise.race([
+    once(child, "message", { signal: AbortSignal.timeout(10_000) }),
+    exited.then(() => { throw new Error("Isolated privacy server stopped: " + stderr); }),
+  ]);
+  return "http://127.0.0.1:" + port;
+}
+
+async function assertOwnerResponse(response, status) {
+  assert.equal(response.status, status);
+  assert.match(response.headers.get("cache-control") || "", /\bno-store\b/i);
+  const body = await response.json();
+  if (status !== 200) {
+    for (const field of ["wallets", "buyerAgents", "stores", "jobs", "wireLogs"]) {
+      assert.equal(Object.hasOwn(body, field), false, "rejection exposes owner field " + field);
+    }
+  }
+  return body;
+}
+
+test("owner state and controls require the owner header and cannot be cached", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t, ownerKey);
+  for (const [method, route] of ownerRoutes) {
+    await assertOwnerResponse(await fetch(origin + route, { method }), 401);
+    await assertOwnerResponse(await fetch(origin + route, {
+      method,
+      headers: { "x-owner-key": ownerKey.slice(0, -1) + "x" },
+    }), 401);
+    await assertOwnerResponse(await fetch(origin + route + "?ownerKey=" + encodeURIComponent(ownerKey), { method }), 401);
+  }
+
+  const state = await assertOwnerResponse(await fetch(origin + statePath, {
+    headers: { "x-owner-key": ownerKey },
+  }), 200);
+  assert.equal(state.swarmRunning, false, "anonymous requests cannot enable the swarm");
+  assert.equal(state.swarmCycleCount, 0, "anonymous requests cannot force a swarm cycle");
+  assert.ok(Array.isArray(state.wireLogs), "owner can still inspect dashboard telemetry");
+  assert.ok(Array.isArray(state.buyerAgents), "owner can still use the operational dashboard");
+  const reset = await assertOwnerResponse(await fetch(origin + "/api/reset", {
+    method: "POST",
+    headers: { "x-owner-key": ownerKey },
+  }), 200);
+  assert.equal(reset.ok, true);
+});
+
+test("owner state and controls fail closed when the owner key is absent", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t);
+  for (const [method, route] of ownerRoutes) {
+    await assertOwnerResponse(await fetch(origin + route, {
+      method,
+      headers: { "x-owner-key": ownerKey },
+    }), 503);
+  }
+});
+
+test("audit and registry inputs do not appear in owner wire logs", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t, ownerKey);
+  async function invoke(name, args) {
+    const response = await fetch(origin + "/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+    });
+    assert.equal(response.status, 200);
+    const rpc = await response.json();
+    assert.ok(rpc.result, "expected an MCP result for " + name);
+    return rpc.result.structuredContent;
+  }
+
+  const contractTool = "audit_smart_contract_escrow";
+  const skillTool = "audit_agent_skill_escrow";
+  const buyerTool = "manage_buyer_finops_spend_passport";
+  const sellerTool = "register_and_certify_store";
+
+  const contract = await invoke(contractTool, {
+    soliditySourceCode: "// SYNTHETIC_CONTRACT_BODY_071\npragma solidity ^0.8.24; contract Counter { function value() external pure returns (uint256) { return 1; } }",
+    contractName: "Counter",
+    targetAgentId: "SYNTHETIC_CONTRACT_TARGET_071",
+    callerAgent: "SYNTHETIC_CONTRACT_CALLER_071",
+    vertical: "SYNTHETIC_CONTRACT_VERTICAL_071",
+  });
+  assert.equal(contract.approved, true);
+
+  const skill = await invoke(skillTool, {
+    skillMarkdown: "---\nname: fixture-note\ndescription: Summarize a sample note.\n---\nSYNTHETIC_SKILL_BODY_071",
+    bundledScripts: "// SYNTHETIC_SKILL_SCRIPT_071\nfunction sample() { return 1; }",
+    targetAgentId: "SYNTHETIC_SKILL_TARGET_071",
+    buyerId: "SYNTHETIC_SKILL_CALLER_071",
+  });
+  assert.equal(skill.approved, true);
+
+  const buyer = await invoke(buyerTool, {
+    buyerId: "SYNTHETIC_BUYER_ID_071",
+    buyerName: "SYNTHETIC_BUYER_NAME_071",
+    activeRfqDescription: "SYNTHETIC_BUYER_RFQ_071",
+    callerSectorOrTrend: "SYNTHETIC_BUYER_TOPIC_071",
+  });
+  assert.equal(buyer.ok, true);
+
+  const seller = await invoke(sellerTool, {
+    storeId: "SYNTHETIC_SELLER_ID_071",
+    storeName: "SYNTHETIC_SELLER_NAME_071",
+    acceptPublicRegistryTerms: true,
+    sampleDeliverable: {
+      soliditySourceCode: "// SYNTHETIC_SELLER_SAMPLE_071\npragma solidity ^0.8.24; contract Sample { function ping() external pure returns (bool) { return true; } }",
+      contractName: "Sample",
+    },
+  });
+  assert.equal(seller.ok, true);
+
+  await assertOwnerResponse(await fetch(origin + statePath), 401);
+  const state = await assertOwnerResponse(await fetch(origin + statePath, {
+    headers: { "x-owner-key": ownerKey },
+  }), 200);
+  assert.ok(state.buyerAgents.some(agent => agent.id === "SYNTHETIC_BUYER_ID_071"));
+  assert.ok(state.stores.some(store => store.name === "SYNTHETIC_SELLER_NAME_071"));
+  assert.doesNotMatch(JSON.stringify(state.wireLogs), /SYNTHETIC_/i);
+  for (const tool of [contractTool, skillTool, buyerTool, sellerTool]) {
+    assert.ok(state.wireLogs.some(({ action }) => action === `tools/call:${tool}`), "telemetry retains tool name " + tool);
+  }
+
+  const radarUrl = origin + "/api/external-traffic";
+  const publicResponse = await fetch(radarUrl + "?ownerKey=" + encodeURIComponent(ownerKey));
+  assert.equal(publicResponse.status, 200);
+  const publicRadar = await publicResponse.json();
+  assert.equal(Object.hasOwn(publicRadar, "recentExternalEvents"), false, "query key cannot unlock owner telemetry");
+  assert.equal(typeof publicRadar.totalExternalHits, "number");
+  assert.doesNotMatch(JSON.stringify(publicRadar), /SYNTHETIC_/i);
+
+  const ownerResponse = await fetch(radarUrl, { headers: { "x-owner-key": ownerKey } });
+  assert.equal(ownerResponse.status, 200);
+  assert.match(ownerResponse.headers.get("cache-control") || "", /\bno-store\b/i);
+  const ownerRadar = await ownerResponse.json();
+  assert.ok(Array.isArray(ownerRadar.recentExternalEvents));
+  assert.doesNotMatch(JSON.stringify(ownerRadar), /SYNTHETIC_/i);
 });

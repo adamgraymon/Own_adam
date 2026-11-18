@@ -492,10 +492,10 @@ export class AgenticEscrowLedger {
       this.logWirePacket({
         protocol: "x402",
         from: "EvaluatorNode",
-        to: buyerId,
+        to: "Buyer",
         action: "REJECT_ECONOMIC_GUARDRAIL",
         status: 400,
-        payloadSummary: quote.reason,
+        payloadSummary: "Escrow quote rejected",
       });
       return { ok: false, status: 400, error: quote.reason, code: quote.code };
     }
@@ -522,10 +522,10 @@ export class AgenticEscrowLedger {
     this.logWirePacket({
       protocol: "x402",
       from: "EvaluatorNode",
-      to: buyerId,
+      to: "Buyer",
       action: "HTTP_402_PAYMENT_REQUIRED",
       status: 402,
-      payloadSummary: `Challenge ${nonce.slice(0, 10)}...: Pay ${tokenAmount} ${tokenSymbol} -> Lock ${challenge.usdcToLock} USDC`,
+      payloadSummary: "Payment challenge issued",
     });
 
     return { ok: true, status: 402, challenge };
@@ -632,11 +632,11 @@ export class AgenticEscrowLedger {
 
     this.logWirePacket({
       protocol: "ERC-8183",
-      from: buyer.id,
-      to: this.wallets.escrow_contract.address,
+      from: "Buyer",
+      to: "Escrow",
       action: "ESCROW_LOCKED_USDC",
       status: 201,
-      payloadSummary: `${jobId}: Swapped ${tokenAmount} ${tokenSymbol} -> ${job.financials.usdcLockedInContract} USDC locked for ${store.id}`,
+      payloadSummary: "Escrow funded",
     });
 
     return { ok: true, job };
@@ -735,14 +735,10 @@ export class AgenticEscrowLedger {
     this.logWirePacket({
       protocol: "EAS+ERC8183",
       from: "EvaluatorNode",
-      to: auditResult.approved ? store.id : buyer.id,
+      to: auditResult.approved ? "Seller" : "Buyer",
       action: auditResult.approved ? "SETTLE_USDC_AND_RELEASE_KEY" : `REFUND_100%_${auditResult.stageFailed}`,
       status: 200,
-      payloadSummary: `${job.jobId} [${auditResult.metrics.durationMs}ms | AI:${aiCost} USDC] -> ${
-        auditResult.approved
-          ? `+${job.financials.sellerPayoutIfApprovedUsdc} USDC to ${store.id} (Fee +${job.financials.protocolFeeUsdc})`
-          : `Refunded ${lockedUsdc} USDC to ${buyer.id} (${store.id} rep -> ${store.reputationScore})`
-      }`,
+      payloadSummary: `Dataset audit completed (${Math.round(auditResult.metrics.durationMs)} ms)`,
     });
 
     return { ok: true, job, attestation };

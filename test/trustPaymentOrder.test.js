@@ -15,6 +15,7 @@ const projectDir = fileURLToPath(new URL("..", import.meta.url));
 const serverUrl = "https://93.184.216.34/mcp";
 const paymentTxHash = "0x" + "ab".repeat(32);
 const paymentRecoveryToken = "cd".repeat(32);
+const ownerDashboardKey = "fixture-owner-dashboard-key";
 
 const childScript = String.raw`
 import assert from "node:assert/strict";
@@ -287,6 +288,7 @@ async function createSandbox(t) {
           TEST_PORT: String(listenPort),
           TRUST_PERSIST_FILE: "0",
           TRUST_ORDER_DATA_DIR: ordersDir,
+          OWNER_DASHBOARD_KEY: ownerDashboardKey,
         },
         stdio: ["ignore", "ignore", "pipe", "ipc"],
       });
@@ -699,7 +701,9 @@ test("a lost paid response is recoverable after restarting the HTTP server", { t
   }, { userAgent: "new-client-after-reconnect" });
   assert.deepEqual(recovered, original);
   assert.deepEqual(restarted.upstream, []);
-  const telemetry = await fetch(restarted.origin + "/api/state");
+  const telemetry = await fetch(restarted.origin + "/api/state", {
+    headers: { "x-owner-key": ownerDashboardKey },
+  });
   assert.equal(telemetry.status, 200);
   assert.equal((await telemetry.text()).includes(paymentRecoveryToken), false);
 });

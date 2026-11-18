@@ -105,7 +105,7 @@ export const DATA_POLICY = {
       EVALUATOR_PRIVATE_KEY: "Signs evaluator verdicts on the escrow contract (0xd4f7...0a5e). It cannot withdraw escrowed funds to arbitrary addresses: the contract only pays the seller (approved) or refunds the buyer (rejected/timeout). Rotatable by the contract owner (rotateEvaluatorKey).",
       GEMINI_API_KEY: "Optional. Used only for a second-opinion review of up to 30 sampled dataset rows. If absent, a local heuristic judge is used. Billed to the operator, never to users.",
       UPSTASH_REDIS_REST_URL_AND_TOKEN: "Optional. Stores public trust-check history and private paid trust orders in separate keys so they survive restarts.",
-      OWNER_DASHBOARD_KEY: "Protects the operator's raw traffic view.",
+      OWNER_DASHBOARD_KEY: "Protects owner console state, simulator controls and detailed traffic. The operator supplies it through the x-owner-key header. Audit and registration logs contain operational metadata only.",
     },
   },
   contact: "Open an issue at https://github.com/adamgraymon/Own_adam/issues (removal requests, privacy questions).",
