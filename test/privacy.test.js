@@ -156,6 +156,18 @@ async function assertOwnerResponse(response, status) {
   return body;
 }
 
+async function requestMcp(origin, method, params = {}, headers = {}) {
+  const response = await fetch(origin + "/mcp", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json, text/event-stream", ...headers },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  });
+  assert.equal(response.status, 200);
+  const rpc = await response.json();
+  assert.ok(rpc.result, "expected MCP result for " + method);
+  return rpc.result;
+}
+
 test("owner state and controls require the owner header and cannot be cached", { timeout: 30_000 }, async t => {
   const origin = await isolatedServer(t, ownerKey);
   for (const [method, route] of ownerRoutes) {
@@ -277,25 +289,13 @@ test("agents discover and run the free skill review with findings per file", { t
   const origin = await isolatedServer(t, ownerKey);
   const name = "review_agent_skill_free";
 
-  async function mcp(method, params = {}) {
-    const response = await fetch(origin + "/mcp", {
-      method: "POST",
-      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    });
-    assert.equal(response.status, 200);
-    const rpc = await response.json();
-    assert.ok(rpc.result, "expected MCP result for " + method);
-    return rpc.result;
-  }
-
-  const invoke = args => mcp("tools/call", { name, arguments: args });
+  const invoke = args => requestMcp(origin, "tools/call", { name, arguments: args });
   const readOwnerState = async () => assertOwnerResponse(await fetch(origin + statePath, {
     headers: { "x-owner-key": ownerKey },
   }), 200);
 
   const before = await readOwnerState();
-  const listing = await mcp("tools/list");
+  const listing = await requestMcp(origin, "tools/list");
   const reviewTool = listing.tools.find(tool => tool.name === name);
   assert.ok(reviewTool, "agents can discover the free review in tools/list");
   assert.equal(reviewTool.annotations.readOnlyHint, true);
@@ -358,4 +358,69 @@ test("agents discover and run the free skill review with findings per file", { t
   }
   assert.doesNotMatch(JSON.stringify(after.wireLogs), /SYNTHETIC_FREE_SKILL_BODY_071/);
   assert.ok(after.wireLogs.some(log => log.action === "tools/call:" + name));
+});
+
+test("skill review pilot counts completed public actions and authorized tests separately", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t, ownerKey);
+  const samplePath = "/skills/review/sample.json";
+  const ownerHeaders = { "x-owner-key": ownerKey };
+  const testHeaders = { ...ownerHeaders, "x-trustgate-test": "1" };
+  const invalidKey = "invalid-pilot-counter-test-key";
+  const callReview = (args, headers) => requestMcp(origin, "tools/call", {
+    name: "review_agent_skill_free", arguments: args,
+  }, headers);
+  const payloadMarker = "SYNTHETIC_PILOT_COUNTER_BODY_D74F";
+  const pathMarker = "SYNTHETIC_PILOT_COUNTER_PATH_D74F";
+  const submission = { files: [
+    { path: "SKILL.md", content: "---\nname: counter-skill\ndescription: Count synthetic labels.\n---\n" + payloadMarker },
+    { path: `references/${pathMarker}.md`, content: "Synthetic notes." },
+  ] };
+
+  async function readRadar(route = "/api/external-traffic", headers = {}) {
+    const response = await fetch(origin + route, { headers });
+    assert.equal(response.status, 200);
+    return response.json();
+  }
+
+  function assertCounts(radar, expected) {
+    for (const [kind, count] of Object.entries(expected)) {
+      assert.equal(radar.skillReviewPilot[kind], count, kind);
+    }
+  }
+
+  assertCounts(await readRadar(), { httpSamples: 0, mcpSamples: 0, skillReviews: 0, tests: 0 });
+  const sample = await fetch(origin + samplePath);
+  assert.equal(sample.status, 200);
+  assert.equal((await sample.json()).sample, true);
+  assert.equal((await callReview({}, ownerHeaders)).structuredContent.sample, true);
+  assert.equal((await callReview(submission)).structuredContent.sample, false);
+  assertCounts(await readRadar(), { httpSamples: 1, mcpSamples: 1, skillReviews: 1, tests: 0 });
+
+  const httpTest = await fetch(origin + samplePath, { headers: testHeaders });
+  assert.equal(httpTest.status, 200);
+  assert.equal((await httpTest.json()).sample, true);
+  assert.equal((await callReview({}, testHeaders)).structuredContent.sample, true);
+  assert.equal((await callReview(submission, testHeaders)).structuredContent.sample, false);
+  assertCounts(await readRadar(), { httpSamples: 1, mcpSamples: 1, skillReviews: 1, tests: 3 });
+
+  const attemptedTest = { ...testHeaders, "x-owner-key": invalidKey };
+  assert.equal((await callReview({}, attemptedTest)).structuredContent.sample, true);
+  const anonymousTest = await fetch(origin + samplePath, { headers: { "x-trustgate-test": "1" } });
+  assert.equal(anonymousTest.status, 200);
+  assert.equal((await anonymousTest.json()).sample, true);
+  assert.equal((await callReview({ files: [] })).isError, true);
+  assert.equal((await callReview({ files: [] }, testHeaders)).isError, true);
+  assert.ok((await requestMcp(origin, "tools/list", {}, testHeaders)).tools.length > 0);
+  assert.equal((await fetch(origin + samplePath, { method: "POST", headers: testHeaders })).status, 404);
+
+  const publicRadar = await readRadar();
+  const ownerRadar = await readRadar("/api/market-intelligence", ownerHeaders);
+  assertCounts(publicRadar, { httpSamples: 2, mcpSamples: 2, skillReviews: 1, tests: 3 });
+  assert.deepEqual(ownerRadar.skillReviewPilot, publicRadar.skillReviewPilot);
+  assert.equal(Object.hasOwn(publicRadar, "recentExternalEvents"), false);
+  const ownerState = await assertOwnerResponse(await fetch(origin + statePath, { headers: ownerHeaders }), 200);
+  const telemetry = JSON.stringify([publicRadar, ownerRadar, ownerState.wireLogs]);
+  for (const secretOrInput of [ownerKey, invalidKey, payloadMarker, pathMarker, "x-trustgate-test"]) {
+    assert.ok(!telemetry.includes(secretOrInput), "telemetry omitted pilot request details");
+  }
 });

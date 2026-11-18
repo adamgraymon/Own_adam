@@ -31,6 +31,8 @@ Call `review_agent_skill_free` with `{}` for a fictional JSON example and its `e
 
 To review a skill, submit `{ "files": [{ "path": "SKILL.md", "content": "..." }] }` with the root `SKILL.md` and any supporting text files. Each file has an array of findings with a 1-based line, rule ID, severity and message. The review is free and accepts up to 8 files, 32 KiB per file and 96 KiB total. It validates required YAML metadata and reports static indicators. Results with no findings still require normal security review before use.
 
+The `skillReviewPilot` section of `GET /api/external-traffic` counts completed actions in `httpSamples`, `mcpSamples`, `skillReviews` and `tests` from the time measurement begins. To count a request as an operator test, send `x-trustgate-test: 1` with the existing `x-owner-key` header. Each action contributes to one counter. The counters store totals only. Local runs use memory. Production uses Upstash when configured, so totals survive restarts. A `null` total means storage could not be read, and `writeErrors` counts unconfirmed increments in the current process.
+
 ### Preview the full dossier
 
 The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, HMAC seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.

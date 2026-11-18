@@ -39,6 +39,8 @@ import {
 } from "./premiumCatalogBroker.js";
 import { X402_MICRO_BAZAAR_SERVICES } from "./veritas8183NotaryEngine.js";
 import { MarketIntelligenceTracker } from "./marketIntelligenceEngine.js";
+import { activeBackend } from "./trustStore.js";
+import { createSkillPilotCounters } from "./skillPilotCounters.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -176,8 +178,17 @@ async function readJsonBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
-export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x402Cdp } = {}) {
+export function createLabServer({
+  autoStartSwarm = false, x402Sandbox = false, x402Cdp, persistSkillPilotCounters = false,
+} = {}) {
   if (x402Sandbox && x402Cdp) throw new Error("Select one local x402 mode.");
+  const skillPilotCounters = createSkillPilotCounters({
+    useUpstash: persistSkillPilotCounters && activeBackend() === "upstash-redis",
+  });
+  function countSkillPilotAction(req, action) {
+    const isTest = req.headers["x-trustgate-test"] === "1" && ownerAccessStatus(req) === 200;
+    return skillPilotCounters.record(isTest ? "tests" : action);
+  }
   const x402Checkout = x402Sandbox || x402Cdp ? createX402TrustCheckout({ cdp: x402Cdp, reportLedger: ledger }) : null;
   const x402Dossier = {
     method: "POST",
@@ -275,6 +286,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
           },
           byEndpoint: externalTrafficRadar.byEndpoint,
           byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
+          skillReviewPilot: await skillPilotCounters.snapshot(),
           byUserAgent: isOwnerInspection
             ? externalTrafficRadar.byUserAgent
             : {
@@ -712,7 +724,9 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
         return sendJson(res, 200, getTrustDossierSample());
       }
       if (req.method === "GET" && url.pathname === FREE_SKILL_REVIEW_SAMPLE_PATH) {
-        return sendJson(res, 200, getFreeSkillReviewSample());
+        const sample = getFreeSkillReviewSample();
+        await countSkillPilotAction(req, "httpSamples");
+        return sendJson(res, 200, sample);
       }
       if (req.method === "GET" && url.pathname === "/trust") {
         recordExternalVisit(req, "/trust");
@@ -818,6 +832,10 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
         if (!rpcResponse) {
           res.writeHead(202);
           return res.end();
+        }
+        const result = rpcResponse.result?.structuredContent;
+        if (mcpTool === FREE_SKILL_REVIEW_TOOL && result?.ok === true) {
+          await countSkillPilotAction(req, result.sample ? "mcpSamples" : "skillReviews");
         }
         return sendJson(res, 200, rpcResponse);
       }
@@ -958,7 +976,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   if (x402Sandbox && cdpSepoliaMode) throw new Error("Select one local x402 mode.");
   const x402Cdp = cdpSepoliaMode ? await configureCdpSepolia() : undefined;
   if (localMode) process.env.TRUST_HISTORY_REDIS_KEY ??= "veritas:trust:snapshots:local:v1";
-  const server = createLabServer({ autoStartSwarm: !localMode, x402Sandbox, x402Cdp });
+  const server = createLabServer({
+    autoStartSwarm: !localMode, x402Sandbox, x402Cdp, persistSkillPilotCounters: !localMode,
+  });
   // Recargar el historial de confianza guardado antes de aceptar tráfico.
   if (!x402Sandbox && !x402Cdp) {
     const persist = await enableTrustPersistence(ledger);
