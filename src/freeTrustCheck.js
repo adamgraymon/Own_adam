@@ -451,6 +451,7 @@ function ensureStore(ledger) {
 export async function enableTrustPersistence(ledger) {
   const { loadTrustSnapshots, saveTrustSnapshot, trustStoreStatus } = await import("./trustStore.js");
   const { enableSellerRegistryPersistence } = await import("./sellerRegistryStore.js");
+  const { enableSkillCatalogPersistence } = await import("./skillReview.js");
   const store = ensureStore(ledger);
   const entries = await loadTrustSnapshots();
   for (const [url, snap] of entries) {
@@ -459,6 +460,7 @@ export async function enableTrustPersistence(ledger) {
   store.persist = saveTrustSnapshot;
   store.persistStatus = trustStoreStatus;
   await enableSellerRegistryPersistence(ledger);
+  await enableSkillCatalogPersistence(ledger);
   return trustStoreStatus;
 }
 
@@ -531,6 +533,29 @@ export function getPublicTrustRecord(ledger, serverUrl) {
     serverVersion: snap.serverVersion ?? null,
     history: snap.history || [],
   };
+}
+
+export function listPublicTrustRecords(ledger, { limit = 100 } = {}) {
+  const store = ensureStore(ledger);
+  const items = [];
+  for (const [serverUrl, snap] of store.snapshots.entries()) {
+    if (!snap) continue;
+    items.push({
+      server: serverUrl,
+      serverName: snap.serverName || null,
+      serverVersion: snap.serverVersion || null,
+      trustScore: snap.lastScore ?? null,
+      verdict: snap.lastVerdict ?? null,
+      firstSeenAt: snap.firstSeenAt,
+      lastCheckedAt: snap.lastSeenAt,
+      totalChecks: snap.checks,
+      toolFingerprint: snap.fingerprint?.slice(0, 16) || null,
+      badgeUrl: `${PUBLIC_BASE_URL}/badge.svg?server=${encodeURIComponent(serverUrl)}`,
+      recordUrl: `${PUBLIC_BASE_URL}/trust?server=${encodeURIComponent(serverUrl)}`,
+    });
+  }
+  items.sort((a, b) => (b.trustScore ?? -1) - (a.trustScore ?? -1) || String(a.server).localeCompare(String(b.server)));
+  return items.slice(0, limit);
 }
 
 function escapeXml(s) {

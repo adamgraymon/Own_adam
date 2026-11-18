@@ -1,8 +1,10 @@
 import { isMap, parseDocument } from "yaml";
 import { scanAgentSkillIndicators } from "./multiVerticalAuditors.js";
+import { activeBackend, executeUpstashCommand } from "./trustStore.js";
 
 export const FREE_SKILL_REVIEW_TOOL = "review_agent_skill_free";
 export const FREE_SKILL_REVIEW_SAMPLE_PATH = "/skills/review/sample.json";
+export const SKILL_CATALOG_REDIS_KEY = "veritas:skill-catalog:v1";
 export const SKILL_REVIEW_MAX_FILES = 8;
 export const SKILL_REVIEW_MAX_FILE_BYTES = 32 * 1024;
 export const SKILL_REVIEW_MAX_TOTAL_BYTES = 96 * 1024;
@@ -159,4 +161,42 @@ export function getFreeSkillReviewSample() {
     ],
   };
   return { ...reviewAgentSkillFree(exampleInput), sample: true, exampleInput };
+}
+
+export async function enableSkillCatalogPersistence(ledger) {
+  if (!ledger.skillCatalog) ledger.skillCatalog = new Map();
+  if (activeBackend() === "upstash-redis") {
+    try {
+      const flat = (await executeUpstashCommand(["HGETALL", SKILL_CATALOG_REDIS_KEY])) || [];
+      for (let i = 0; i + 1 < flat.length; i += 2) {
+        try {
+          ledger.skillCatalog.set(flat[i], JSON.parse(flat[i + 1]));
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return { loadedSkills: ledger.skillCatalog.size };
+}
+
+export async function saveEvaluatedSkillRecord(ledger, skillId, record) {
+  if (ledger) {
+    if (!ledger.skillCatalog) ledger.skillCatalog = new Map();
+    ledger.skillCatalog.set(skillId, record);
+  }
+  if (activeBackend() === "upstash-redis") {
+    await executeUpstashCommand(["HSET", SKILL_CATALOG_REDIS_KEY, skillId, JSON.stringify(record)]).catch(() => {});
+  }
+  return record;
+}
+
+export function listEvaluatedSkills(ledger, { limit = 100 } = {}) {
+  const map = ledger?.skillCatalog;
+  if (!map) return [];
+  const items = [...map.values()];
+  items.sort((a, b) => (a.findingsCount ?? 0) - (b.findingsCount ?? 0) || String(a.skillId).localeCompare(String(b.skillId)));
+  return items.slice(0, limit);
 }

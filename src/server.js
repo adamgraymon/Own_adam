@@ -18,6 +18,7 @@ import { getKnownMcpToolName, handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall 
 import {
   renderTrustBadgeSvg,
   getPublicTrustRecord,
+  listPublicTrustRecords,
   getFreeTrustCheckStats,
   TRUST_METHODOLOGY,
   enableTrustPersistence,
@@ -25,7 +26,12 @@ import {
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
-import { FREE_SKILL_REVIEW_SAMPLE_PATH, FREE_SKILL_REVIEW_TOOL, getFreeSkillReviewSample } from "./skillReview.js";
+import {
+  FREE_SKILL_REVIEW_SAMPLE_PATH,
+  FREE_SKILL_REVIEW_TOOL,
+  getFreeSkillReviewSample,
+  listEvaluatedSkills,
+} from "./skillReview.js";
 import {
   createX402TrustCheckout,
   X402_TRUST_DOSSIER_PATH,
@@ -728,6 +734,21 @@ export function createLabServer({
         await countSkillPilotAction(req, "httpSamples");
         return sendJson(res, 200, sample);
       }
+      if (req.method === "GET" && url.pathname === "/skills/review") {
+        recordExternalVisit(req, "/skills/review");
+        const skillId = url.searchParams.get("skill");
+        const allSkills = listEvaluatedSkills(ledger);
+        if (skillId) {
+          const found = allSkills.find((s) => s.skillId === skillId);
+          return sendJson(res, found ? 200 : 404, found || { ok: false, skillId, status: "NOT_REVIEWED_YET" });
+        }
+        return sendJson(res, 200, {
+          service: "VERITAS Public Skill Review Catalog",
+          howTo: `Call MCP tool ${FREE_SKILL_REVIEW_TOOL} at https://own-adam.onrender.com/mcp with { files } (free), or view sample at ${FREE_SKILL_REVIEW_SAMPLE_PATH}.`,
+          skillsReviewedCount: allSkills.length,
+          auditedSkills: allSkills,
+        });
+      }
       if (req.method === "GET" && url.pathname === "/trust") {
         recordExternalVisit(req, "/trust");
         const target = url.searchParams.get("server");
@@ -738,6 +759,7 @@ export function createLabServer({
             ...(sandboxOrigin && checkoutDiscovery),
             howTo: "Call MCP tool check_mcp_server_trust at https://own-adam.onrender.com/mcp with { serverUrl }. Then view /trust?server=<url> or embed /badge.svg?server=<url>.",
             stats: getFreeTrustCheckStats(ledger),
+            auditedServers: listPublicTrustRecords(ledger),
           });
         }
         return sendJson(res, 200, getPublicTrustRecord(ledger, target));
