@@ -12,7 +12,7 @@ import { pipeline } from "node:stream/promises";
 
 // Patrones de ataque: CSV Formula Injection, XSS/Ejecución y Prompt Injection al árbitro
 import { unsealVeritasVaultPayload, hydrateRegexRuleList } from "./veritasEncryptedVaultLoader.js";
-import { ENCRYPTED_AUDITOR_SIGNATURES_VAULT } from "./multiVerticalAuditors.js";
+import { ENCRYPTED_AUDITOR_SIGNATURES_VAULT } from "./auditorSignatureVault.js";
 
 const _UNSEALED_DATASET_RULES = unsealVeritasVaultPayload(ENCRYPTED_AUDITOR_SIGNATURES_VAULT);
 const MALWARE_PATTERNS = hydrateRegexRuleList(_UNSEALED_DATASET_RULES.DATASET_MALWARE_PATTERNS);

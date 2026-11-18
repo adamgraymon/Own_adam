@@ -25,6 +25,7 @@ import {
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
+import { FREE_SKILL_REVIEW_SAMPLE_PATH, FREE_SKILL_REVIEW_TOOL, getFreeSkillReviewSample } from "./skillReview.js";
 import {
   createX402TrustCheckout,
   X402_TRUST_DOSSIER_PATH,
@@ -609,6 +610,7 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
           "## START HERE (FREE): Is this MCP server safe to connect?",
           "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check.",
           `- **Full dossier (${FULL_DOSSIER_PRICE_USDC} USDC on Base)**: preview the JSON for free with \`${FULL_DOSSIER_SAMPLE.mcpTool}\` or \`GET ${FULL_DOSSIER_SAMPLE.path}\`.`,
+          `- **Free skill review**: call \`${FREE_SKILL_REVIEW_TOOL}\` with empty arguments for a fictional JSON example, or with a root SKILL.md and related text files for findings by file and line. Sample: \`GET ${FREE_SKILL_REVIEW_SAMPLE_PATH}\`.`,
           "",
           `## ${MCP_TOOLS.length} MCP Tools: Free Trust Check, 7 Audits, Escrow + Refund, Public Notary, Buyer Spending Limits & Opt-in Matchmaker`,
           "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`)",
@@ -708,6 +710,9 @@ export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x
       }
       if (req.method === "GET" && url.pathname === FULL_DOSSIER_SAMPLE.path) {
         return sendJson(res, 200, getTrustDossierSample());
+      }
+      if (req.method === "GET" && url.pathname === FREE_SKILL_REVIEW_SAMPLE_PATH) {
+        return sendJson(res, 200, getFreeSkillReviewSample());
       }
       if (req.method === "GET" && url.pathname === "/trust") {
         recordExternalVisit(req, "/trust");

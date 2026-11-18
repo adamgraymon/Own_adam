@@ -50,6 +50,7 @@ export const DATA_POLICY = {
   tiers: {
     PRIVATE: {
       who: [
+        "Free skill review: review_agent_skill_free (supplied text is analyzed in memory and kept out of telemetry logs)",
         "Security audits: audit_smart_contract_escrow, audit_agent_skill_escrow, audit_rag_embeddings_escrow, audit_ai_inference_escrow, audit_quant_backtest_escrow, audit_api_sla_escrow, audit_depin_gpu_sla_escrow",
         "Escrow: open_escrow_job, submit_encrypted_deliverable, claim_escrow_timeout_refund",
         "Trust checks: check_mcp_server_trust (who asked is private; the checked server's public metadata and score are public)",

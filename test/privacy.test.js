@@ -272,3 +272,90 @@ test("audit and registry inputs do not appear in owner wire logs", { timeout: 30
   assert.ok(Array.isArray(ownerRadar.recentExternalEvents));
   assert.doesNotMatch(JSON.stringify(ownerRadar), /SYNTHETIC_/i);
 });
+
+test("agents discover and run the free skill review with findings per file", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t, ownerKey);
+  const name = "review_agent_skill_free";
+
+  async function mcp(method, params = {}) {
+    const response = await fetch(origin + "/mcp", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
+    assert.equal(response.status, 200);
+    const rpc = await response.json();
+    assert.ok(rpc.result, "expected MCP result for " + method);
+    return rpc.result;
+  }
+
+  const invoke = args => mcp("tools/call", { name, arguments: args });
+  const readOwnerState = async () => assertOwnerResponse(await fetch(origin + statePath, {
+    headers: { "x-owner-key": ownerKey },
+  }), 200);
+
+  const before = await readOwnerState();
+  const listing = await mcp("tools/list");
+  const reviewTool = listing.tools.find(tool => tool.name === name);
+  assert.ok(reviewTool, "agents can discover the free review in tools/list");
+  assert.equal(reviewTool.annotations.readOnlyHint, true);
+  assert.match(reviewTool.description, /\b(free|USDC)\b/i);
+  assert.equal(reviewTool.inputSchema.properties.files.type, "array");
+
+  const exampleCall = await invoke({});
+  const example = exampleCall.structuredContent;
+  assert.equal(exampleCall.isError, false);
+  assert.deepEqual(JSON.parse(exampleCall.content[0].text), example);
+  assert.equal(example.ok, true);
+  assert.equal(example.tool, name);
+  assert.equal(example.priceUsdc, 0);
+  assert.equal(example.sample, true);
+  assert.equal(example.verdict, "REVIEW_REQUIRED");
+  assert.deepEqual(example.files.find(file => file.path === "SKILL.md").findings, []);
+  const notes = example.files.find(file => file.path === "references/notes.md");
+  const finding = notes.findings.find(item => item.ruleId === "INVISIBLE_UNICODE_STEGO_INJECTION");
+  assert.ok(finding, "example reports a known static indicator in the correct file");
+  assert.equal(finding.line, 2);
+  assert.equal(typeof finding.severity, "string");
+  assert.equal(typeof finding.message, "string");
+  assert.ok(example.limitations.length > 0);
+
+  const publicExample = await fetch(origin + "/skills/review/sample.json");
+  assert.equal(publicExample.status, 200);
+  assert.deepEqual(await publicExample.json(), example);
+
+  const review = (await invoke(example.exampleInput)).structuredContent;
+  assert.equal(review.ok, true);
+  assert.equal(review.sample, false);
+  assert.equal(review.verdict, example.verdict);
+  assert.deepEqual(review.files, example.files);
+  assert.deepEqual(review.summary, example.summary);
+  assert.ok(!Object.hasOwn(review, "exampleInput"));
+  assert.ok(review.files.every(file => !Object.hasOwn(file, "content")));
+
+  const marker = "SYNTHETIC_FREE_SKILL_BODY_071";
+  const rootFile = example.exampleInput.files.find(file => file.path === "SKILL.md");
+  const clean = (await invoke({ files: [{ ...rootFile, content: rootFile.content + "\n" + marker }] })).structuredContent;
+  assert.equal(clean.verdict, "NO_FINDINGS");
+  assert.doesNotMatch(JSON.stringify(clean), /SYNTHETIC_FREE_SKILL_BODY_071/);
+  const malformed = (await invoke({ files: [{ path: "SKILL.md", content: "name: example\ndescription: Labels without a YAML header." }] })).structuredContent;
+  assert.equal(malformed.verdict, "REVIEW_REQUIRED");
+  assert.ok(malformed.files[0].findings.some(item => item.ruleId === "SKILL_FRONTMATTER_MISSING" && item.line === 1));
+  for (const files of [
+    [rootFile, rootFile],
+    [{ path: "references/other.md", content: "An inert reference." }],
+    [rootFile, { path: "../other.md", content: "An inert reference." }],
+    [rootFile, { path: "references/large.md", content: "é".repeat(16_385) }],
+  ]) {
+    const rejected = await invoke({ files });
+    assert.equal(rejected.isError, true);
+    assert.equal(rejected.structuredContent.status, "INVALID_SKILL_FILES");
+  }
+
+  const after = await readOwnerState();
+  for (const field of ["buyerAgents", "stores", "jobs"]) {
+    assert.deepEqual(after[field], before[field], "free review must not change " + field);
+  }
+  assert.doesNotMatch(JSON.stringify(after.wireLogs), /SYNTHETIC_FREE_SKILL_BODY_071/);
+  assert.ok(after.wireLogs.some(log => log.action === "tools/call:" + name));
+});

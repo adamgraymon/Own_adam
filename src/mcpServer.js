@@ -34,6 +34,14 @@ import {
 } from "./freeTrustCheck.js";
 import { runPaidTrustCheck } from "./paidTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
+import {
+  FREE_SKILL_REVIEW_TOOL,
+  reviewAgentSkillFree,
+  SKILL_REVIEW_MAX_FILES,
+  SKILL_REVIEW_MAX_FILE_BYTES,
+  SKILL_REVIEW_MAX_PATH_LENGTH,
+  SKILL_REVIEW_MAX_TOTAL_BYTES,
+} from "./skillReview.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
 
 /**
@@ -435,8 +443,49 @@ export const MCP_TOOLS = [
     }
   },
   {
+    "name": FREE_SKILL_REVIEW_TOOL,
+    "description": "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
+    "annotations": {
+      "title": "Review an agent skill for free",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": `Text files with a root SKILL.md. Maximum ${SKILL_REVIEW_MAX_FILE_BYTES} UTF-8 bytes per file and ${SKILL_REVIEW_MAX_TOTAL_BYTES} in total. Omit files to see the free sample JSON.`,
+          "minItems": 1,
+          "maxItems": SKILL_REVIEW_MAX_FILES,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "content"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": SKILL_REVIEW_MAX_PATH_LENGTH,
+                "description": "Relative file path using forward slashes, such as references/notes.md."
+              },
+              "content": {
+                "type": "string",
+                "maxLength": SKILL_REVIEW_MAX_FILE_BYTES,
+                "description": "Full UTF-8 text of this file."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  {
     "name": "audit_agent_skill_escrow",
-    "description": "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. Example: version='1.1.0'.",
+    "description": `[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call ${FREE_SKILL_REVIEW_TOOL} with {}.`,
     "annotations": {
       "title": "Audit an agent skill",
       "readOnlyHint": false,
@@ -1326,6 +1375,9 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
             targetAgentId: args.targetAgentId || null,
             version: args.version || "1.0.0",
           });
+          break;
+        case FREE_SKILL_REVIEW_TOOL:
+          output = reviewAgentSkillFree(params.arguments);
           break;
         case "audit_agent_skill_escrow":
           output = attachVeritasForensicGateAndAutoCaptureBuyer({

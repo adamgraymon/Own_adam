@@ -41,7 +41,8 @@
     "@x402/evm": "2.31.0",
     "@x402/extensions": "2.31.0",
     "solc": "^0.8.38",
-    "viem": "^2.57.19"
+    "viem": "^2.57.19",
+    "yaml": "2.9.1"
   },
   "devDependencies": {
     "@coinbase/cdp-sdk": "1.62.0",

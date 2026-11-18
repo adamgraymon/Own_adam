@@ -25,6 +25,12 @@
 
 Then call `check_mcp_server_trust` with any public MCP URL: free, no signup, 5 checks/day. It reports what the server can do, which tools are risky, prompt-injection signs and changes since the last check. Methodology: https://own-adam.onrender.com/trust/methodology
 
+### Review an agent skill for free
+
+Call `review_agent_skill_free` with `{}` for a fictional JSON example and its `exampleInput`. Resend that input to reproduce the findings. The same example is available at [GET /skills/review/sample.json](https://own-adam.onrender.com/skills/review/sample.json).
+
+To review a skill, submit `{ "files": [{ "path": "SKILL.md", "content": "..." }] }` with the root `SKILL.md` and any supporting text files. Each file has an array of findings with a 1-based line, rule ID, severity and message. The review is free and accepts up to 8 files, 32 KiB per file and 96 KiB total. It validates required YAML metadata and reports static indicators. Results with no findings still require normal security review before use.
+
 ### Preview the full dossier
 
 The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, HMAC seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.
@@ -110,7 +116,7 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 
 ---
 
-## 22 MCP tools
+## 23 MCP tools
 
 | # | Tool | Privacy | What it does |
 | :--- | :--- | :--- | :--- |
@@ -136,6 +142,7 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 | 20 | `notarize_and_witness_a2a_deal` | Public record, private content | Signed receipt of a deal, or a paid micro-service. |
 | 21 | `match_verified_buyers_by_intent` | Opt-in buyers only | Sellers find buyers who chose to be listed. |
 | 22 | `get_trust_dossier_sample` | Public | Free fictional JSON preview and price of the full TrustGate dossier. |
+| 23 | `review_agent_skill_free` | Private input | Free static skill review with findings by file and a reproducible JSON example. |
 
 Entries labeled `[DEMO]` (sellers and buyers) are fictional and only feed the internal simulation.
 

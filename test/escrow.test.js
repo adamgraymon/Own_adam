@@ -180,7 +180,7 @@ test("6. Reloj de Seguridad (Timeout) devuelve el 100% al comprador y cifrado AE
 test("7. Interfaz M2M: Servidor MCP JSON-RPC lista herramientas y filtra tiendas ERC-8004", () => {
   const ledger = new AgenticEscrowLedger();
   const toolsList = handleMcpJsonRpc({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ledger);
-  assert.equal(toolsList.result.tools.length, 22);
+  assert.equal(toolsList.result.tools.length, 23);
 
   const onChainCheck = handleMcpJsonRpc(
     {
