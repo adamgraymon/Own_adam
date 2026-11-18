@@ -18,6 +18,10 @@ import net from "node:net";
 export const FREE_CHECKS_PER_DAY = 5;
 export const FULL_DOSSIER_PRICE_USDC = 0.25;
 export const FULL_DOSSIER_SERVICE_ID = "x402-mcp-trust-full-dossier";
+export const FULL_DOSSIER_SAMPLE = Object.freeze({
+  path: "/trust/sample.json",
+  mcpTool: "get_trust_dossier_sample",
+});
 export const EXTRA_CHECK_PRICE_USDC = 0.02;
 export const PUBLIC_BASE_URL = "https://own-adam.onrender.com";
 const BADGE_STALE_MS = 30 * 24 * 3600 * 1000;
@@ -52,7 +56,7 @@ function isPrivateIp(ip) {
   return false;
 }
 
-export async function validatePublicMcpUrl(rawUrl) {
+export function parsePublicMcpUrl(rawUrl) {
   let url;
   try {
     url = new URL(String(rawUrl || "").trim());
@@ -69,6 +73,17 @@ export async function validatePublicMcpUrl(rawUrl) {
   if (/^(localhost|.*\.local|.*\.internal)$/i.test(host)) {
     return { ok: false, reason: "Local or internal hostnames are not allowed." };
   }
+  if (net.isIP(host) && isPrivateIp(host)) {
+    return { ok: false, reason: "Host resolves to a private or reserved IP address." };
+  }
+  return { ok: true, url };
+}
+
+export async function validatePublicMcpUrl(rawUrl) {
+  const parsed = parsePublicMcpUrl(rawUrl);
+  if (!parsed.ok) return parsed;
+  const { url } = parsed;
+  const host = url.hostname.replace(/^\[|\]$/g, "");
   try {
     const addrs = net.isIP(host) ? [{ address: host }] : await dns.lookup(host, { all: true });
     if (!addrs.length || addrs.some((a) => isPrivateIp(a.address))) {
@@ -457,12 +472,13 @@ function paymentInstructions() {
     chainId: 8453,
     usdcTokenContract: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     recipientWallet: wallet,
+    fullDossierSample: FULL_DOSSIER_SAMPLE,
     pricing: [
       { tier: "FREE", priceUsdc: 0, includes: `${FREE_CHECKS_PER_DAY} checks/day, questions 1, 2 and 5` },
       { tier: "EXTRA_CHECK", priceUsdc: EXTRA_CHECK_PRICE_USDC, includes: "One more basic check after the daily free quota" },
       { tier: "FULL_DOSSIER", priceUsdc: FULL_DOSSIER_PRICE_USDC, includes: "All 7 questions, every finding, anti-cloaking test and signed report" },
     ],
-    howToUnlock: `Send the USDC amount on Base to ${wallet}, then call check_mcp_server_trust again with the same serverUrl and paymentTxHash='0x...'. Amount >= ${FULL_DOSSIER_PRICE_USDC} unlocks the full dossier; >= ${EXTRA_CHECK_PRICE_USDC} unlocks one extra basic check. Each tx hash works once.`,
+    howToUnlock: `Generate and keep a private random 32-byte token as 64 hex characters. Send the USDC amount on Base to ${wallet}, then call check_mcp_server_trust with serverUrl, paymentTxHash and paymentRecoveryToken. Reuse those arguments to recover the report without another transfer. Amount >= ${FULL_DOSSIER_PRICE_USDC} unlocks the full dossier; >= ${EXTRA_CHECK_PRICE_USDC} unlocks one extra basic check.`,
   };
 }
 

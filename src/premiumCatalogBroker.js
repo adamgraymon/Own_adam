@@ -11,6 +11,7 @@
  */
 
 import crypto from "node:crypto";
+import { readTrustPaymentOrder } from "./trustOrderStore.js";
 import { encryptDeliverable, auditEncryptedDataset } from "./auditorEngine.js";
 import {
   buildAuditScopeAndLiability,
@@ -66,6 +67,9 @@ export async function verifyOnChainBaseMainnetUsdcPayment({ paymentTxHash, requi
   }
 
   try {
+    if (await readTrustPaymentOrder(txHashNorm)) {
+      return { verified: false, reason: "This transaction is reserved for a paid MCP trust check." };
+    }
     const rpcRes = await fetch(BASE_MAINNET_RPC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

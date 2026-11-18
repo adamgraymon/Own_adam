@@ -25,6 +25,38 @@
 
 Then call `check_mcp_server_trust` with any public MCP URL: free, no signup, 5 checks/day. It reports what the server can do, which tools are risky, prompt-injection signs and changes since the last check. Methodology: https://own-adam.onrender.com/trust/methodology
 
+### Preview the full dossier
+
+The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, HMAC seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.
+
+### Local paid-order recovery
+
+Run `npm run start:local` from the project root. The server loads the existing `.env` and binds to `127.0.0.1`. With `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, local paid orders use the Redis prefix `veritas:trust-orders:local:v1` and local history uses a separate key. Without Redis credentials, orders use the Git-ignored `data/trust-orders/` directory.
+
+Before the first paid `check_mcp_server_trust` call, generate a private random 32-byte `paymentRecoveryToken` as 64 hex characters. Keep it with the original `serverUrl` and `paymentTxHash`. Resend all three to retry a failed check or retrieve the same completed report after a disconnect or restart. The token is a per-order credential. Redis credentials belong in `.env` and are never tool arguments.
+
+### Local x402 v2 dossier checkout
+
+Run `npm run start:local:x402` to enable the sandbox on `127.0.0.1:3402`. Send `POST /api/trust/dossier` with JSON fields `serverUrl` and `paymentRecoveryToken`. Use a new private random 32-byte token (64 hex characters) for each new order.
+
+Read `GET /discovery/resources` to discover the sandbox offer without payment. The catalog and the checkout's `PAYMENT-REQUIRED` header advertise the same x402 v2 price and `extensions.bazaar` declaration. The declaration includes the POST JSON input schema and a compact output example. The catalog's `sampleUrl` points to the full fictional report. An unsigned request with an empty body or the example body returns the challenge. The all-zero example token cannot authorize a purchase.
+
+1. The first request returns HTTP 402 with `PAYMENT-REQUIRED` for exactly **0.25 USDC on Base Sepolia** (`eip155:84532`).
+2. An x402 v2 client signs the EIP-3009 authorization and retries with `PAYMENT-SIGNATURE`. The sandbox verifies the signature locally, prepares the report and simulates settlement.
+3. HTTP 200 returns the full report JSON and a simulated receipt in `PAYMENT-RESPONSE`. Resend the same body to recover a completed report, even after a restart. For a pending check, resend the original authorization header before it expires.
+
+Sandbox orders and receipts use the Git-ignored `data/trust-orders/x402-sandbox/` directory. This mode uses a dummy recipient and creates no on-chain transactions. Run `node --test --test-name-pattern x402 test/trustPaymentOrder.test.js` to exercise it with the official `@x402/fetch` client and an ephemeral signer. The test simulates the target and blocks external requests.
+
+Public CDP Bazaar indexing requires a public HTTPS endpoint, successful validation and an actual settlement via the CDP facilitator. [Coinbase discovery guide](https://docs.cdp.coinbase.com/x402/seller/get-discovered)
+
+### Local CDP facilitator on Base Sepolia
+
+The CDP checkout reads `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET` from the existing local `.env`. The payout address uses `X402_SEPOLIA_PAY_TO` when set and otherwise uses `TREASURY_PUBLIC_ADDRESS`. A CDP wallet secret is unnecessary for an existing public receiver address.
+
+Run `npm run start:local:cdp` to use the same checkout on loopback with the hosted CDP facilitator, accepting only **0.25 test USDC on Base Sepolia**. The server checks the chain ID via `BASE_SEPOLIA_RPC_URL` (or the Base Sepolia default) and keeps the order and settlement records in `data/trust-orders/x402-cdp-sepolia/`. The local discovery card stays local.
+
+After a cut, submit the original JSON body to recover the report and receipt. When the facilitator response is lost, the server looks up the original authorization nonce and exact USDC transfer before delivering the report. An ambiguous settlement stays pending without a second settlement request. The offline regression test uses the official x402 client with CDP and chain fixtures.
+
 ---
 
 ## Privacy in one table
@@ -76,7 +108,7 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 
 ---
 
-## 21 MCP tools
+## 22 MCP tools
 
 | # | Tool | Privacy | What it does |
 | :--- | :--- | :--- | :--- |
@@ -101,6 +133,7 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 | 19 | `manage_buyer_finops_spend_passport` | Private by default | Spending limits for your agent; optional buyer directory. |
 | 20 | `notarize_and_witness_a2a_deal` | Public record, private content | Signed receipt of a deal, or a paid micro-service. |
 | 21 | `match_verified_buyers_by_intent` | Opt-in buyers only | Sellers find buyers who chose to be listed. |
+| 22 | `get_trust_dossier_sample` | Public | Free fictional JSON preview and price of the full TrustGate dossier. |
 
 Entries labeled `[DEMO]` (sellers and buyers) are fictional and only feed the internal simulation.
 

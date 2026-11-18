@@ -30,9 +30,10 @@ import {
   buildQuotaExhaustedResponse,
   validatePublicMcpUrl,
   FULL_DOSSIER_PRICE_USDC,
-  EXTRA_CHECK_PRICE_USDC,
+  FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
-import { verifyOnChainBaseMainnetUsdcPayment, markOnChainPaymentTxHashUsed } from "./premiumCatalogBroker.js";
+import { runPaidTrustCheck } from "./paidTrustCheck.js";
+import { getTrustDossierSample } from "./trustDossierSample.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
 
 /**
@@ -43,7 +44,19 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
   if (rpcPayload?.method !== "tools/call" || rpcPayload?.params?.name !== "check_mcp_server_trust") return;
   const args = (rpcPayload.params.arguments = rpcPayload.params.arguments || {});
   delete args._trustCheckResult;
+  const { paymentRecoveryToken } = args;
+  delete args.paymentRecoveryToken;
   if (!args.serverUrl) return;
+
+  if (args.paymentTxHash) {
+    args._trustCheckResult = await runPaidTrustCheck({
+      ledger,
+      serverUrl: args.serverUrl,
+      paymentTxHash: args.paymentTxHash,
+      paymentRecoveryToken,
+    });
+    return;
+  }
 
   const valid = await validatePublicMcpUrl(args.serverUrl);
   if (!valid.ok) {
@@ -51,38 +64,20 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
     return;
   }
 
-  let mode = "FREE";
-  let quota = null;
-  if (args.paymentTxHash) {
-    const pay = await verifyOnChainBaseMainnetUsdcPayment({
-      paymentTxHash: args.paymentTxHash,
-      requiredAmountUsdc: EXTRA_CHECK_PRICE_USDC,
-    });
-    if (!pay.verified) {
-      args._trustCheckResult = { ok: false, tool: "check_mcp_server_trust", httpStatus: 402, status: "PAYMENT_NOT_VERIFIED", reason: pay.reason };
-      return;
-    }
-    if (!markOnChainPaymentTxHashUsed(pay.txHash)) {
-      args._trustCheckResult = { ok: false, tool: "check_mcp_server_trust", httpStatus: 402, status: "PAYMENT_TX_ALREADY_USED", reason: "This paymentTxHash was already used." };
-      return;
-    }
-    mode = pay.verifiedUsdcPaid + 1e-6 >= FULL_DOSSIER_PRICE_USDC ? "FULL" : "FREE";
-  } else {
-    quota = consumeFreeCheckQuota(ledger, callerKey);
-    if (!quota.allowed) {
-      args._trustCheckResult = buildQuotaExhaustedResponse(quota);
-      return;
-    }
+  const quota = consumeFreeCheckQuota(ledger, callerKey);
+  if (!quota.allowed) {
+    args._trustCheckResult = buildQuotaExhaustedResponse(quota);
+    return;
   }
 
   const probe = await probeMcpServerLive(valid.url.toString());
-  args._trustCheckResult = buildMcpTrustReport({ ledger, probe, mode, quota, paymentTxHash: args.paymentTxHash || null });
+  args._trustCheckResult = buildMcpTrustReport({ ledger, probe, quota });
 }
 
 export const MCP_TOOLS = [
   {
     "name": "check_mcp_server_trust",
-    "description": "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
+    "description": `[Private query, public score] Is this MCP server safe to connect? FREE, no signup: we connect to any public MCP URL and report its permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'. For a free JSON preview of the ${FULL_DOSSIER_PRICE_USDC} USDC full dossier, call ${FULL_DOSSIER_SAMPLE.mcpTool}.`,
     "annotations": {
       "title": "Check if an MCP server is safe (free)",
       "readOnlyHint": true,
@@ -102,13 +97,31 @@ export const MCP_TOOLS = [
         },
         "paymentTxHash": {
           "type": "string",
-          "description": "Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, 0.25 USDC = full signed 7-question dossier."
+          "description": `Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, ${FULL_DOSSIER_PRICE_USDC} USDC = full 7-question dossier with HMAC seal.`
+        },
+        "paymentRecoveryToken": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$",
+          "description": "Required with paymentTxHash. Generate a private random 32-byte token as 64 hex characters before the first paid request. Reuse it with the same transaction and server URL to retry or retrieve the report without paying again."
         }
       },
+      "dependentRequired": { "paymentTxHash": ["paymentRecoveryToken"] },
       "required": [
         "serverUrl"
       ]
     }
+  },
+  {
+    "name": FULL_DOSSIER_SAMPLE.mcpTool,
+    "description": `View a fictional example of the full TrustGate dossier and its ${FULL_DOSSIER_PRICE_USDC} USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.`,
+    "annotations": {
+      "title": "Preview the full TrustGate dossier",
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false
+    },
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
   },
   {
     "name": "discover_verified_stores",
@@ -1173,7 +1186,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
         to: "MCP-Server",
         action: `tools/call:${toolName}`,
         status: 200,
-        payloadSummary: JSON.stringify(args).slice(0, 110),
+        payloadSummary: toolName === "check_mcp_server_trust" ? "Private trust check" : JSON.stringify(args).slice(0, 110),
       });
 
       let output;
@@ -1199,6 +1212,9 @@ export function handleMcpJsonRpc(rpcRequest, ledger) {
               reason: "Live check unavailable in this transport. Use https://own-adam.onrender.com/mcp",
             };
           }
+          break;
+        case FULL_DOSSIER_SAMPLE.mcpTool:
+          output = getTrustDossierSample();
           break;
         case "discover_verified_stores":
           if (args.buyerId) {

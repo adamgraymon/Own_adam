@@ -13,8 +13,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const REDIS_HASH_KEY = "veritas:trust:snapshots:v1";
 const FILE_NAME = "trust-snapshots.json";
+
+function redisHashKey() {
+  return process.env.TRUST_HISTORY_REDIS_KEY || "veritas:trust:snapshots:v1";
+}
 
 function redisConfig() {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -30,13 +33,14 @@ async function redis(cmd) {
   const cfg = redisConfig();
   const res = await fetch(cfg.url, {
     method: "POST",
+    redirect: "error",
     headers: { Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" },
     body: JSON.stringify(cmd),
     signal: AbortSignal.timeout(5000),
   });
   if (!res.ok) throw new Error(`Upstash HTTP ${res.status}`);
   const json = await res.json();
-  if (json.error) throw new Error(`Upstash: ${json.error}`);
+  if (json.error) throw new Error("Upstash command failed.");
   return json.result;
 }
 
@@ -62,7 +66,7 @@ export async function loadTrustSnapshots() {
   try {
     let entries = [];
     if (backend === "upstash-redis") {
-      const flat = (await redis(["HGETALL", REDIS_HASH_KEY])) || [];
+      const flat = (await redis(["HGETALL", redisHashKey()])) || [];
       for (let i = 0; i + 1 < flat.length; i += 2) {
         try {
           entries.push([flat[i], JSON.parse(flat[i + 1])]);
@@ -98,7 +102,7 @@ export function saveTrustSnapshot(serverUrl, snapshot, allSnapshotsMap) {
     trustStoreStatus.lastError = `save: ${err.message}`;
   };
   if (backend === "upstash-redis") {
-    return redis(["HSET", REDIS_HASH_KEY, serverUrl, JSON.stringify(snapshot)]).then(done, fail);
+    return redis(["HSET", redisHashKey(), serverUrl, JSON.stringify(snapshot)]).then(done, fail);
   }
   if (backend === "local-file" && allSnapshotsMap) {
     // Serializar escrituras y escribir de forma atómica (tmp + rename).

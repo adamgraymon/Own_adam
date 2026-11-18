@@ -15,7 +15,21 @@ import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import { handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall } from "./mcpServer.js";
-import { renderTrustBadgeSvg, getPublicTrustRecord, getFreeTrustCheckStats, TRUST_METHODOLOGY, enableTrustPersistence } from "./freeTrustCheck.js";
+import {
+  renderTrustBadgeSvg,
+  getPublicTrustRecord,
+  getFreeTrustCheckStats,
+  TRUST_METHODOLOGY,
+  enableTrustPersistence,
+  FULL_DOSSIER_PRICE_USDC,
+  FULL_DOSSIER_SAMPLE,
+} from "./freeTrustCheck.js";
+import { getTrustDossierSample } from "./trustDossierSample.js";
+import {
+  createX402TrustCheckout,
+  X402_TRUST_DOSSIER_PATH,
+  X402_BAZAAR_DISCOVERY_PATH,
+} from "./x402TrustCheckout.js";
 import { DATA_POLICY, renderPrivacyMarkdown } from "./dataPolicy.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
@@ -29,6 +43,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const PORT = Number(process.env.PORT) || 3402;
 
+const fullDossier = { priceUsdc: FULL_DOSSIER_PRICE_USDC, sample: FULL_DOSSIER_SAMPLE };
 const ledger = new AgenticEscrowLedger();
 const marketIntelTracker = new MarketIntelligenceTracker();
 let swarmRunning = false;
@@ -126,7 +141,16 @@ async function readJsonBody(req) {
   return raw ? JSON.parse(raw) : {};
 }
 
-export function createLabServer({ autoStartSwarm = false } = {}) {
+export function createLabServer({ autoStartSwarm = false, x402Sandbox = false, x402Cdp } = {}) {
+  if (x402Sandbox && x402Cdp) throw new Error("Select one local x402 mode.");
+  const x402Checkout = x402Sandbox || x402Cdp ? createX402TrustCheckout({ cdp: x402Cdp, reportLedger: ledger }) : null;
+  const x402Dossier = {
+    method: "POST",
+    path: X402_TRUST_DOSSIER_PATH,
+    discoveryPath: X402_BAZAAR_DISCOVERY_PATH,
+    simulated: x402Sandbox,
+  };
+  const checkoutDiscovery = x402Cdp ? { x402CdpSepolia: x402Dossier } : { x402Sandbox: x402Dossier };
   if (autoStartSwarm) {
     // Ejecutar 2 ciclos iniciales y dejar el enjambre M2M operando solo
     executeAutonomousM2MCycle(ledger, swarmCycleCount++);
@@ -138,6 +162,29 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
     try {
       const baseUrl = `http://${req.headers.host || `localhost:${PORT}`}`;
       const url = new URL(req.url, baseUrl);
+      const sandboxOrigin = x402Checkout && req.socket.remoteAddress === "127.0.0.1" && req.socket.localAddress === "127.0.0.1"
+        ? `http://127.0.0.1:${req.socket.localPort}`
+        : null;
+
+      if (sandboxOrigin && req.method === "GET" && url.pathname === X402_BAZAAR_DISCOVERY_PATH) {
+        const result = await x402Checkout.listResources(sandboxOrigin + X402_TRUST_DOSSIER_PATH);
+        return sendJson(res, result.status, result.body, result.headers);
+      }
+
+      if (sandboxOrigin && req.method === "POST" && url.pathname === X402_TRUST_DOSSIER_PATH) {
+        let body;
+        try {
+          body = await readJsonBody(req);
+        } catch {
+          return sendJson(res, 400, { ok: false, status: "INVALID_JSON" }, { "Cache-Control": "no-store" });
+        }
+        const result = await x402Checkout.purchase({
+          body,
+          paymentSignature: req.headers["payment-signature"],
+          resourceUrl: sandboxOrigin + X402_TRUST_DOSSIER_PATH,
+        });
+        return sendJson(res, result.status, result.body, result.headers);
+      }
 
       // =====================================================================
       // PUERTA 0: Healthcheck Rápido (/healthz) para Keep-Alive 24/7 en Render
@@ -273,6 +320,10 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         const catalog = ledger.getFullCatalogManifest(baseUrl);
         return sendJson(res, 200, {
           ...bazaar,
+          trustDossier: {
+            ...fullDossier,
+            ...(sandboxOrigin && checkoutDiscovery),
+          },
           curatedFirstPartyPackages: catalog.curatedFirstPartyPackages,
           vipBuyerDiscounts: {
             VIP_GOLD_PRIME_BUYER: "15% Fee Discount + 10% Catalog Discount",
@@ -508,15 +559,17 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
           `- **Dual-Tier AI Catalog & x402 Micro-Bazaar**: \`GET ${baseUrl}/catalog.json\``,
           `- **MCP Auto-Discovery**: \`GET ${baseUrl}/.well-known/mcp.json\``,
           `- **ERC-8004 Agent Card**: \`GET ${baseUrl}/.well-known/agent.json\``,
-          `- **Coinbase x402 Bazaar**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
+          `- **TrustGate pricing descriptor**: \`GET ${baseUrl}/.well-known/x402-bazaar.json\``,
+          ...(sandboxOrigin ? [`- **Local x402 v2 catalog**: \`GET ${sandboxOrigin}${X402_BAZAAR_DISCOVERY_PATH}\``] : []),
           `- **OpenAPI 3.1.0 Spec**: \`GET ${baseUrl}/openapi.json\``,
           `- **Free MCP Trust Badge**: \`GET ${baseUrl}/badge.svg?server=<mcp-url>\` · record: \`GET ${baseUrl}/trust?server=<mcp-url>\``,
           `- **Data & Privacy Policy**: \`GET ${baseUrl}/privacy\` (JSON) · \`GET ${baseUrl}/privacy.md\`. Security & escrow clients: PRIVATE. Registered sellers: PUBLIC by consent. Traffic: anonymous aggregates only. Users never provide private keys.`,
           "",
           "## START HERE (FREE): Is this MCP server safe to connect?",
-          "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check. 0.25 USDC on Base unlocks the full signed 7-question dossier.",
+          "0. `check_mcp_server_trust` — Give any public MCP URL. Free, no signup, 5 checks/day: permissions, risky tools, prompt-injection signs and changes since last check.",
+          `- **Full dossier (${FULL_DOSSIER_PRICE_USDC} USDC on Base)**: preview the JSON for free with \`${FULL_DOSSIER_SAMPLE.mcpTool}\` or \`GET ${FULL_DOSSIER_SAMPLE.path}\`.`,
           "",
-          "## 21 MCP Tools: Free Trust Check, 7 Audits, Escrow + Refund, Public Notary, Buyer Spending Limits & Opt-in Matchmaker",
+          `## ${MCP_TOOLS.length} MCP Tools: Free Trust Check, 7 Audits, Escrow + Refund, Public Notary, Buyer Spending Limits & Opt-in Matchmaker`,
           "1. `discover_verified_stores` — ERC-8004 Dual-Tier Marketplace Filter (`INSTITUTIONAL_B2B` & `RETAIL_INDIE`)",
           "2. `quote_multitoken_escrow` — Atomic Swap Quote (SOL, ETH, VIRTUAL, USDT -> Base USDC)",
           "3. `open_escrow_job` — Lock USDC in ERC-8183 Vault",
@@ -612,12 +665,17 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
         recordExternalVisit(req, "/trust/methodology");
         return sendJson(res, 200, TRUST_METHODOLOGY);
       }
+      if (req.method === "GET" && url.pathname === FULL_DOSSIER_SAMPLE.path) {
+        return sendJson(res, 200, getTrustDossierSample());
+      }
       if (req.method === "GET" && url.pathname === "/trust") {
         recordExternalVisit(req, "/trust");
         const target = url.searchParams.get("server");
         if (!target) {
           return sendJson(res, 200, {
             service: "VERITAS MCP Trust Check",
+            fullDossier,
+            ...(sandboxOrigin && checkoutDiscovery),
             howTo: "Call MCP tool check_mcp_server_trust at https://own-adam.onrender.com/mcp with { serverUrl }. Then view /trust?server=<url> or embed /badge.svg?server=<url>.",
             stats: getFreeTrustCheckStats(ledger),
           });
@@ -799,17 +857,73 @@ export function createLabServer({ autoStartSwarm = false } = {}) {
   });
 }
 
+async function configureCdpSepolia() {
+  const apiKeyId = process.env.CDP_API_KEY_ID?.trim();
+  const apiKeySecret = process.env.CDP_API_KEY_SECRET?.trim();
+  if (!apiKeyId || !apiKeySecret) {
+    throw new Error("Local CDP requires CDP_API_KEY_ID and CDP_API_KEY_SECRET.");
+  }
+  const { generateJwt } = await import("@coinbase/cdp-sdk/auth");
+  const { HTTPFacilitatorClient } = await import("@x402/core/server");
+  const { createPublicClient, http, isAddress } = await import("viem");
+  const { baseSepolia } = await import("viem/chains");
+  const recipient = (process.env.X402_SEPOLIA_PAY_TO || process.env.TREASURY_PUBLIC_ADDRESS || "").trim();
+  if (!isAddress(recipient, { strict: false }) || /^0x0{36}(?:0000|dead)$/i.test(recipient)) {
+    throw new Error("Set X402_SEPOLIA_PAY_TO to a valid Base Sepolia recipient address.");
+  }
+  const cdpUrl = new URL("https://api.cdp.coinbase.com/platform/v2/x402");
+  async function auth(operation, method) {
+    const token = await generateJwt({
+      apiKeyId,
+      apiKeySecret,
+      requestMethod: method,
+      requestHost: cdpUrl.host,
+      requestPath: `${cdpUrl.pathname}/${operation}`,
+    });
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {
+    recipient,
+    facilitator: new HTTPFacilitatorClient({
+      url: cdpUrl.href,
+      async createAuthHeaders() {
+        const [supported, verify, settle] = await Promise.all([
+          auth("supported", "GET"),
+          auth("verify", "POST"),
+          auth("settle", "POST"),
+        ]);
+        return { supported, verify, settle };
+      },
+    }),
+    chain: createPublicClient({
+      chain: baseSepolia,
+      transport: http(process.env.BASE_SEPOLIA_RPC_URL || undefined),
+    }),
+  };
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const server = createLabServer({ autoStartSwarm: true });
+  const localMode = process.argv.includes("--local");
+  const x402Sandbox = process.argv.includes("--x402-sandbox");
+  const cdpSepoliaMode = process.argv.includes("--x402-cdp-sepolia");
+  if ((x402Sandbox || cdpSepoliaMode) && !localMode) throw new Error("Local x402 modes require --local.");
+  if (x402Sandbox && cdpSepoliaMode) throw new Error("Select one local x402 mode.");
+  const x402Cdp = cdpSepoliaMode ? await configureCdpSepolia() : undefined;
+  if (localMode) process.env.TRUST_HISTORY_REDIS_KEY ??= "veritas:trust:snapshots:local:v1";
+  const server = createLabServer({ autoStartSwarm: !localMode, x402Sandbox, x402Cdp });
   // Recargar el historial de confianza guardado antes de aceptar tráfico.
-  const persist = await enableTrustPersistence(ledger);
-  console.log(` * Trust history   : backend=${persist.backend}, fichas recargadas=${persist.loadedSnapshots}${persist.lastError ? `, error=${persist.lastError}` : ""}`);
-  server.listen(PORT, () => {
+  if (!x402Sandbox && !x402Cdp) {
+    const persist = await enableTrustPersistence(ledger);
+    console.log(` * Trust history   : backend=${persist.backend}, fichas recargadas=${persist.loadedSnapshots}${persist.lastError ? `, error=${persist.lastError}` : ""}`);
+  }
+  server.listen(PORT, localMode ? "127.0.0.1" : undefined, () => {
     console.log(`\n===================================================================`);
     console.log(` NODO M2M INTERVENTOR ACTIVO (Tráfico Autónomo Bot-a-Bot en curso)`);
     console.log(` * Agent Card (IA) : http://localhost:${PORT}/.well-known/agent.json`);
     console.log(` * MCP HTTP RPC    : POST http://localhost:${PORT}/mcp`);
     console.log(` * x402 Endpoint   : POST http://localhost:${PORT}/api/m2m/escrow`);
+    if (x402Sandbox) console.log(` * x402 v2 sandbox : POST http://127.0.0.1:${PORT}${X402_TRUST_DOSSIER_PATH} (simulated settlement)`);
+    if (x402Cdp) console.log(` * x402 CDP Sepolia: POST http://127.0.0.1:${PORT}${X402_TRUST_DOSSIER_PATH} (testnet)`);
     console.log(` * Telemetría Dueño: http://localhost:${PORT}`);
     console.log(`===================================================================\n`);
   });

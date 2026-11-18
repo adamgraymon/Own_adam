@@ -72,6 +72,7 @@ Opcional. Si envías listMeInBuyerDirectory=true, los vendedores de 2-3 estrella
 - **escrowDeliverables**: Kept AES-256-GCM encrypted in server memory until the escrow settles; the decryption key is released only to the buyer. Lost on restart.
 - **rawTrafficEvents**: Memory only, last 40 events, lost on restart. IPs are never stored in clear: only a truncated SHA-256 hash of IP+user-agent.
 - **trustCheckHistory**: Per checked server (public endpoint metadata): last 50 checks, persisted.
+- **paidTrustOrders**: Paid order bindings and generated reports are stored privately for recovery. Only a hash of the private recovery token is retained. Records remain until the operator removes them.
 - **freeQuotaCounters**: Per day, memory only.
 - **sellerRegistry**: Until removal is requested; notarial hashes are append-only.
 
@@ -84,7 +85,7 @@ Estas claves son del OPERADOR y viven solo en el entorno del servidor. Los usuar
 
 - `EVALUATOR_PRIVATE_KEY`: Signs evaluator verdicts on the escrow contract (0xd4f7...0a5e). It cannot withdraw escrowed funds to arbitrary addresses: the contract only pays the seller (approved) or refunds the buyer (rejected/timeout). Rotatable by the contract owner (rotateEvaluatorKey).
 - `GEMINI_API_KEY`: Optional. Used only for a second-opinion review of up to 30 sampled dataset rows. If absent, a local heuristic judge is used. Billed to the operator, never to users.
-- `UPSTASH_REDIS_REST_URL_AND_TOKEN`: Optional. Stores the public trust-check history so it survives restarts.
+- `UPSTASH_REDIS_REST_URL_AND_TOKEN`: Optional. Stores public trust-check history and private paid trust orders in separate keys so they survive restarts.
 - `OWNER_DASHBOARD_KEY`: Protects the operator's raw traffic view.
 
 ## Contact

@@ -68,57 +68,47 @@ export function initOrLoadAgentWallets() {
     );
   }
 
-  let envVars = {};
-  if (fs.existsSync(ENV_PATH)) {
-    envVars = parseSimpleEnv(fs.readFileSync(ENV_PATH, "utf8"));
-  }
+  const hasEnvFile = fs.existsSync(ENV_PATH);
+  const envVars = hasEnvFile ? parseSimpleEnv(fs.readFileSync(ENV_PATH, "utf8")) : {};
+  const activeKeyHex = process.env.EVALUATOR_SIGNER_HEX || process.env.EVALUATOR_PRIVATE_KEY ||
+    envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY;
+  const evaluatorKey = activeKeyHex || generatePrivateKey();
+  const evaluatorAccount = privateKeyToAccount(evaluatorKey);
+  const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL || envVars.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org";
+  const treasuryAddress = process.env.TREASURY_PUBLIC_ADDRESS || process.env.TREASURY_ADDRESS ||
+    envVars.TREASURY_PUBLIC_ADDRESS || envVars.TREASURY_ADDRESS || "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
+  const escrowContractAddress = process.env.ESCROW_CONTRACT_ADDRESS || envVars.ESCROW_CONTRACT_ADDRESS ||
+    "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
 
-  let createdNew = false;
-  const activeKeyHex = envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY;
-  if (!activeKeyHex || !envVars.TREASURY_PUBLIC_ADDRESS) {
-    const evaluatorPk = generatePrivateKey();
-    const evaluatorAcc = privateKeyToAccount(evaluatorPk);
-
-    const defaultEscrow = "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e";
-    const defaultTreasury = "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
-
-    envVars = {
-      BASE_SEPOLIA_RPC_URL: "https://sepolia.base.org",
-      EVALUATOR_SIGNER_HEX: evaluatorPk,
-      EVALUATOR_PUBLIC_ADDRESS: evaluatorAcc.address,
-      TREASURY_PUBLIC_ADDRESS: defaultTreasury,
-      ESCROW_CONTRACT_ADDRESS: defaultEscrow,
-    };
-
+  if (!hasEnvFile && !activeKeyHex) {
     const envFileBody = [
       "# GENERADO AUTOMÁTICAMENTE (PROTEGIDO POR .gitignore — NO SUBIR A GITHUB)",
-      `BASE_SEPOLIA_RPC_URL=${envVars.BASE_SEPOLIA_RPC_URL}`,
+      `BASE_SEPOLIA_RPC_URL=${rpcUrl}`,
       `# Wallet Efímera de Solo-Firma del Juez IA (0 custodia de clientes)`,
-      `EVALUATOR_SIGNER_HEX=${envVars.EVALUATOR_SIGNER_HEX}`,
-      `EVALUATOR_PUBLIC_ADDRESS=${envVars.EVALUATOR_PUBLIC_ADDRESS}`,
+      `EVALUATOR_SIGNER_HEX=${evaluatorKey}`,
+      `EVALUATOR_PUBLIC_ADDRESS=${evaluatorAccount.address}`,
       `# Dirección Pública de Tesorería`,
-      `TREASURY_PUBLIC_ADDRESS=${envVars.TREASURY_PUBLIC_ADDRESS}`,
-      `ESCROW_CONTRACT_ADDRESS=${envVars.ESCROW_CONTRACT_ADDRESS}`,
+      `TREASURY_PUBLIC_ADDRESS=${treasuryAddress}`,
+      `ESCROW_CONTRACT_ADDRESS=${escrowContractAddress}`,
       "",
     ].join("\n");
 
-    fs.writeFileSync(ENV_PATH, envFileBody, "utf8");
-    createdNew = true;
+    // Never replace an existing .env, even if another process creates it concurrently.
+    try {
+      fs.writeFileSync(ENV_PATH, envFileBody, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      return initOrLoadAgentWallets();
+    }
   }
 
-  const evaluatorAccount = privateKeyToAccount(envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY);
-
   return {
-    createdNew,
-    rpcUrl: envVars.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+    createdNew: !activeKeyHex,
+    rpcUrl,
     evaluatorAccount,
     evaluatorAddress: evaluatorAccount.address,
-    treasuryAddress:
-      envVars.TREASURY_PUBLIC_ADDRESS ||
-      "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
-    escrowContractAddress:
-      envVars.ESCROW_CONTRACT_ADDRESS ||
-      "0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e",
+    treasuryAddress,
+    escrowContractAddress,
   };
 }
 
