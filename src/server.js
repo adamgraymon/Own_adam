@@ -51,6 +51,7 @@ import { MarketIntelligenceTracker } from "./marketIntelligenceEngine.js";
 import { activeBackend } from "./trustStore.js";
 import { createSkillPilotCounters } from "./skillPilotCounters.js";
 import { createCatalogReadCounters } from "./catalogReadCounters.js";
+import { createTrafficCounters } from "./trafficCounters.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -73,6 +74,7 @@ const marketIntelTracker = new MarketIntelligenceTracker();
 let swarmRunning = false;
 let swarmCycleCount = 0;
 let swarmInterval = null;
+let activeTrafficCounters = null;
 
 // Radar Exclusivo de Visitantes e IAs Externas (nunca sobreescrito por el simulador interno)
 const externalTrafficRadar = {
@@ -106,6 +108,14 @@ function recordExternalVisit(req, pathname, extraMeta = {}) {
   if (extraMeta.mcpTool) {
     externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] =
       (externalTrafficRadar.byMcpToolCalled[extraMeta.mcpTool] || 0) + 1;
+  }
+
+  if (activeTrafficCounters) {
+    void activeTrafficCounters.recordVisit({
+      isTest: isOperatorTest(req),
+      isMcp: pathname === "/mcp",
+      mcpTool: extraMeta.mcpTool || null,
+    });
   }
 
   // Registrar en el clasificador de los 7 Rubros e Intención de Compra (< 40 KB RAM fija)
@@ -200,6 +210,8 @@ export function createLabServer({
   const useUpstash = persistSkillPilotCounters && activeBackend() === "upstash-redis";
   const skillPilotCounters = createSkillPilotCounters({ useUpstash });
   const catalogReadCounters = createCatalogReadCounters({ useUpstash });
+  const trafficCounters = createTrafficCounters({ useUpstash });
+  activeTrafficCounters = trafficCounters;
 
   function countSkillPilotAction(req, action) {
     return skillPilotCounters.record(isOperatorTest(req) ? "tests" : action);
@@ -290,18 +302,36 @@ export function createLabServer({
         const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
           includeUnlockedRawIdentities: isOwnerInspection,
         });
-        const [skillReviewPilot, catalogReads] = await Promise.all([
+        const [skillReviewPilot, catalogReads, trafficTotals] = await Promise.all([
           skillPilotCounters.snapshot(),
           catalogReadCounters.snapshot(),
+          trafficCounters.snapshot(),
         ]);
+        const mergedByMcpToolCalled = { ...externalTrafficRadar.byMcpToolCalled };
+        if (trafficTotals.storage === "upstash-redis") {
+          for (const [toolName, count] of Object.entries(trafficTotals.byMcpToolCalled || {})) {
+            mergedByMcpToolCalled[toolName] = Math.max(mergedByMcpToolCalled[toolName] || 0, count);
+          }
+        }
+        const persistentHits =
+          trafficTotals.storage === "upstash-redis" && typeof trafficTotals.totalExternalHits === "number"
+            ? trafficTotals.totalExternalHits
+            : null;
         return sendJson(res, 200, {
           ok: true,
           startedAt: externalTrafficRadar.startedAt,
           uptimeSeconds: Math.round(process.uptime()),
           keepAlivePingsCount: externalTrafficRadar.keepAlivePingsCount,
-          allTimeTotalExternalHits: intelSummary.allTimeTotalExternalHits,
+          allTimeTotalExternalHits:
+            persistentHits !== null
+              ? Math.max(intelSummary.allTimeTotalExternalHits, intelSummary.historicalSeedBaselineHits + persistentHits)
+              : intelSummary.allTimeTotalExternalHits,
           historicalSeedBaselineHits: intelSummary.historicalSeedBaselineHits,
-          totalExternalHits: externalTrafficRadar.totalExternalHits,
+          totalExternalHits:
+            persistentHits !== null
+              ? Math.max(externalTrafficRadar.totalExternalHits, persistentHits)
+              : externalTrafficRadar.totalExternalHits,
+          sessionExternalHits: externalTrafficRadar.totalExternalHits,
           uniqueExternalVisitorsCount: externalTrafficRadar.uniqueVisitorsSet.size,
           commercialAccessPolicy: intelSummary.commercialAccessPolicy,
           marketIntelligenceBySector: {
@@ -311,7 +341,8 @@ export function createLabServer({
             searchAndBuyingIntentTrends: intelSummary.searchAndBuyingIntentTrends,
           },
           byEndpoint: externalTrafficRadar.byEndpoint,
-          byMcpToolCalled: externalTrafficRadar.byMcpToolCalled,
+          byMcpToolCalled: mergedByMcpToolCalled,
+          trafficTotals,
           skillReviewPilot,
           catalogReads,
           byUserAgent: isOwnerInspection
