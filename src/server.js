@@ -52,6 +52,11 @@ import { activeBackend } from "./trustStore.js";
 import { createSkillPilotCounters } from "./skillPilotCounters.js";
 import { createCatalogReadCounters } from "./catalogReadCounters.js";
 import { createTrafficCounters } from "./trafficCounters.js";
+import {
+  createStoreOnboardingCounters,
+  getStoreOnboardingPreview,
+  STORE_ONBOARDING_SAMPLE_PATH,
+} from "./storeOnboardingFunnel.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -211,6 +216,7 @@ export function createLabServer({
   const skillPilotCounters = createSkillPilotCounters({ useUpstash });
   const catalogReadCounters = createCatalogReadCounters({ useUpstash });
   const trafficCounters = createTrafficCounters({ useUpstash });
+  const storeOnboardingCounters = createStoreOnboardingCounters({ useUpstash });
   activeTrafficCounters = trafficCounters;
 
   function countSkillPilotAction(req, action) {
@@ -302,10 +308,11 @@ export function createLabServer({
         const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
           includeUnlockedRawIdentities: isOwnerInspection,
         });
-        const [skillReviewPilot, catalogReads, trafficTotals] = await Promise.all([
+        const [skillReviewPilot, catalogReads, trafficTotals, storeOnboardingFunnel] = await Promise.all([
           skillPilotCounters.snapshot(),
           catalogReadCounters.snapshot(),
           trafficCounters.snapshot(),
+          storeOnboardingCounters.snapshot(),
         ]);
         const mergedByMcpToolCalled = { ...externalTrafficRadar.byMcpToolCalled };
         if (trafficTotals.storage === "upstash-redis") {
@@ -343,6 +350,7 @@ export function createLabServer({
           byEndpoint: externalTrafficRadar.byEndpoint,
           byMcpToolCalled: mergedByMcpToolCalled,
           trafficTotals,
+          storeOnboardingFunnel,
           skillReviewPilot,
           catalogReads,
           byUserAgent: isOwnerInspection
@@ -788,6 +796,11 @@ export function createLabServer({
         await countSkillPilotAction(req, "httpSamples");
         return sendJson(res, 200, sample);
       }
+      if (req.method === "GET" && url.pathname === STORE_ONBOARDING_SAMPLE_PATH) {
+        const preview = getStoreOnboardingPreview({ vertical: url.searchParams.get("vertical") || null });
+        await storeOnboardingCounters.recordStep("previews", { isTest: isOperatorTest(req) });
+        return sendJson(res, 200, preview);
+      }
       if (req.method === "GET" && url.pathname === "/skills/review") {
         recordExternalVisit(req, "/skills/review");
         const skillId = url.searchParams.get("skill");
@@ -914,6 +927,17 @@ export function createLabServer({
         const result = rpcResponse.result?.structuredContent;
         if (mcpTool === FREE_SKILL_REVIEW_TOOL && result?.ok === true) {
           await countSkillPilotAction(req, result.sample ? "mcpSamples" : "skillReviews");
+        }
+        if (mcpTool === "register_and_certify_store" && result) {
+          const isTest = isOperatorTest(req);
+          if (result.mode === "ONBOARDING_PREVIEW" || result.sample === true) {
+            await storeOnboardingCounters.recordStep("previews", { isTest });
+          } else {
+            await storeOnboardingCounters.recordStep("submissions", { isTest });
+            if (!isTest && result.ok === true && result.certificationStatus === "CERTIFIED_AND_LISTED_ERC8004") {
+              await storeOnboardingCounters.recordStep("certified", { isTest: false });
+            }
+          }
         }
         if (mcpMethod === "resources/read") {
           const catalog = getMcpResourceCatalog(rpcResponse.result?.contents?.[0]?.uri);

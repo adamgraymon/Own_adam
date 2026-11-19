@@ -1,5 +1,6 @@
 import {
   buildMcpTrustReport,
+  EXTRA_CHECK_PRICE_USDC,
   FULL_DOSSIER_PRICE_USDC,
 } from "./freeTrustCheck.js";
 import { prepareTrustReportSeal } from "./reportSignature.js";
@@ -75,6 +76,34 @@ export function getTrustDossierSample() {
       mcpTool: "check_mcp_server_trust",
       resultPath: "result.structuredContent",
       contentType: "application/json",
+    },
+    mcpPaymentFlow: {
+      network: "Base Mainnet",
+      chainId: 8453,
+      usdcTokenContract: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      usdcDecimals: 6,
+      recipientWallet: "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4",
+      fullDossierPriceUsdc: FULL_DOSSIER_PRICE_USDC,
+      fullDossierAtomicUnits: "250000",
+      extraCheckPriceUsdc: EXTRA_CHECK_PRICE_USDC,
+      extraCheckAtomicUnits: "20000",
+      steps: [
+        "1. Generate a private random 32-byte token as 64 hex characters (paymentRecoveryToken) and keep it before sending your first paid request.",
+        "2. Transfer 0.25 USDC (250000 atomic units of 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 on Base Mainnet, chainId 8453) to 0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4 and record the confirmed 0x... transaction hash (paymentTxHash).",
+        "3. Call MCP tool check_mcp_server_trust at https://own-adam.onrender.com/mcp with { serverUrl, paymentTxHash, paymentRecoveryToken }.",
+        "4. If the network drops or the target server is temporarily unreachable (503 PAID_CHECK_RETRYABLE), call check_mcp_server_trust again with the exact same { serverUrl, paymentTxHash, paymentRecoveryToken } to recover or retry your paid report without sending another transfer.",
+      ],
+      exampleCall: {
+        method: "tools/call",
+        params: {
+          name: "check_mcp_server_trust",
+          arguments: {
+            serverUrl: "https://inventory.example/mcp",
+            paymentTxHash: "0x" + "a".repeat(64),
+            paymentRecoveryToken: "b".repeat(64),
+          },
+        },
+      },
     },
     example,
   };

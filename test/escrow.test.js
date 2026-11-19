@@ -1372,6 +1372,24 @@ test("17. Cobertura 23/23: check_mcp_server_trust, review_agent_skill_free, get_
   const sampleTools = dossierSampleCall.example.answers.q2_whatToolsDoesItUse.tools.map((t) => t.name);
   assert.ok(sampleTools.includes("lookup_item"));
   assert.ok(sampleTools.includes("lookup_supplier"));
+  assert.equal(dossierSampleCall.mcpPaymentFlow.fullDossierAtomicUnits, "250000");
+  assert.equal(dossierSampleCall.mcpPaymentFlow.steps.length, 4);
+
+  const storesBeforePreview = Object.keys(ledger.stores).length;
+  const onboardingPreview = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 1731,
+      method: "tools/call",
+      params: { name: "register_and_certify_store", arguments: {} },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(onboardingPreview.ok, true);
+  assert.equal(onboardingPreview.sample, true);
+  assert.equal(onboardingPreview.mode, "ONBOARDING_PREVIEW");
+  assert.equal(Object.keys(onboardingPreview.examplesByVertical).length, 8);
+  assert.equal(Object.keys(ledger.stores).length, storesBeforePreview);
 
   const opened = handleMcpJsonRpc(
     {

@@ -48,6 +48,7 @@ import {
   SKILL_REVIEW_MAX_TOTAL_BYTES,
 } from "./skillReview.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
+import { getStoreOnboardingPreview } from "./storeOnboardingFunnel.js";
 
 /**
  * Pre-procesa herramientas que necesitan trabajo asíncrono (red / blockchain) antes del
@@ -632,17 +633,17 @@ export const MCP_TOOLS = [
   },
   {
     name: "register_and_certify_store",
-    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
+    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true.",
     inputSchema: {
       type: "object",
       properties: {
         acceptPublicRegistryTerms: {
           type: "boolean",
-          description: "Required: true. You accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy)."
+          description: "Required for submission: true to accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy), or false with storeId to withdraw an existing listing. Omit to view the read-only onboarding preview."
         },
         storeId: {
           type: "string",
-          description: "Unique slug identifier for the store."
+          description: "Unique slug identifier for the store. Omit to view the read-only onboarding preview."
         },
         storeName: {
           type: "string",
@@ -668,7 +669,7 @@ export const MCP_TOOLS = [
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
           ],
-          description: "Primary service vertical to certify."
+          description: "Primary service vertical to certify (or filter the read-only onboarding preview)."
         },
         marketTier: {
           type: "string",
@@ -687,10 +688,7 @@ export const MCP_TOOLS = [
           description: "Sample deliverable payload to verify deterministically before listing."
         }
       },
-      required: [
-        "acceptPublicRegistryTerms",
-        "storeId"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
@@ -1485,6 +1483,17 @@ export function handleMcpJsonRpc(rpcRequest, ledger, { baseUrl = PUBLIC_BASE_URL
             .trim()
             .toLowerCase()
             .replace(/[^a-z0-9-_]/g, "-");
+          const isReadOnlyPreview =
+            !normStoreId &&
+            args.acceptPublicRegistryTerms === undefined &&
+            !args.storeName &&
+            !args.walletAddress &&
+            !args.endpointUrl &&
+            !args.sampleDeliverable;
+          if (isReadOnlyPreview) {
+            output = getStoreOnboardingPreview({ vertical: args.vertical || null });
+            break;
+          }
           if (args.acceptPublicRegistryTerms === false && normStoreId && ledger.stores?.[normStoreId]?.publicRegistryConsent) {
             delete ledger.stores[normStoreId];
             const tombstone = {
@@ -1510,6 +1519,15 @@ export function handleMcpJsonRpc(rpcRequest, ledger, { baseUrl = PUBLIC_BASE_URL
               reason: "The VERITAS notary registry is public. Read the terms and call again with acceptPublicRegistryTerms=true.",
               publicRegistryTerms: PUBLIC_REGISTRY_TERMS,
               privacyPolicy: "https://own-adam.onrender.com/privacy",
+            };
+            break;
+          }
+          if (!normStoreId) {
+            output = {
+              ok: false,
+              status: 400,
+              error: "STORE_ID_REQUIRED",
+              reason: "Pass storeId and acceptPublicRegistryTerms=true to register a store, or call with {} for a read-only onboarding preview.",
             };
             break;
           }
