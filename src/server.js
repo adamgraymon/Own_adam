@@ -15,7 +15,8 @@ import { fileURLToPath } from "node:url";
 import { SUPPORTED_TOKENS } from "./swapRouter.js";
 import { AgenticEscrowLedger } from "./escrowContract.js";
 import {
-  getKnownMcpToolName, getMcpResourceCatalog, handleMcpJsonRpc, MCP_TOOLS, prepareAsyncToolCall,
+  getKnownMcpToolName, getMcpResourceCatalog, handleMcpJsonRpc, MCP_TOOLS,
+  normalizeSellerStoreId, prepareAsyncToolCall,
 } from "./mcpServer.js";
 import {
   renderTrustBadgeSvg,
@@ -217,7 +218,17 @@ export function createLabServer({
   const catalogReadCounters = createCatalogReadCounters({ useUpstash });
   const trafficCounters = createTrafficCounters({ useUpstash });
   const storeOnboardingCounters = createStoreOnboardingCounters({ useUpstash });
+  const sellerRegistrationWrites = new Map();
   activeTrafficCounters = trafficCounters;
+
+  function runSellerRegistrationInOrder(storeId, handleCall) {
+    const previous = sellerRegistrationWrites.get(storeId) ?? Promise.resolve();
+    const current = previous.then(handleCall, handleCall);
+    sellerRegistrationWrites.set(storeId, current);
+    return current.finally(() => {
+      if (sellerRegistrationWrites.get(storeId) === current) sellerRegistrationWrites.delete(storeId);
+    });
+  }
 
   function countSkillPilotAction(req, action) {
     return skillPilotCounters.record(isOperatorTest(req) ? "tests" : action);
@@ -919,12 +930,15 @@ export function createLabServer({
         const callerKey = "v_" + crypto.createHash("sha256").update(`${callerIp}|${req.headers["user-agent"] || ""}`).digest("hex").slice(0, 10);
         await prepareAsyncToolCall(rpcPayload, ledger, { callerKey });
 
-        let sellerRegistrationWrite;
-        const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger, {
+        const handleCall = () => handleMcpJsonRpc(rpcPayload, ledger, {
           baseUrl,
           signingMetadata,
-          onSellerRegistrationWrite: write => { sellerRegistrationWrite = write; },
+          requireConfirmedSellerRegistration: true,
         });
+        const storeId = mcpTool === "register_and_certify_store"
+          ? normalizeSellerStoreId(rpcPayload.params?.arguments?.storeId)
+          : "";
+        const rpcResponse = await (storeId ? runSellerRegistrationInOrder(storeId, handleCall) : handleCall());
         if (!rpcResponse) {
           res.writeHead(202);
           return res.end();
@@ -939,7 +953,7 @@ export function createLabServer({
             await storeOnboardingCounters.recordStep("previews", { isTest });
           } else {
             await storeOnboardingCounters.recordStep("submissions", { isTest });
-            if (!isTest && result.ok === true && (await sellerRegistrationWrite) === true) {
+            if (!isTest && result.newlyCertified === true) {
               await storeOnboardingCounters.recordStep("certified", { isTest: false });
             }
           }

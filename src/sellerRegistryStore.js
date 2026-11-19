@@ -3,7 +3,8 @@
  * and their public-registry consent (including consent withdrawal).
  *
  * Uses Upstash Redis (`veritas:seller-registry:v1`) when configured, or local file
- * (`data/seller-registry.json`) otherwise.
+ * (`data/seller-registry.json`) otherwise. Public MCP registration requires a
+ * confirmed Redis write. File and memory are available to legacy local callers.
  */
 
 import fs from "node:fs/promises";
@@ -49,12 +50,11 @@ export async function loadSellerRegistryEntries() {
 
 let writeChain = Promise.resolve();
 
-// Reports a new listing only when Upstash acknowledges creation of its hash field.
 export function saveSellerRegistryEntry(storeId, record, allEntriesMap = null) {
   const backend = activeBackend();
   if (backend === "upstash-redis") {
     return executeUpstashCommand(["HSET", redisKey(), storeId, JSON.stringify(record)])
-      .then(added => added === 1, () => false);
+      .then(added => added === 0 || added === 1 ? { added: added === 1 } : null, () => null);
   }
   if (backend === "local-file" && allEntriesMap) {
     writeChain = writeChain
@@ -66,9 +66,9 @@ export function saveSellerRegistryEntry(storeId, record, allEntriesMap = null) {
         await fs.rename(tmp, file);
       })
       .catch(() => {});
-    return writeChain.then(() => false);
+    return writeChain.then(() => null);
   }
-  return Promise.resolve(false);
+  return Promise.resolve(null);
 }
 
 export async function enableSellerRegistryPersistence(ledger) {
@@ -86,6 +86,12 @@ export async function enableSellerRegistryPersistence(ledger) {
   ledger.persistSellerRecord = (storeId, record) => {
     ledger.persistedSellerEntries.set(storeId, record);
     return saveSellerRegistryEntry(storeId, record, ledger.persistedSellerEntries);
+  };
+  ledger.confirmSellerRecord = async (storeId, record) => {
+    if (activeBackend() !== "upstash-redis") return null;
+    const confirmation = await saveSellerRegistryEntry(storeId, record);
+    if (confirmation) ledger.persistedSellerEntries.set(storeId, record);
+    return confirmation;
   };
   return { loadedSellers: entries.filter(([, r]) => r && !r.withdrawn).length };
 }

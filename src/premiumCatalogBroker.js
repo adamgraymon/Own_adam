@@ -720,6 +720,7 @@ export function registerAndCertifyExternalStore({
   marketTier = "RETAIL_INDIE",
   startingPriceUsdc = 5.0,
   sampleDeliverable = {},
+  stagePublication,
 }) {
   const effectiveStoreId =
     storeId || `ext-agent-store-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 90 + 10)}`;
@@ -879,9 +880,6 @@ export function registerAndCertifyExternalStore({
     certifiedAt: new Date().toISOString(),
   };
 
-  ledger.stores[normalizedId] = newStore;
-  ledger.wallets.protocol_treasury.stats.auditsCompleted += 1;
-
   const certHash =
     "0x" +
     crypto
@@ -889,14 +887,20 @@ export function registerAndCertifyExternalStore({
       .update(`ERC8004_CERT|${normalizedId}|${vertical}|${effectiveWalletAddress}`)
       .digest("hex");
 
-  ledger.logWirePacket({
-    protocol: "ERC-8004",
-    from: "EvaluatorNode",
-    to: "Seller",
-    action: "STORE_CERTIFIED_AND_LISTED",
-    status: 200,
-    payloadSummary: "Seller certification completed",
-  });
+  const publish = () => {
+    ledger.stores[normalizedId] = newStore;
+    ledger.wallets.protocol_treasury.stats.auditsCompleted += 1;
+    ledger.logWirePacket({
+      protocol: "ERC-8004",
+      from: "EvaluatorNode",
+      to: "Seller",
+      action: "STORE_CERTIFIED_AND_LISTED",
+      status: 200,
+      payloadSummary: "Seller certification completed",
+    });
+  };
+  if (stagePublication) stagePublication(publish);
+  else publish();
 
   return {
     ok: true,

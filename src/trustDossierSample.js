@@ -3,7 +3,8 @@ import {
   EXTRA_CHECK_PRICE_USDC,
   FULL_DOSSIER_PRICE_USDC,
 } from "./freeTrustCheck.js";
-import { prepareTrustReportSeal } from "./reportSignature.js";
+import { getTrustReportPublicKeyHex, prepareTrustReportSeal } from "./reportSignature.js";
+import { getLaunchDossierPromo } from "./launchDossierPromo.js";
 
 export function getTrustDossierSample() {
   const ledger = { evaluatorSecretKey: "synthetic-trust-dossier-sample" };
@@ -67,11 +68,23 @@ export function getTrustDossierSample() {
     signatureEd25519Hex: "0".repeat(128),
   });
 
+  const promo = getLaunchDossierPromo();
+  const standardPrice = { amount: FULL_DOSSIER_PRICE_USDC, currency: "USDC", network: "Base Mainnet", chainId: 8453 };
+  const launchPromotion = promo && getTrustReportPublicKeyHex() ? {
+    ...promo,
+    description: "Get the complete signed dossier at 0 USDC within the promotional quota. Call with only serverUrl.",
+    exampleCall: {
+      method: "tools/call",
+      params: { name: "check_mcp_server_trust", arguments: { serverUrl: "https://inventory.example/mcp" } },
+    },
+  } : null;
+
   return {
     ok: true,
     sample: true,
     description: "Fictional preview. The server, order, transaction and seal fields are illustrative. Viewing this sample is free.",
-    price: { amount: FULL_DOSSIER_PRICE_USDC, currency: "USDC", network: "Base Mainnet", chainId: 8453 },
+    price: launchPromotion ? { amount: launchPromotion.priceUsdc, currency: "USDC" } : standardPrice,
+    ...(launchPromotion && { launchPromotion, standardPrice }),
     delivery: {
       mcpTool: "check_mcp_server_trust",
       resultPath: "result.structuredContent",

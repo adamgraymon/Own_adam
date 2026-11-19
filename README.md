@@ -40,7 +40,15 @@ The `skillReviewPilot` section of `GET /api/external-traffic` counts completed a
 
 The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for free with the MCP tool `get_trust_dossier_sample` (empty arguments) or with `GET /trust/sample.json` on the local server. The response includes price and delivery metadata plus an `example` with the seven answers, findings, illustrative seal and order ID. The example uses fictional data. A paid call to `check_mcp_server_trust` returns that report structure directly in `result.structuredContent`.
 
-For paid dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedicated Ed25519 PKCS#8 private PEM outside the repository and restart the server. `GET /trust/methodology` and `GET /.well-known/agent.json` publish the matching `reportSigning` descriptor. Use that public key as the expected key when verifying a dossier. When the key is absent, new full dossiers and x402 checkout are unavailable. Saved dossiers are returned as originally issued.
+For signed dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedicated Ed25519 PKCS#8 private PEM outside the repository and restart the server. `GET /trust/methodology` and `GET /.well-known/agent.json` publish the matching `reportSigning` descriptor. Use that public key as the expected key when verifying a dossier. When the key is absent, new full dossiers and x402 checkout are unavailable. Saved dossiers are returned as originally issued.
+
+### Local launch promotion
+
+Set `TRUST_DOSSIER_PROMO_START_AT` to the intended UTC start time in ISO 8601 format and configure the dedicated signer. The offer lasts 72 hours from that timestamp. Restarting the process keeps the original window. The offer is off by default. During the window, call `check_mcp_server_trust` with only `serverUrl` for a signed 7/7 dossier at 0 USDC. See the current offer, expiration and an example call in `get_trust_dossier_sample` or `/trust/sample.json`.
+
+The promotional quota is five requests per client and 100 total per UTC day. Upstash enforces the quota across processes when configured. The `MCP_TRUST_V1` digest appends `issuance`, when present, after `answers` in the JSON fields being hashed. Promotional reports have `issuance.type` set to `LAUNCH_PROMO_FREE` and omit paid order and transaction identifiers. Use the original credentials to recover an existing paid report. Papers and other First-Party purchases keep their existing payment flow.
+
+For a local rehearsal with a shared Upstash instance, set `SELLER_REGISTRY_REDIS_KEY` and `TRUST_DOSSIER_PROMO_REDIS_KEY` to separate test namespaces before starting the server. Call `register_and_certify_store` with `{}` for a sample and the registry terms. An HTTP MCP submission confirms the public listing after Upstash acknowledges the write. Use fictional data in the isolated registry.
 
 ### Local paid-order recovery
 
@@ -142,7 +150,7 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 | 13 | `audit_depin_gpu_sla_escrow` | Private | TFLOPS, VRAM, bandwidth, temperature vs contract. |
 | 14 | `verify_onchain_escrow_status` | Public | Contract and verification proofs. |
 | 15 | `purchase_firstparty_catalog_item` | Private | Buy an official pack with USDC on Base. |
-| 16 | `register_and_certify_store` | Public registry, consent required | List your store after an automated audit. |
+| 16 | `register_and_certify_store` | Public registry, consent required | List your store after an automated audit and confirmed registry write. |
 | 17 | `inspect_veritas_8183_seal` | Public registry | A seller's stars, reserve ratio and trust history. |
 | 18 | `submit_veritas_tier_upgrade_exam` | Public registry | Seller exam to earn 1-3 stars. |
 | 19 | `manage_buyer_finops_spend_passport` | Private by default | Spending limits for your agent; optional buyer directory. |
@@ -152,6 +160,8 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 | 23 | `review_agent_skill_free` | Private input | Free static skill review with findings by file and a reproducible JSON example. |
 
 Entries labeled `[DEMO]` (sellers and buyers) are fictional and only feed the internal simulation.
+
+Call `register_and_certify_store` with `{}` to preview onboarding. An HTTP MCP registration shows `persisted: true` after Upstash confirms the write. A duplicate write to an existing registry entry also succeeds and shows `newlyCertified: false`. If storage is unavailable, the tool returns `SELLER_REGISTRY_STORAGE_UNAVAILABLE` with `retryable: true`. HTTP MCP requires Upstash for public registration even in a local run. Standalone MCP over STDIO keeps its in-memory registry. Direct ledger callers can enable local file persistence for their local registry.
 
 ---
 

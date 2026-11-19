@@ -37,7 +37,8 @@ import {
 } from "./freeTrustCheck.js";
 import { runPaidTrustCheck } from "./paidTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
-import { getTrustReportSigningMetadata } from "./reportSignature.js";
+import { getTrustReportPublicKeyHex, getTrustReportSigningMetadata, sealFinalTrustReport } from "./reportSignature.js";
+import { consumeLaunchDossierQuota, getLaunchDossierPromo } from "./launchDossierPromo.js";
 import {
   FREE_SKILL_REVIEW_TOOL,
   reviewAgentSkillFree,
@@ -79,20 +80,56 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
     return;
   }
 
-  const quota = consumeFreeCheckQuota(ledger, callerKey);
+  const promo = getLaunchDossierPromo();
+  if (promo && !getTrustReportPublicKeyHex()) {
+    args._trustCheckResult = {
+      ok: false, tool: "check_mcp_server_trust", httpStatus: 503,
+      status: "REPORT_SIGNING_UNAVAILABLE", reason: "The dossier signer is temporarily unavailable.",
+    };
+    return;
+  }
+
+  const quota = promo
+    ? await consumeLaunchDossierQuota(ledger, promo, callerKey)
+    : consumeFreeCheckQuota(ledger, callerKey);
   if (!quota.allowed) {
-    args._trustCheckResult = buildQuotaExhaustedResponse(quota);
+    args._trustCheckResult = promo ? {
+      ok: false, tool: "check_mcp_server_trust", status: quota.status,
+      httpStatus: quota.status === "LAUNCH_PROMO_QUOTA_UNAVAILABLE" ? 503 : 429,
+      reason: quota.status === "LAUNCH_PROMO_QUOTA_UNAVAILABLE"
+        ? "Promotional availability could not be confirmed. Retry without payment."
+        : "The promotional dossier quota is exhausted for now.",
+      resetsAt: quota.resetsAt,
+      standardDossierPriceUsdc: FULL_DOSSIER_PRICE_USDC,
+    } : buildQuotaExhaustedResponse(quota);
     return;
   }
 
   const probe = await probeMcpServerLive(valid.url.toString());
-  args._trustCheckResult = buildMcpTrustReport({ ledger, probe, quota });
+  if (!promo || !probe.ok) {
+    args._trustCheckResult = buildMcpTrustReport({ ledger, probe, quota });
+    return;
+  }
+
+  const report = buildMcpTrustReport({
+    ledger, probe, mode: "FULL", quota,
+    issuance: { type: "LAUNCH_PROMO_FREE", priceUsdc: promo.priceUsdc, startsAt: promo.startsAt, endsAt: promo.endsAt },
+  });
+  sealFinalTrustReport(report, { secretMaterial: ledger.evaluatorSecretKey });
+  report.freeChecksRemainingToday = quota.remaining;
+  report.quotaResetsAt = quota.resetsAt;
+  report.nextStep = {
+    description: "Preview free store registration and the public registry terms.",
+    name: "register_and_certify_store",
+    arguments: {},
+  };
+  args._trustCheckResult = report;
 }
 
 export const MCP_TOOLS = [
   {
     name: "check_mcp_server_trust",
-    description: "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
+    description: "[Private query, public score] Check a public MCP URL for risky tools, permissions and changes, or call with {} for the full dossier sample and current offers. During an active launch promotion, send only serverUrl for the signed 7-question dossier at 0 USDC within quota. Example: serverUrl='https://example.com/mcp'.",
     inputSchema: {
       type: "object",
       properties: {
@@ -633,7 +670,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "register_and_certify_store",
-    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true.",
+    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true. Over HTTP, a public listing requires a confirmed Upstash write.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1046,12 +1083,21 @@ export function getMcpResourceCatalog(uri) {
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.
  */
+export function normalizeSellerStoreId(storeId) {
+  return String(storeId || "").trim().toLowerCase().replace(/[^a-z0-9-_]/g, "-");
+}
+
 export function handleMcpJsonRpc(rpcRequest, ledger, {
-  baseUrl = PUBLIC_BASE_URL, signingMetadata, onSellerRegistrationWrite,
+  baseUrl = PUBLIC_BASE_URL, signingMetadata, requireConfirmedSellerRegistration = false,
 } = {}) {
   const { jsonrpc = "2.0", id = null, method, params = {} } = rpcRequest || {};
   const started = performance.now();
   ledger.wallets.protocol_treasury.stats.mcpCallsHandled += 1;
+
+  function fail(err) {
+    if (method === "tools/call") logMcpToolCall(ledger, params?.name, "Tool failed", started);
+    return { jsonrpc, id, error: { code: -32000, message: err.message } };
+  }
 
   try {
     if (method === "initialize") {
@@ -1181,6 +1227,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
       const args = params.arguments || {};
 
       let output;
+      let pendingCompletion;
       switch (toolName) {
         case "claim_escrow_timeout_refund":
           try {
@@ -1481,10 +1528,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "register_and_certify_store": {
-          const normStoreId = String(args.storeId || "")
-            .trim()
-            .toLowerCase()
-            .replace(/[^a-z0-9-_]/g, "-");
+          const normStoreId = normalizeSellerStoreId(args.storeId);
           const isReadOnlyPreview =
             !normStoreId &&
             args.acceptPublicRegistryTerms === undefined &&
@@ -1503,7 +1547,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
               withdrawn: true,
               withdrawnAt: new Date().toISOString(),
             };
-            ledger.persistSellerRecord?.(normStoreId, tombstone);
+            const withdrawalWrite = ledger.persistSellerRecord?.(normStoreId, tombstone);
             output = {
               ok: true,
               status: 200,
@@ -1511,6 +1555,9 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
               storeId: normStoreId,
               withdrawnAt: tombstone.withdrawnAt,
             };
+            if (requireConfirmedSellerRegistration && withdrawalWrite) {
+              pendingCompletion = withdrawalWrite.then(() => output);
+            }
             break;
           }
           if (args.acceptPublicRegistryTerms !== true) {
@@ -1533,6 +1580,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
             };
             break;
           }
+          let publish;
           output = ledger.registerAndCertifyStore({
             storeId: args.storeId,
             storeName: args.storeName,
@@ -1542,16 +1590,36 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
             marketTier: args.marketTier,
             startingPriceUsdc: args.startingPriceUsdc,
             sampleDeliverable: args.sampleDeliverable || {},
+            stagePublication: requireConfirmedSellerRegistration ? commit => { publish = commit; } : undefined,
           });
-          if (output?.ok === true && ledger.stores?.[normStoreId]) {
-            ledger.stores[normStoreId].publicRegistryConsent = {
-              accepted: true,
-              termsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
-              acceptedAt: new Date().toISOString(),
-            };
-            const registrationWrite = ledger.persistSellerRecord?.(normStoreId, ledger.stores[normStoreId]);
-            onSellerRegistrationWrite?.(registrationWrite);
-            output = { ...output, publicRegistryConsent: ledger.stores[normStoreId].publicRegistryConsent };
+          if (output?.ok !== true) break;
+          const publicRegistryConsent = {
+            accepted: true,
+            termsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
+            acceptedAt: new Date().toISOString(),
+          };
+          const { storeProfile } = output;
+          storeProfile.publicRegistryConsent = publicRegistryConsent;
+          output = { ...output, publicRegistryConsent };
+          if (requireConfirmedSellerRegistration) {
+            pendingCompletion = (async () => {
+              const confirmation = await ledger.confirmSellerRecord?.(normStoreId, storeProfile);
+              if (!confirmation) {
+                return {
+                  ok: false,
+                  status: 503,
+                  error: "SELLER_REGISTRY_STORAGE_UNAVAILABLE",
+                  reason: "Public listing requires a confirmed Upstash write. Retry the same registration later.",
+                  retryable: true,
+                  persisted: false,
+                  storeId: normStoreId,
+                };
+              }
+              publish();
+              return { ...output, persisted: true, newlyCertified: confirmation.added };
+            })();
+          } else {
+            ledger.persistSellerRecord?.(normStoreId, storeProfile);
           }
           break;
         }
@@ -1630,19 +1698,21 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           };
       }
 
-      const isError = output?.ok === false || output?.viable === false;
-      const outcome = isError || output?.approved === false ? "Tool rejected" : "Tool completed";
-      logMcpToolCall(ledger, toolName, outcome, started);
-
-      return {
-        jsonrpc,
-        id,
-        result: {
-          content: [{ type: "text", text: JSON.stringify(output) }],
-          structuredContent: output,
-          isError,
-        },
-      };
+      function completeToolCall(toolOutput) {
+        const isError = toolOutput?.ok === false || toolOutput?.viable === false;
+        const outcome = isError || toolOutput?.approved === false ? "Tool rejected" : "Tool completed";
+        logMcpToolCall(ledger, toolName, outcome, started);
+        return {
+          jsonrpc,
+          id,
+          result: {
+            content: [{ type: "text", text: JSON.stringify(toolOutput) }],
+            structuredContent: toolOutput,
+            isError,
+          },
+        };
+      }
+      return pendingCompletion ? pendingCompletion.then(completeToolCall).catch(fail) : completeToolCall(output);
     }
 
     return {
@@ -1651,12 +1721,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
       error: { code: -32601, message: `Método JSON-RPC no soportado: ${method}` },
     };
   } catch (err) {
-    if (method === "tools/call") logMcpToolCall(ledger, params?.name, "Tool failed", started);
-    return {
-      jsonrpc,
-      id,
-      error: { code: -32000, message: err.message },
-    };
+    return fail(err);
   }
 }
 

@@ -202,23 +202,54 @@ async function requestMcp(origin, method, params, headers) {
   return rpc.result;
 }
 
+test("HTTP seller registration requires Upstash while the preview stays available", { timeout: 30_000 }, async t => {
+  const origin = await isolatedServer(t);
+  const name = "register_and_certify_store";
+  const greeting = await requestMcp(origin, "tools/call", { name, arguments: {} });
+  assert.equal(greeting.structuredContent.mode, "ONBOARDING_PREVIEW");
+
+  const storeId = "fictional-store-without-upstash";
+  const request = await requestMcp(origin, "tools/call", {
+    name,
+    arguments: { storeId, vertical: "VERTICAL_5_CERTIFIED_SKILLS", acceptPublicRegistryTerms: true },
+  });
+  assert.equal(request.isError, true);
+  assert.equal(request.structuredContent.error, "SELLER_REGISTRY_STORAGE_UNAVAILABLE");
+  assert.equal(request.structuredContent.retryable, true);
+  assert.equal(request.structuredContent.persisted, false);
+  const listing = await fetch(origin + "/api/m2m/stores");
+  assert.equal(listing.status, 200);
+  assert.equal((await listing.text()).includes(storeId), false);
+});
+
 test("certified funnel counts only confirmed new Upstash registrations", { timeout: 30_000 }, async t => {
   const acceptedId = "fictional-redis-confirmed-store";
   const rejectedId = "fictional-redis-rejected-store";
   const saved = new Map();
   const writes = [];
+  const sellerRegistryKey = "veritas:seller-registry:v1";
+  let releaseWrite;
+  const heldWrite = new Promise(resolve => { releaseWrite = resolve; });
+  let rejectWrite = true;
   const redis = createServer(async (req, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
     const [command, key, storeId, record] = JSON.parse(body);
     res.setHeader("content-type", "application/json");
-    if (command === "HGETALL") return res.end(JSON.stringify({ result: [] }));
-    if (command !== "HSET" || key !== "veritas:seller-registry:v1") {
+    if (command === "HGETALL") {
+      const result = key === sellerRegistryKey ? [...saved].flatMap(([id, entry]) => [id, JSON.stringify(entry)]) : [];
+      return res.end(JSON.stringify({ result }));
+    }
+    if (command !== "HSET" || key !== sellerRegistryKey) {
       res.statusCode = 400;
       return res.end(JSON.stringify({ error: "Unexpected test Redis command" }));
     }
     writes.push(storeId);
-    if (storeId === rejectedId) {
+    if (storeId === acceptedId && writes.length === 1) {
+      redis.emit("seller-write-pending");
+      await heldWrite;
+    }
+    if (storeId === rejectedId && rejectWrite) {
       res.statusCode = 503;
       return res.end(JSON.stringify({ error: "Simulated unavailable Redis" }));
     }
@@ -233,7 +264,8 @@ test("certified funnel counts only confirmed new Upstash registrations", { timeo
   }));
   await once(redis, "listening");
 
-  const origin = await isolatedServer(t, undefined, undefined, `http://127.0.0.1:${redis.address().port}`);
+  const redisOrigin = `http://127.0.0.1:${redis.address().port}`;
+  const origin = await isolatedServer(t, undefined, undefined, redisOrigin);
   const register = storeId => requestMcp(origin, "tools/call", {
     name: "register_and_certify_store",
     arguments: {
@@ -249,27 +281,74 @@ test("certified funnel counts only confirmed new Upstash registrations", { timeo
       },
     },
   });
-  async function assertFunnel(submissions, certified) {
+  async function readFunnel() {
     const response = await fetch(origin + "/api/external-traffic");
     assert.equal(response.status, 200);
     const { storeOnboardingFunnel } = await response.json();
+    return storeOnboardingFunnel;
+  }
+  async function assertFunnel(submissions, certified) {
+    const storeOnboardingFunnel = await readFunnel();
     assert.equal(storeOnboardingFunnel.submissions, submissions);
     assert.equal(storeOnboardingFunnel.certified, certified);
   }
+  async function assertListed(base, storeId, listed) {
+    const response = await fetch(base + "/api/m2m/stores");
+    assert.equal(response.status, 200);
+    const { eligibleStores } = await response.json();
+    assert.equal(eligibleStores.some(store => store.storeId === storeId), listed);
+  }
 
   await assertFunnel(0, 0);
-  const registered = await register(acceptedId);
+  const pendingWrite = once(redis, "seller-write-pending", { signal: AbortSignal.timeout(8_000) });
+  const registration = register(acceptedId);
+  registration.catch(() => {});
+  try {
+    await pendingWrite;
+    await assertListed(origin, acceptedId, false);
+    assert.equal((await readFunnel()).certified, 0);
+  } finally {
+    releaseWrite();
+  }
+  const registered = await registration;
   assert.equal(registered.structuredContent.certificationStatus, "APPROVED_ERC8004_VERIFIED_PARTNER");
+  assert.equal(registered.structuredContent.persisted, true);
+  assert.equal(registered.structuredContent.newlyCertified, true);
   assert.equal(saved.get(acceptedId)?.publicRegistryConsent?.accepted, true);
+  await assertListed(origin, acceptedId, true);
   await assertFunnel(1, 1);
 
-  await register(acceptedId);
+  const duplicate = await register(acceptedId);
+  assert.equal(duplicate.structuredContent.persisted, true);
+  assert.equal(duplicate.structuredContent.newlyCertified, false);
   await assertFunnel(2, 1);
 
-  await register(rejectedId);
-  assert.deepEqual(writes, [acceptedId, acceptedId, rejectedId]);
+  const failed = await register(rejectedId);
+  assert.equal(failed.isError, true);
+  const { reason, ...failure } = failed.structuredContent;
+  assert.match(reason, /retry the same registration/i);
+  assert.deepEqual(failure, {
+    ok: false,
+    status: 503,
+    error: "SELLER_REGISTRY_STORAGE_UNAVAILABLE",
+    retryable: true,
+    persisted: false,
+    storeId: rejectedId,
+  });
   assert.equal(saved.has(rejectedId), false);
+  await assertListed(origin, rejectedId, false);
   await assertFunnel(3, 1);
+
+  rejectWrite = false;
+  const retried = await register(rejectedId);
+  assert.equal(retried.structuredContent.persisted, true);
+  assert.equal(retried.structuredContent.newlyCertified, true);
+  assert.deepEqual(writes, [acceptedId, acceptedId, rejectedId, rejectedId]);
+  await assertFunnel(4, 2);
+
+  const restarted = await isolatedServer(t, undefined, undefined, redisOrigin);
+  await assertListed(restarted, acceptedId, true);
+  await assertListed(restarted, rejectedId, true);
 });
 
 test("owner state and controls require the owner header and cannot be cached", { timeout: 30_000 }, async t => {
@@ -308,7 +387,20 @@ test("owner state and controls fail closed when the owner key is absent", { time
 });
 
 test("audit and registry inputs do not appear in owner wire logs", { timeout: 30_000 }, async t => {
-  const origin = await isolatedServer(t, ownerKey);
+  const redis = createServer(async (req, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const [command] = JSON.parse(body);
+    res.setHeader("content-type", "application/json");
+    res.end(JSON.stringify({ result: command === "HGETALL" ? [] : 1 }));
+  });
+  redis.listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve, reject) => {
+    redis.close(error => error ? reject(error) : resolve());
+    redis.closeAllConnections();
+  }));
+  await once(redis, "listening");
+  const origin = await isolatedServer(t, ownerKey, undefined, `http://127.0.0.1:${redis.address().port}`);
   async function invoke(name, args) {
     const response = await fetch(origin + "/mcp", {
       method: "POST",

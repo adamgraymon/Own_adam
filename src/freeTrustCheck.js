@@ -438,7 +438,7 @@ function ensureStore(ledger) {
     ledger.freeTrustCheck = {
       snapshots: new Map(), // url -> { fingerprint, toolHashes, firstSeenAt, lastSeenAt, checks }
       quota: new Map(), // callerKey|day -> count
-      stats: { totalChecks: 0, freeChecks: 0, paidChecks: 0, quotaBlocked: 0 },
+      stats: { totalChecks: 0, freeChecks: 0, paidChecks: 0, promoChecks: 0, quotaBlocked: 0 },
       persist: null, // función (url, snap, map) => Promise; se activa con enableTrustPersistence()
     };
   }
@@ -588,10 +588,13 @@ export function renderTrustBadgeSvg(ledger, serverUrl) {
  * Construye el informe (síncrono). `probe` viene de probeMcpServerLive().
  * `mode`: "FREE" (3/7 preguntas) o "FULL" (7/7 + firma).
  */
-export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null, paymentTxHash = null, orderId = null }) {
+export function buildMcpTrustReport({
+  ledger, probe, mode = "FREE", quota = null, paymentTxHash = null, orderId = null, issuance,
+}) {
   const store = ensureStore(ledger);
   store.stats.totalChecks += 1;
-  if (mode === "FULL") store.stats.paidChecks += 1;
+  if (issuance) store.stats.promoChecks += 1;
+  else if (mode === "FULL") store.stats.paidChecks += 1;
   else store.stats.freeChecks += 1;
 
   if (!probe || !probe.ok) {
@@ -780,6 +783,7 @@ export function buildMcpTrustReport({ ledger, probe, mode = "FREE", quota = null
     q7_whatVulnerabilitiesRemainPending: q7,
   };
   if (orderId) base.orderId = orderId;
+  if (issuance) base.issuance = issuance;
   prepareTrustReportSeal(base, {
     secretMaterial: ledger?.evaluatorSecretKey,
     paymentTxHash,

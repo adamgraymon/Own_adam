@@ -2,7 +2,8 @@
  * Public-key (Ed25519) signing and verification for TrustGate MCP Trust Dossiers.
  *
  * Covers the final report content (server, checkedAt, trustScore, verdict, findingsCount, answers),
- * the order identifier (orderId), and the payment reference (paymentTxHash).
+ * the order identifier (orderId), the payment reference (paymentTxHash), and
+ * promotional issuance terms when present.
  * Any independent client can verify the signature with the public key (`publicKeyHex`) and detect
  * any alteration to the report, orderId, or paymentTxHash.
  */
@@ -50,6 +51,7 @@ export function computeTrustReportSha256(report) {
     verdict: report?.verdict ?? null,
     findingsCount: report?.findingsCount ?? null,
     answers: report?.answers ?? null,
+    issuance: report?.issuance,
   };
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
 }
@@ -96,11 +98,13 @@ export function prepareTrustReportSeal(report, options) {
   return attachTrustReportSeal(report, options);
 }
 
-export function sealFinalPaidTrustReport(report, options) {
+export function sealFinalTrustReport(report, options) {
   const signer = loadSigner();
   if (!signer) throw new Error("Dedicated TrustGate report signing key is not configured.");
   return attachTrustReportSeal(report, options, signer);
 }
+
+export { sealFinalTrustReport as sealFinalPaidTrustReport };
 
 /**
  * Verifies the signature using the public key obtained from the trusted service.
