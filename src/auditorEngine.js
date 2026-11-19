@@ -728,7 +728,7 @@ export async function auditLargeDatasetStream({
  * Capa 2 Conectada a Cerebro LLM Real (Google Gemini 2.5 Flash-Lite).
  * Recibe únicamente las 30 muestras ciegas del Reservoir Sampling y evalúa coherencia semántica,
  * veracidad de registros y ausencia de relleno sintético.
- * Si no se provee GEMINI_API_KEY, aplica el juez heurístico local como respaldo sin fallo.
+ * Si no se provee clave externa opcional, aplica el juez heurístico local como respaldo sin fallo.
  */
 export async function evaluateBlindSamplesWithGemini({
   sampledRows,

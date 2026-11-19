@@ -1333,3 +1333,71 @@ test("16. Confianza Continua (Las 7 Preguntas), Detector de Deriva entre Version
     0
   );
 });
+
+test("17. Cobertura 23/23: check_mcp_server_trust, review_agent_skill_free, get_trust_dossier_sample y claim_escrow_timeout_refund", () => {
+  const ledger = new AgenticEscrowLedger();
+
+  const trustSampleCall = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 171,
+      method: "tools/call",
+      params: { name: "check_mcp_server_trust", arguments: {} },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(trustSampleCall.ok, true);
+
+  const skillSampleCall = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 172,
+      method: "tools/call",
+      params: { name: "review_agent_skill_free", arguments: {} },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(skillSampleCall.ok, true);
+
+  const dossierSampleCall = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 173,
+      method: "tools/call",
+      params: { name: "get_trust_dossier_sample", arguments: {} },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(dossierSampleCall.ok, true);
+
+  const opened = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 174,
+      method: "tools/call",
+      params: {
+        name: "open_escrow_job",
+        arguments: {
+          buyerId: "alphaquant-agent",
+          storeId: "dataforge-ai",
+          tokenSymbol: "USDC",
+          tokenAmount: 5,
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+  const jobId = opened.job.jobId;
+  ledger.jobs.find((j) => j.jobId === jobId).expiresAtMs = Date.now() - 1;
+
+  const refunded = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 175,
+      method: "tools/call",
+      params: { name: "claim_escrow_timeout_refund", arguments: { jobId } },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(refunded.ok, true);
+});

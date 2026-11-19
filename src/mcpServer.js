@@ -91,7 +91,7 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
 export const MCP_TOOLS = [
   {
     "name": "check_mcp_server_trust",
-    "description": `[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.`,
+    "description": "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
     "annotations": {
       "title": "Check if an MCP server is safe (free)",
       "readOnlyHint": true,
@@ -111,7 +111,7 @@ export const MCP_TOOLS = [
         },
         "paymentTxHash": {
           "type": "string",
-          "description": `Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, ${FULL_DOSSIER_PRICE_USDC} USDC = full 7-question dossier with Ed25519 seal.`
+          "description": "Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, 0.25 USDC = full 7-question dossier with Ed25519 seal."
         },
         "paymentRecoveryToken": {
           "type": "string",
@@ -123,7 +123,7 @@ export const MCP_TOOLS = [
     }
   },
   {
-    "name": FREE_SKILL_REVIEW_TOOL,
+    "name": "review_agent_skill_free",
     "description": "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
     "annotations": {
       "title": "Review an agent skill for free",
@@ -138,7 +138,7 @@ export const MCP_TOOLS = [
       "properties": {
         "files": {
           "type": "array",
-          "description": `Text files with a root SKILL.md. Maximum ${SKILL_REVIEW_MAX_FILE_BYTES} UTF-8 bytes per file and ${SKILL_REVIEW_MAX_TOTAL_BYTES} in total. Omit files to see the free sample JSON.`,
+          "description": "Text files with a root SKILL.md. Maximum 32768 UTF-8 bytes per file and 98304 in total. Omit files to see the free sample JSON.",
           "minItems": 1,
           "maxItems": SKILL_REVIEW_MAX_FILES,
           "items": {
@@ -164,8 +164,8 @@ export const MCP_TOOLS = [
     }
   },
   {
-    "name": FULL_DOSSIER_SAMPLE.mcpTool,
-    "description": `View a fictional example of the full TrustGate dossier and its ${FULL_DOSSIER_PRICE_USDC} USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.`,
+    "name": "get_trust_dossier_sample",
+    "description": "View a fictional example of the full TrustGate dossier and its 0.25 USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.",
     "annotations": {
       "title": "Preview the full TrustGate dossier",
       "readOnlyHint": true,
@@ -488,7 +488,7 @@ export const MCP_TOOLS = [
   },
   {
     "name": "audit_agent_skill_escrow",
-    "description": `[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call ${FREE_SKILL_REVIEW_TOOL} with {}.`,
+    "description": "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call review_agent_skill_free with {}.",
     "annotations": {
       "title": "Audit an agent skill",
       "readOnlyHint": false,

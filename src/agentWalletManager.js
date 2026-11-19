@@ -70,8 +70,7 @@ export function initOrLoadAgentWallets() {
 
   const hasEnvFile = fs.existsSync(ENV_PATH);
   const envVars = hasEnvFile ? parseSimpleEnv(fs.readFileSync(ENV_PATH, "utf8")) : {};
-  const activeKeyHex = process.env.EVALUATOR_SIGNER_HEX || process.env.EVALUATOR_PRIVATE_KEY ||
-    envVars.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_PRIVATE_KEY;
+  const activeKeyHex = process.env.EVALUATOR_SIGNER_HEX || envVars.EVALUATOR_SIGNER_HEX;
   const evaluatorKey = activeKeyHex || generatePrivateKey();
   const evaluatorAccount = privateKeyToAccount(evaluatorKey);
   const rpcUrl = process.env.BASE_SEPOLIA_RPC_URL || envVars.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org";

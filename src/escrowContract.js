@@ -31,7 +31,6 @@ export class AgenticEscrowLedger {
     this.realWallets = initOrLoadAgentWallets();
     this.evaluatorSecretKey =
       process.env.REPORT_SIGNING_SEED_HEX ||
-      process.env.EVALUATOR_PRIVATE_KEY ||
       this.realWallets?.evaluatorPrivateKey ||
       "veritas-8183-deterministic-evaluator-seed";
     this.pendingX402Challenges = new Map();
