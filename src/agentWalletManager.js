@@ -101,11 +101,17 @@ export function initOrLoadAgentWallets() {
     }
   }
 
+  const evaluatorAddress = activeKeyHex
+    ? evaluatorAccount.address
+    : process.env.EVALUATOR_PUBLIC_ADDRESS ||
+      envVars.EVALUATOR_PUBLIC_ADDRESS ||
+      "0x861Ac49F8299C45Cca6bD9F0254080Fd82061Ac4";
+
   return {
     createdNew: !activeKeyHex,
     rpcUrl,
     evaluatorAccount,
-    evaluatorAddress: evaluatorAccount.address,
+    evaluatorAddress,
     treasuryAddress,
     escrowContractAddress,
   };
