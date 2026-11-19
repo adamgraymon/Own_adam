@@ -1046,7 +1046,9 @@ export function getMcpResourceCatalog(uri) {
 /**
  * Procesa cualquier mensaje JSON-RPC 2.0 del protocolo MCP sobre una instancia del Ledger.
  */
-export function handleMcpJsonRpc(rpcRequest, ledger, { baseUrl = PUBLIC_BASE_URL, signingMetadata } = {}) {
+export function handleMcpJsonRpc(rpcRequest, ledger, {
+  baseUrl = PUBLIC_BASE_URL, signingMetadata, onSellerRegistrationWrite,
+} = {}) {
   const { jsonrpc = "2.0", id = null, method, params = {} } = rpcRequest || {};
   const started = performance.now();
   ledger.wallets.protocol_treasury.stats.mcpCallsHandled += 1;
@@ -1541,13 +1543,14 @@ export function handleMcpJsonRpc(rpcRequest, ledger, { baseUrl = PUBLIC_BASE_URL
             startingPriceUsdc: args.startingPriceUsdc,
             sampleDeliverable: args.sampleDeliverable || {},
           });
-          if (output?.ok !== false && ledger.stores?.[normStoreId]) {
+          if (output?.ok === true && ledger.stores?.[normStoreId]) {
             ledger.stores[normStoreId].publicRegistryConsent = {
               accepted: true,
               termsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
               acceptedAt: new Date().toISOString(),
             };
-            ledger.persistSellerRecord?.(normStoreId, ledger.stores[normStoreId]);
+            const registrationWrite = ledger.persistSellerRecord?.(normStoreId, ledger.stores[normStoreId]);
+            onSellerRegistrationWrite?.(registrationWrite);
             output = { ...output, publicRegistryConsent: ledger.stores[normStoreId].publicRegistryConsent };
           }
           break;

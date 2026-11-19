@@ -49,10 +49,12 @@ export async function loadSellerRegistryEntries() {
 
 let writeChain = Promise.resolve();
 
+// Reports a new listing only when Upstash acknowledges creation of its hash field.
 export function saveSellerRegistryEntry(storeId, record, allEntriesMap = null) {
   const backend = activeBackend();
   if (backend === "upstash-redis") {
-    return executeUpstashCommand(["HSET", redisKey(), storeId, JSON.stringify(record)]).catch(() => {});
+    return executeUpstashCommand(["HSET", redisKey(), storeId, JSON.stringify(record)])
+      .then(added => added === 1, () => false);
   }
   if (backend === "local-file" && allEntriesMap) {
     writeChain = writeChain
@@ -64,9 +66,9 @@ export function saveSellerRegistryEntry(storeId, record, allEntriesMap = null) {
         await fs.rename(tmp, file);
       })
       .catch(() => {});
-    return writeChain;
+    return writeChain.then(() => false);
   }
-  return Promise.resolve();
+  return Promise.resolve(false);
 }
 
 export async function enableSellerRegistryPersistence(ledger) {

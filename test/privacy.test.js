@@ -4,6 +4,7 @@ import { spawn } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { once } from "node:events";
 import fs from "node:fs/promises";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,7 +93,7 @@ const ownerRoutes = [
   ["POST", "/api/reset"],
 ];
 
-async function isolatedServer(t, configuredOwnerKey, signingKey) {
+async function isolatedServer(t, configuredOwnerKey, signingKey, redisOrigin) {
   const projectDir = fileURLToPath(new URL("..", import.meta.url));
   const tempRoot = path.resolve(os.tmpdir());
   const dir = await fs.mkdtemp(path.join(tempRoot, "trustgate-privacy-"));
@@ -125,18 +126,41 @@ async function isolatedServer(t, configuredOwnerKey, signingKey) {
   const env = Object.fromEntries(
     Object.entries(process.env).filter(([name]) => /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP)$/i.test(name)),
   );
-  child = spawn(process.execPath, ["--input-type=module", "-e", `
+  const isolatedServerScript = `
     globalThis.fetch = async () => { throw new Error("Outbound network disabled in privacy test"); };
     const { createLabServer } = await import("./src/server.js");
     const server = createLabServer();
     server.listen(0, "127.0.0.1", () => process.send(server.address().port));
-  `], {
+  `;
+  const localCliPreload = `
+    import { Server } from "node:http";
+    const fetch = globalThis.fetch;
+    globalThis.fetch = async (url, options) => {
+      if (new URL(url).origin !== process.env.UPSTASH_REDIS_REST_URL) {
+        throw new Error("Only the test Redis endpoint is allowed");
+      }
+      return fetch(url, options);
+    };
+    const listen = Server.prototype.listen;
+    Server.prototype.listen = function (_port, host, ready) {
+      this.once("listening", () => process.send(this.address().port));
+      return listen.call(this, 0, host, ready);
+    };
+  `;
+  const args = redisOrigin
+    ? ["--import", "data:text/javascript," + encodeURIComponent(localCliPreload), "./src/server.js", "--local"]
+    : ["--input-type=module", "-e", isolatedServerScript];
+  child = spawn(process.execPath, args, {
     cwd: dir,
     env: {
       ...env,
       EVALUATOR_SIGNER_HEX: "0x" + "12".repeat(32),
       ...(configuredOwnerKey === undefined ? {} : { OWNER_DASHBOARD_KEY: configuredOwnerKey }),
       ...(signingKey ? { TRUST_REPORT_SIGNING_KEY_FILE: signingKeyFile } : {}),
+      ...(redisOrigin ? {
+        UPSTASH_REDIS_REST_URL: redisOrigin,
+        UPSTASH_REDIS_REST_TOKEN: "fake-test-token",
+      } : {}),
     },
     stdio: ["ignore", "ignore", "pipe", "ipc"],
   });
@@ -177,6 +201,76 @@ async function requestMcp(origin, method, params, headers) {
   assert.ok(rpc.result, "expected MCP result for " + method);
   return rpc.result;
 }
+
+test("certified funnel counts only confirmed new Upstash registrations", { timeout: 30_000 }, async t => {
+  const acceptedId = "fictional-redis-confirmed-store";
+  const rejectedId = "fictional-redis-rejected-store";
+  const saved = new Map();
+  const writes = [];
+  const redis = createServer(async (req, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const [command, key, storeId, record] = JSON.parse(body);
+    res.setHeader("content-type", "application/json");
+    if (command === "HGETALL") return res.end(JSON.stringify({ result: [] }));
+    if (command !== "HSET" || key !== "veritas:seller-registry:v1") {
+      res.statusCode = 400;
+      return res.end(JSON.stringify({ error: "Unexpected test Redis command" }));
+    }
+    writes.push(storeId);
+    if (storeId === rejectedId) {
+      res.statusCode = 503;
+      return res.end(JSON.stringify({ error: "Simulated unavailable Redis" }));
+    }
+    const added = saved.has(storeId) ? 0 : 1;
+    saved.set(storeId, JSON.parse(record));
+    res.end(JSON.stringify({ result: added }));
+  });
+  redis.listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve, reject) => {
+    redis.close(error => error ? reject(error) : resolve());
+    redis.closeAllConnections();
+  }));
+  await once(redis, "listening");
+
+  const origin = await isolatedServer(t, undefined, undefined, `http://127.0.0.1:${redis.address().port}`);
+  const register = storeId => requestMcp(origin, "tools/call", {
+    name: "register_and_certify_store",
+    arguments: {
+      storeId,
+      storeName: "Fictional Read-only Skill Store",
+      walletAddress: "0x5555555555555555555555555555555555555555",
+      endpointUrl: "https://fictional-shop.example/mcp",
+      vertical: "VERTICAL_5_CERTIFIED_SKILLS",
+      acceptPublicRegistryTerms: true,
+      sampleDeliverable: {
+        skillMarkdown: "---\nname: local-test-skill\ndescription: Fictional read-only skill.\n---\n# Instructions\nSummarize user-provided text.",
+        requiredSections: ["name:", "description:"],
+      },
+    },
+  });
+  async function assertFunnel(submissions, certified) {
+    const response = await fetch(origin + "/api/external-traffic");
+    assert.equal(response.status, 200);
+    const { storeOnboardingFunnel } = await response.json();
+    assert.equal(storeOnboardingFunnel.submissions, submissions);
+    assert.equal(storeOnboardingFunnel.certified, certified);
+  }
+
+  await assertFunnel(0, 0);
+  const registered = await register(acceptedId);
+  assert.equal(registered.structuredContent.certificationStatus, "APPROVED_ERC8004_VERIFIED_PARTNER");
+  assert.equal(saved.get(acceptedId)?.publicRegistryConsent?.accepted, true);
+  await assertFunnel(1, 1);
+
+  await register(acceptedId);
+  await assertFunnel(2, 1);
+
+  await register(rejectedId);
+  assert.deepEqual(writes, [acceptedId, acceptedId, rejectedId]);
+  assert.equal(saved.has(rejectedId), false);
+  await assertFunnel(3, 1);
+});
 
 test("owner state and controls require the owner header and cannot be cached", { timeout: 30_000 }, async t => {
   const origin = await isolatedServer(t, ownerKey);

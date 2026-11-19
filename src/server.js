@@ -919,7 +919,12 @@ export function createLabServer({
         const callerKey = "v_" + crypto.createHash("sha256").update(`${callerIp}|${req.headers["user-agent"] || ""}`).digest("hex").slice(0, 10);
         await prepareAsyncToolCall(rpcPayload, ledger, { callerKey });
 
-        const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger, { baseUrl, signingMetadata });
+        let sellerRegistrationWrite;
+        const rpcResponse = handleMcpJsonRpc(rpcPayload, ledger, {
+          baseUrl,
+          signingMetadata,
+          onSellerRegistrationWrite: write => { sellerRegistrationWrite = write; },
+        });
         if (!rpcResponse) {
           res.writeHead(202);
           return res.end();
@@ -934,7 +939,7 @@ export function createLabServer({
             await storeOnboardingCounters.recordStep("previews", { isTest });
           } else {
             await storeOnboardingCounters.recordStep("submissions", { isTest });
-            if (!isTest && result.ok === true && result.certificationStatus === "CERTIFIED_AND_LISTED_ERC8004") {
+            if (!isTest && result.ok === true && (await sellerRegistrationWrite) === true) {
               await storeOnboardingCounters.recordStep("certified", { isTest: false });
             }
           }
