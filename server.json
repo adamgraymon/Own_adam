@@ -1,16 +1,17 @@
 {
-    "version":  "0.7.0",
-    "name":  "io.github.adamgraymon/trustgate-erc8183-mcp",
-    "remotes":  [
-                    {
-                        "type":  "streamable-http",
-                        "url":  "https://own-adam.onrender.com/mcp"
-                    }
-                ],
-    "repository":  {
-                       "url":  "https://github.com/adamgraymon/Own_adam",
-                       "source":  "github"
-                   },
-    "description":  "VERITAS-8183 M2M Notary, 3-Star Rating Bureau, FinOps Spend Guard \u0026 8-Vertical Escrow on Base.",
-    "$schema":  "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json"
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.adamgraymon/trustgate-erc8183-mcp",
+  "version": "0.8.0",
+  "description": "VERITAS-8183 M2M Notary, Free MCP Trust & Skill Audits, 3-Star Seals & 8-Vertical Escrow on Base.",
+  "websiteUrl": "https://own-adam.onrender.com",
+  "repository": {
+    "url": "https://github.com/adamgraymon/Own_adam",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://own-adam.onrender.com/mcp"
+    }
+  ]
 }
