@@ -90,123 +90,110 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
 
 export const MCP_TOOLS = [
   {
-    "name": "check_mcp_server_trust",
-    "description": "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
-    "annotations": {
-      "title": "Check if an MCP server is safe (free)",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "serverUrl": {
-          "type": "string",
-          "description": "Public https URL of the MCP server to check. Omit to see the free sample preview.",
-          "examples": [
+    name: "check_mcp_server_trust",
+    description: "[Private query, public score] Is this MCP server safe to connect? FREE, no signup: pass any public MCP serverUrl (or call with {} for a free sample preview) to report permissions, risky tools, prompt-injection signs and changes since the last check. Example: serverUrl='https://example.com/mcp'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        serverUrl: {
+          type: "string",
+          description: "Public https URL of the MCP server to check. Omit to see the free sample preview.",
+          examples: [
             "https://own-adam.onrender.com/mcp"
           ]
         },
-        "paymentTxHash": {
-          "type": "string",
-          "description": "Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, 0.25 USDC = full 7-question dossier with Ed25519 seal."
+        paymentTxHash: {
+          type: "string",
+          description: "Optional. Base USDC tx hash: 0.02 USDC = extra check after 5 free/day, 0.25 USDC = full 7-question dossier with Ed25519 seal."
         },
-        "paymentRecoveryToken": {
-          "type": "string",
-          "pattern": "^[a-fA-F0-9]{64}$",
-          "description": "Required with paymentTxHash. Generate a private random 32-byte token as 64 hex characters before the first paid request. Reuse it with the same transaction and server URL to retry or retrieve the report without paying again."
+        paymentRecoveryToken: {
+          type: "string",
+          pattern: "^[a-fA-F0-9]{64}$",
+          description: "Required with paymentTxHash. Generate a private random 32-byte token as 64 hex characters before the first paid request. Reuse it with the same transaction and server URL to retry or retrieve the report without paying again."
         }
       },
-      "dependentRequired": { "paymentTxHash": ["serverUrl", "paymentRecoveryToken"] }
-    }
+      dependentRequired: {
+        paymentTxHash: [
+          "serverUrl",
+          "paymentRecoveryToken"
+        ]
+      }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
-    "name": "review_agent_skill_free",
-    "description": "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
-    "annotations": {
-      "title": "Review an agent skill for free",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "files": {
-          "type": "array",
-          "description": "Text files with a root SKILL.md. Maximum 32768 UTF-8 bytes per file and 98304 in total. Omit files to see the free sample JSON.",
-          "minItems": 1,
-          "maxItems": SKILL_REVIEW_MAX_FILES,
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["path", "content"],
-            "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": SKILL_REVIEW_MAX_PATH_LENGTH,
-                "description": "Relative file path using forward slashes, such as references/notes.md."
+    name: "review_agent_skill_free",
+    description: "Free static review of an agent skill and related text files, with findings by file, line and rule. Call with {} for a fictional JSON example, or send files to review.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        files: {
+          type: "array",
+          description: "Text files with a root SKILL.md. Maximum 32768 UTF-8 bytes per file and 98304 in total. Omit files to see the free sample JSON.",
+          minItems: 1,
+          maxItems: 8,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: [
+              "path",
+              "content"
+            ],
+            properties: {
+              path: {
+                type: "string",
+                minLength: 1,
+                maxLength: 200,
+                description: "Relative file path using forward slashes, such as references/notes.md."
               },
-              "content": {
-                "type": "string",
-                "maxLength": SKILL_REVIEW_MAX_FILE_BYTES,
-                "description": "Full UTF-8 text of this file."
+              content: {
+                type: "string",
+                maxLength: 32768,
+                description: "Full UTF-8 text of this file."
               }
             }
           }
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "get_trust_dossier_sample",
-    "description": "View a fictional example of the full TrustGate dossier and its 0.25 USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.",
-    "annotations": {
-      "title": "Preview the full TrustGate dossier",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
+    name: "get_trust_dossier_sample",
+    description: "View a fictional example of the full TrustGate dossier and its 0.25 USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false
     },
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false }
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "discover_verified_stores",
-    "description": "[Public registry] Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
-    "annotations": {
-      "title": "Find audited sellers",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "minReputation": {
-          "type": "number",
-          "description": "Minimum ERC-8004 reputation score (0 to 100).",
-          "examples": [
+    name: "discover_verified_stores",
+    description: "[Public registry] Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        minReputation: {
+          type: "number",
+          description: "Minimum ERC-8004 reputation score (0 to 100).",
+          examples: [
             85
           ]
         },
-        "marketTier": {
-          "type": "string",
-          "enum": [
+        marketTier: {
+          type: "string",
+          enum: [
             "ALL",
             "INSTITUTIONAL_B2B",
             "RETAIL_INDIE"
           ],
-          "description": "Target market lane to filter stores and packages."
+          description: "Target market lane to filter stores and packages."
         },
-        "vertical": {
-          "type": "string",
-          "enum": [
+        vertical: {
+          type: "string",
+          enum: [
             "ALL",
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
@@ -217,474 +204,396 @@ export const MCP_TOOLS = [
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
           ],
-          "description": "Audit vertical category to filter providers."
+          description: "Audit vertical category to filter providers."
         },
-        "maxPriceUsdc": {
-          "type": "number",
-          "description": "Maximum starting price in USDC."
+        maxPriceUsdc: {
+          type: "number",
+          description: "Maximum starting price in USDC."
         },
-        "firstPartyOnly": {
-          "type": "boolean",
-          "description": "Return only official TrustGate curated packages."
+        firstPartyOnly: {
+          type: "boolean",
+          description: "Return only official TrustGate curated packages."
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "quote_multitoken_escrow",
-    "description": "[Private] Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
-    "annotations": {
-      "title": "Price quote in USDC (read-only)",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "tokenSymbol": {
-          "type": "string",
-          "enum": [
+    name: "quote_multitoken_escrow",
+    description: "[Private] Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        tokenSymbol: {
+          type: "string",
+          enum: [
             "USDC",
             "ETH",
             "SOL",
             "VIRTUAL",
             "USDT"
           ],
-          "description": "Input token symbol to swap and lock."
+          description: "Input token symbol to swap and lock."
         },
-        "tokenAmount": {
-          "type": "number",
-          "description": "Amount of input token to quote.",
-          "examples": [
+        tokenAmount: {
+          type: "number",
+          description: "Amount of input token to quote.",
+          examples: [
             10
           ]
         }
       },
-      "required": [
+      required: [
         "tokenSymbol",
         "tokenAmount"
       ]
-    }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "open_escrow_job",
-    "description": "[Private] Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
-    "annotations": {
-      "title": "Lock a payment in escrow",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "buyerId": {
-          "type": "string",
-          "description": "Buyer agent identifier opening the escrow order."
+    name: "open_escrow_job",
+    description: "[Private] Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        buyerId: {
+          type: "string",
+          description: "Buyer agent identifier opening the escrow order."
         },
-        "storeId": {
-          "type": "string",
-          "description": "Target verified store identifier.",
-          "examples": [
+        storeId: {
+          type: "string",
+          description: "Target verified store identifier.",
+          examples: [
             "dataforge-ai"
           ]
         },
-        "tokenSymbol": {
-          "type": "string",
-          "enum": [
+        tokenSymbol: {
+          type: "string",
+          enum: [
             "USDC",
             "ETH",
             "SOL",
             "VIRTUAL",
             "USDT"
           ],
-          "description": "Payment token symbol."
+          description: "Payment token symbol."
         },
-        "tokenAmount": {
-          "type": "number",
-          "description": "Token amount to fund into escrow."
+        tokenAmount: {
+          type: "number",
+          description: "Token amount to fund into escrow."
         },
-        "minRows": {
-          "type": "number",
-          "description": "Minimum dataset rows required for settlement."
+        minRows: {
+          type: "number",
+          description: "Minimum dataset rows required for settlement."
         }
       },
-      "required": [
+      required: [
         "storeId",
         "tokenSymbol",
         "tokenAmount"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
-    "name": "submit_encrypted_deliverable",
-    "description": "[Private] Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
-    "annotations": {
-      "title": "Submit a delivery for audit",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "jobId": {
-          "type": "string",
-          "description": "Active escrow job identifier (e.g. JOB-1001)."
+    name: "submit_encrypted_deliverable",
+    description: "[Private] Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        jobId: {
+          type: "string",
+          description: "Active escrow job identifier (e.g. JOB-1001)."
         },
-        "rawDatasetJsonString": {
-          "type": "string",
-          "description": "Serialized JSON array of dataset rows to encrypt and audit."
+        rawDatasetJsonString: {
+          type: "string",
+          description: "Serialized JSON array of dataset rows to encrypt and audit."
         }
       },
-      "required": [
+      required: [
         "jobId",
         "rawDatasetJsonString"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
-    "name": "claim_escrow_timeout_refund",
-    "description": "[Private] Buyer: the seller did not deliver before the deadline? Get 100% of your locked USDC back. No evaluator needed. Example: jobId='JOB-1001'.",
-    "annotations": {
-      "title": "Get a refund if the seller missed the deadline",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "jobId": {
-          "type": "string",
-          "description": "Escrow job id returned by open_escrow_job.",
-          "examples": [
+    name: "claim_escrow_timeout_refund",
+    description: "[Private] Buyer: the seller did not deliver before the deadline? Get 100% of your locked USDC back. No evaluator needed. Example: jobId='JOB-1001'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        jobId: {
+          type: "string",
+          description: "Escrow job id returned by open_escrow_job.",
+          examples: [
             "JOB-1001"
           ]
         }
       },
-      "required": [
+      required: [
         "jobId"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_quant_backtest_escrow",
-    "description": "[Private] Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
-    "annotations": {
-      "title": "Audit a trading backtest",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "trades": {
-          "type": "array",
-          "items": {
-            "type": "object"
+    name: "audit_quant_backtest_escrow",
+    description: "[Private] Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        trades: {
+          type: "array",
+          items: {
+            type: "object"
           },
-          "description": "Array of trade objects with entry/exit timestamps, prices, and PnL."
+          description: "Array of trade objects with entry/exit timestamps, prices, and PnL."
         },
-        "minTrades": {
-          "type": "number",
-          "description": "Minimum required trade count for statistical validity."
+        minTrades: {
+          type: "number",
+          description: "Minimum required trade count for statistical validity."
         },
-        "minProfitFactor": {
-          "type": "number",
-          "description": "Minimum gross profit to gross loss ratio."
+        minProfitFactor: {
+          type: "number",
+          description: "Minimum gross profit to gross loss ratio."
         },
-        "maxDrawdownPct": {
-          "type": "number",
-          "description": "Maximum allowed peak-to-trough equity drawdown percentage."
+        maxDrawdownPct: {
+          type: "number",
+          description: "Maximum allowed peak-to-trough equity drawdown percentage."
         }
       },
-      "required": [
+      required: [
         "trades"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_smart_contract_escrow",
-    "description": "[Private] Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
-    "annotations": {
-      "title": "Audit a Solidity contract",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "soliditySourceCode": {
-          "type": "string",
-          "description": "Complete Solidity smart contract source code to compile and scan."
+    name: "audit_smart_contract_escrow",
+    description: "[Private] Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        soliditySourceCode: {
+          type: "string",
+          description: "Complete Solidity smart contract source code to compile and scan."
         },
-        "contractName": {
-          "type": "string",
-          "description": "Target contract name inside the Solidity source.",
-          "examples": [
+        contractName: {
+          type: "string",
+          description: "Target contract name inside the Solidity source.",
+          examples: [
             "VaultToken"
           ]
         },
-        "requiredFunctions": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        requiredFunctions: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Function names that must exist in the compiled ABI."
+          description: "Function names that must exist in the compiled ABI."
         }
       },
-      "required": [
+      required: [
         "soliditySourceCode"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_api_sla_escrow",
-    "description": "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
-    "annotations": {
-      "title": "Audit a paid API response",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "apiResponsePayload": {
-          "type": "object",
-          "description": "Parsed JSON payload returned by the oracle or API."
+    name: "audit_api_sla_escrow",
+    description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiResponsePayload: {
+          type: "object",
+          description: "Parsed JSON payload returned by the oracle or API."
         },
-        "observedLatencyMs": {
-          "type": "number",
-          "description": "Measured round-trip response latency in milliseconds."
+        observedLatencyMs: {
+          type: "number",
+          description: "Measured round-trip response latency in milliseconds."
         },
-        "maxLatencyMs": {
-          "type": "number",
-          "description": "Maximum allowed SLA latency in milliseconds."
+        maxLatencyMs: {
+          type: "number",
+          description: "Maximum allowed SLA latency in milliseconds."
         },
-        "requiredKeys": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        requiredKeys: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Mandatory top-level JSON keys required by the SLA."
+          description: "Mandatory top-level JSON keys required by the SLA."
         }
       },
-      "required": [
+      required: [
         "apiResponsePayload"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_agent_skill_escrow",
-    "description": "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call review_agent_skill_free with {}.",
-    "annotations": {
-      "title": "Audit an agent skill",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "skillMarkdown": {
-          "type": "string",
-          "description": "Full SKILL.md markdown content including YAML frontmatter."
+    name: "audit_agent_skill_escrow",
+    description: "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call review_agent_skill_free with {}.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        skillMarkdown: {
+          type: "string",
+          description: "Full SKILL.md markdown content including YAML frontmatter."
         },
-        "bundledScripts": {
-          "type": "string",
-          "description": "Optional helper script code bundled with the skill."
+        bundledScripts: {
+          type: "string",
+          description: "Optional helper script code bundled with the skill."
         },
-        "requiredSections": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        requiredSections: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Required frontmatter or markdown headings."
+          description: "Required frontmatter or markdown headings."
         },
-        "targetAgentId": {
-          "type": "string",
-          "description": "Optional agent or plugin ID to track version drift history."
+        targetAgentId: {
+          type: "string",
+          description: "Optional agent or plugin ID to track version drift history."
         },
-        "version": {
-          "type": "string",
-          "description": "Semantic version string (e.g. '1.0.0') for behavioral drift comparison."
+        version: {
+          type: "string",
+          description: "Semantic version string (e.g. '1.0.0') for behavioral drift comparison."
         }
       },
-      "required": [
+      required: [
         "skillMarkdown"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_rag_embeddings_escrow",
-    "description": "[Private] Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
-    "annotations": {
-      "title": "Audit RAG chunks and embeddings",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "chunks": {
-          "type": "array",
-          "items": {
-            "type": "object"
+    name: "audit_rag_embeddings_escrow",
+    description: "[Private] Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        chunks: {
+          type: "array",
+          items: {
+            type: "object"
           },
-          "description": "Array of RAG objects containing text and numeric embedding arrays."
+          description: "Array of RAG objects containing text and numeric embedding arrays."
         },
-        "expectedDimension": {
-          "type": "number",
-          "description": "Expected vector length for every embedding."
+        expectedDimension: {
+          type: "number",
+          description: "Expected vector length for every embedding."
         },
-        "minChunks": {
-          "type": "number",
-          "description": "Minimum required number of valid knowledge chunks."
+        minChunks: {
+          type: "number",
+          description: "Minimum required number of valid knowledge chunks."
         }
       },
-      "required": [
+      required: [
         "chunks"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_ai_inference_escrow",
-    "description": "[Private] Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
-    "annotations": {
-      "title": "Audit an LLM output and its bill",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "responseText": {
-          "type": "string",
-          "description": "Generated text output returned by the inference provider."
+    name: "audit_ai_inference_escrow",
+    description: "[Private] Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        responseText: {
+          type: "string",
+          description: "Generated text output returned by the inference provider."
         },
-        "billedOutputTokens": {
-          "type": "number",
-          "description": "Number of output tokens billed by the provider."
+        billedOutputTokens: {
+          type: "number",
+          description: "Number of output tokens billed by the provider."
         },
-        "mustIncludeTerms": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        mustIncludeTerms: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Keywords or phrases that must appear in the output."
+          description: "Keywords or phrases that must appear in the output."
         },
-        "forbiddenTerms": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        forbiddenTerms: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Terms that must not appear in the output."
+          description: "Terms that must not appear in the output."
         },
-        "minUniqueWordRatio": {
-          "type": "number",
-          "description": "Minimum lexical diversity ratio (0 to 1) to detect model downgrade."
+        minUniqueWordRatio: {
+          type: "number",
+          description: "Minimum lexical diversity ratio (0 to 1) to detect model downgrade."
         }
       },
-      "required": [
+      required: [
         "responseText"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "audit_depin_gpu_sla_escrow",
-    "description": "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
-    "annotations": {
-      "title": "Audit a rented GPU",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "benchmarkReport": {
-          "type": "object",
-          "description": "Hardware telemetry object with measuredTflopsFp16, availableVramGb, and gpuTempCelsius."
+    name: "audit_depin_gpu_sla_escrow",
+    description: "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        benchmarkReport: {
+          type: "object",
+          description: "Hardware telemetry object with measuredTflopsFp16, availableVramGb, and gpuTempCelsius."
         },
-        "minTflopsFp16": {
-          "type": "number",
-          "description": "Minimum required FP16 compute throughput in TFLOPS."
+        minTflopsFp16: {
+          type: "number",
+          description: "Minimum required FP16 compute throughput in TFLOPS."
         },
-        "minVramGb": {
-          "type": "number",
-          "description": "Minimum required GPU VRAM in gigabytes."
+        minVramGb: {
+          type: "number",
+          description: "Minimum required GPU VRAM in gigabytes."
         },
-        "minMemoryBandwidthGbs": {
-          "type": "number",
-          "description": "Minimum memory bandwidth in GB/s."
+        minMemoryBandwidthGbs: {
+          type: "number",
+          description: "Minimum memory bandwidth in GB/s."
         },
-        "maxTempCelsius": {
-          "type": "number",
-          "description": "Maximum safe GPU operating temperature in Celsius."
+        maxTempCelsius: {
+          type: "number",
+          description: "Maximum safe GPU operating temperature in Celsius."
         }
       },
-      "required": [
+      required: [
         "benchmarkReport"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "verify_onchain_escrow_status",
-    "description": "[Public] Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
-    "annotations": {
-      "title": "Show on-chain proofs",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "includeReceipts": {
-          "type": "boolean",
-          "description": "Include Sourcify and LEGION Merkle inclusion receipts.",
-          "examples": [
+    name: "verify_onchain_escrow_status",
+    description: "[Public] Proof that this service is real: verified Base contract (Sourcify), signed agent passport and fee terms. Example: call with {}.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        includeReceipts: {
+          type: "boolean",
+          description: "Include Sourcify and LEGION Merkle inclusion receipts.",
+          examples: [
             true
           ]
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "purchase_firstparty_catalog_item",
-    "description": "[Private] Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
-    "annotations": {
-      "title": "Buy an official pack (USDC on Base)",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "itemId": {
-          "type": "string",
-          "enum": [
+    name: "purchase_firstparty_catalog_item",
+    description: "[Private] Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        itemId: {
+          type: "string",
+          enum: [
             "inst-cme-nq-microstructure-v06",
             "inst-solidity-0838-vault-blueprint-v06",
             "inst-enterprise-rag-skill-firewall-v06",
@@ -693,69 +602,63 @@ export const MCP_TOOLS = [
             "retail-safe-mcp-skills-starter-v06",
             "retail-veritas-level3-mastery-tutorial-v07"
           ],
-          "description": "Catalog package identifier to unlock."
+          description: "Catalog package identifier to unlock."
         },
-        "buyerId": {
-          "type": "string",
-          "description": "Buyer agent ID claiming the package."
+        buyerId: {
+          type: "string",
+          description: "Buyer agent ID claiming the package."
         },
-        "paymentToken": {
-          "type": "string",
-          "enum": [
+        paymentToken: {
+          type: "string",
+          enum: [
             "USDC",
             "ETH",
             "SOL",
             "VIRTUAL",
             "USDT"
           ],
-          "description": "Settlement token symbol."
+          description: "Settlement token symbol."
         },
-        "paymentTxHash": {
-          "type": "string",
-          "description": "Base Mainnet USDC transaction hash (0x...) paying the package price."
+        paymentTxHash: {
+          type: "string",
+          description: "Base Mainnet USDC transaction hash (0x...) paying the package price."
         }
       },
-      "required": [
+      required: [
         "itemId"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
-    "name": "register_and_certify_store",
-    "description": "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
-    "annotations": {
-      "title": "List your store",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "acceptPublicRegistryTerms": {
-          "type": "boolean",
-          "description": "Required: true. You accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy)."
+    name: "register_and_certify_store",
+    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Example: storeId='indie-safe-solidity-lab'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        acceptPublicRegistryTerms: {
+          type: "boolean",
+          description: "Required: true. You accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy)."
         },
-        "storeId": {
-          "type": "string",
-          "description": "Unique slug identifier for the store."
+        storeId: {
+          type: "string",
+          description: "Unique slug identifier for the store."
         },
-        "storeName": {
-          "type": "string",
-          "description": "Display name of the AI provider node."
+        storeName: {
+          type: "string",
+          description: "Display name of the AI provider node."
         },
-        "walletAddress": {
-          "type": "string",
-          "description": "Payout wallet address on Base Mainnet."
+        walletAddress: {
+          type: "string",
+          description: "Payout wallet address on Base Mainnet."
         },
-        "endpointUrl": {
-          "type": "string",
-          "description": "MCP or A2A delivery endpoint URL."
+        endpointUrl: {
+          type: "string",
+          description: "MCP or A2A delivery endpoint URL."
         },
-        "vertical": {
-          "type": "string",
-          "enum": [
+        vertical: {
+          type: "string",
+          enum: [
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
             "VERTICAL_3_SOLIDITY_SECURITY",
@@ -765,131 +668,119 @@ export const MCP_TOOLS = [
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
           ],
-          "description": "Primary service vertical to certify."
+          description: "Primary service vertical to certify."
         },
-        "marketTier": {
-          "type": "string",
-          "enum": [
+        marketTier: {
+          type: "string",
+          enum: [
             "INSTITUTIONAL_B2B",
             "RETAIL_INDIE"
           ],
-          "description": "Target market tier."
+          description: "Target market tier."
         },
-        "startingPriceUsdc": {
-          "type": "number",
-          "description": "Base order price in USDC."
+        startingPriceUsdc: {
+          type: "number",
+          description: "Base order price in USDC."
         },
-        "sampleDeliverable": {
-          "type": "object",
-          "description": "Sample deliverable payload to verify deterministically before listing."
+        sampleDeliverable: {
+          type: "object",
+          description: "Sample deliverable payload to verify deterministically before listing."
         }
       },
-      "required": [
+      required: [
         "acceptPublicRegistryTerms",
         "storeId"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
-    "name": "inspect_veritas_8183_seal",
-    "description": "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
-    "annotations": {
-      "title": "Check a seller's trust seal",
-      "readOnlyHint": true,
-      "destructiveHint": false,
-      "idempotentHint": true,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "targetId": {
-          "type": "string",
-          "description": "Store ID, agent ID, or 'ALL' for the full directory.",
-          "examples": [
+    name: "inspect_veritas_8183_seal",
+    description: "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        targetId: {
+          type: "string",
+          description: "Store ID, agent ID, or 'ALL' for the full directory.",
+          examples: [
             "trustgate-official-institutional"
           ]
         },
-        "roleFilter": {
-          "type": "string",
-          "enum": [
+        roleFilter: {
+          type: "string",
+          enum: [
             "ALL",
             "SELLER",
             "BUYER"
           ],
-          "description": "Filter directory output by SELLER or BUYER."
+          description: "Filter directory output by SELLER or BUYER."
         },
-        "proposedTransactionAmountUsdc": {
-          "type": "number",
-          "description": "Optional USDC amount to check against buyer FinOps spend caps."
+        proposedTransactionAmountUsdc: {
+          type: "number",
+          description: "Optional USDC amount to check against buyer FinOps spend caps."
         },
-        "buyerIdForSimulation": {
-          "type": "string",
-          "description": "Buyer agent ID for bilateral pre-check or single-use unlock."
+        buyerIdForSimulation: {
+          type: "string",
+          description: "Buyer agent ID for bilateral pre-check or single-use unlock."
         },
-        "callerSectorOrTrend": {
-          "type": "string",
-          "description": "Single industry sector or keyword to query radar search intelligence."
+        callerSectorOrTrend: {
+          type: "string",
+          description: "Single industry sector or keyword to query radar search intelligence."
         },
-        "forensicUnlockToken": {
-          "type": "string",
-          "description": "Single-use unlock token issued by manage_buyer_finops_spend_passport."
+        forensicUnlockToken: {
+          type: "string",
+          description: "Single-use unlock token issued by manage_buyer_finops_spend_passport."
         },
-        "versionToInspectOrUpdate": {
-          "type": "string",
-          "description": "Agent version string to inspect for behavioral drift (v1 vs v2)."
+        versionToInspectOrUpdate: {
+          type: "string",
+          description: "Agent version string to inspect for behavioral drift (v1 vs v2)."
         },
-        "simulatedUpdateBehavior": {
-          "type": "object",
-          "description": "Optional update payload to evaluate version drift before deployment."
+        simulatedUpdateBehavior: {
+          type: "object",
+          description: "Optional update payload to evaluate version drift before deployment."
         },
-        "preExecutionCallCheck": {
-          "type": "object",
-          "description": "Optional tool call payload to evaluate in the pre-execution firewall."
+        preExecutionCallCheck: {
+          type: "object",
+          description: "Optional tool call payload to evaluate in the pre-execution firewall."
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    "name": "submit_veritas_tier_upgrade_exam",
-    "description": "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
-    "annotations": {
-      "title": "Take the seller star exam",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "storeId": {
-          "type": "string",
-          "description": "Candidate store identifier."
+    name: "submit_veritas_tier_upgrade_exam",
+    description: "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        storeId: {
+          type: "string",
+          description: "Candidate store identifier."
         },
-        "storeName": {
-          "type": "string",
-          "description": "Display name of the candidate node."
+        storeName: {
+          type: "string",
+          description: "Display name of the candidate node."
         },
-        "walletAddress": {
-          "type": "string",
-          "description": "Primary operational wallet address."
+        walletAddress: {
+          type: "string",
+          description: "Primary operational wallet address."
         },
-        "publicReserveWallet": {
-          "type": "string",
-          "description": "Public wallet holding auditable crypto reserves."
+        publicReserveWallet: {
+          type: "string",
+          description: "Public wallet holding auditable crypto reserves."
         },
-        "declaredPublicReserveUsdc": {
-          "type": "number",
-          "description": "Liquid crypto reserve balance in USDC equivalent."
+        declaredPublicReserveUsdc: {
+          type: "number",
+          description: "Liquid crypto reserve balance in USDC equivalent."
         },
-        "declaredMonthlyVolumeUsdc": {
-          "type": "number",
-          "description": "Monthly operational volume in USDC (>=20% reserve ratio required for 3 Stars)."
+        declaredMonthlyVolumeUsdc: {
+          type: "number",
+          description: "Monthly operational volume in USDC (>=20% reserve ratio required for 3 Stars)."
         },
-        "vertical": {
-          "type": "string",
-          "enum": [
+        vertical: {
+          type: "string",
+          enum: [
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
             "VERTICAL_3_SOLIDITY_SECURITY",
@@ -899,100 +790,88 @@ export const MCP_TOOLS = [
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
           ],
-          "description": "Technical vertical for the live exam."
+          description: "Technical vertical for the live exam."
         },
-        "observedLatencyMs": {
-          "type": "number",
-          "description": "Measured P95 response latency in milliseconds."
+        observedLatencyMs: {
+          type: "number",
+          description: "Measured P95 response latency in milliseconds."
         },
-        "sampleDeliverable": {
-          "type": "object",
-          "description": "Deliverable sample to audit during the exam."
+        sampleDeliverable: {
+          type: "object",
+          description: "Deliverable sample to audit during the exam."
         }
       },
-      "required": [
+      required: [
         "storeId"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
-    "name": "manage_buyer_finops_spend_passport",
-    "description": "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
-    "annotations": {
-      "title": "Set your agent's spending limits",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "listMeInBuyerDirectory": {
-          "type": "boolean",
-          "description": "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
+    name: "manage_buyer_finops_spend_passport",
+    description: "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        listMeInBuyerDirectory: {
+          type: "boolean",
+          description: "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
         },
-        "buyerId": {
-          "type": "string",
-          "description": "Unique buyer agent identifier.",
-          "examples": [
+        buyerId: {
+          type: "string",
+          description: "Unique buyer agent identifier.",
+          examples: [
             "alphaquant-agent"
           ]
         },
-        "buyerName": {
-          "type": "string",
-          "description": "Human-readable name of the buyer agent."
+        buyerName: {
+          type: "string",
+          description: "Human-readable name of the buyer agent."
         },
-        "walletAddress": {
-          "type": "string",
-          "description": "Buyer wallet address."
+        walletAddress: {
+          type: "string",
+          description: "Buyer wallet address."
         },
-        "maxSpendPerTxUsdc": {
-          "type": "number",
-          "description": "Maximum authorized spend per transaction in USDC."
+        maxSpendPerTxUsdc: {
+          type: "number",
+          description: "Maximum authorized spend per transaction in USDC."
         },
-        "dailySpendCapUsdc": {
-          "type": "number",
-          "description": "Maximum authorized daily spend cap in USDC."
+        dailySpendCapUsdc: {
+          type: "number",
+          description: "Maximum authorized daily spend cap in USDC."
         },
-        "lookingToBuyVerticals": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        lookingToBuyVerticals: {
+          type: "array",
+          items: {
+            type: "string"
           },
-          "description": "Verticals this buyer is actively purchasing."
+          description: "Verticals this buyer is actively purchasing."
         },
-        "activeRfqDescription": {
-          "type": "string",
-          "description": "Brief procurement requirement description for 2★/3★ sellers."
+        activeRfqDescription: {
+          type: "string",
+          description: "Brief procurement requirement description for 2★/3★ sellers."
         },
-        "proposedPurchaseUsdc": {
-          "type": "number",
-          "description": "Optional purchase amount to test against FinOps caps and VIP discounts."
+        proposedPurchaseUsdc: {
+          type: "number",
+          description: "Optional purchase amount to test against FinOps caps and VIP discounts."
         },
-        "estimatedPromptTokens": {
-          "type": "number",
-          "description": "Token count to benchmark LLM inference cost across providers."
+        estimatedPromptTokens: {
+          type: "number",
+          description: "Token count to benchmark LLM inference cost across providers."
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
-    "name": "notarize_and_witness_a2a_deal",
-    "description": "[Public record, private content] Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
-    "annotations": {
-      "title": "Signed deal receipt / paid micro-service",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": true
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "serviceId": {
-          "type": "string",
-          "enum": [
+    name: "notarize_and_witness_a2a_deal",
+    description: "[Public record, private content] Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        serviceId: {
+          type: "string",
+          enum: [
             "x402-veritas-deal-witness-acta",
             "x402-veritas-level3-star-exam",
             "x402-micro-antirug-token-scan",
@@ -1000,70 +879,64 @@ export const MCP_TOOLS = [
             "x402-veritas-level3-step-by-step-tutorial",
             "x402-radar-single-sector-intel"
           ],
-          "description": "Micro-bazaar service or notary action to execute."
+          description: "Micro-bazaar service or notary action to execute."
         },
-        "buyerId": {
-          "type": "string",
-          "description": "Buyer agent identifier."
+        buyerId: {
+          type: "string",
+          description: "Buyer agent identifier."
         },
-        "sellerStoreId": {
-          "type": "string",
-          "description": "Counterparty seller store identifier."
+        sellerStoreId: {
+          type: "string",
+          description: "Counterparty seller store identifier."
         },
-        "dealAmountUsdc": {
-          "type": "number",
-          "description": "Transaction value in USDC being witnessed."
+        dealAmountUsdc: {
+          type: "number",
+          description: "Transaction value in USDC being witnessed."
         },
-        "deliverableSha256": {
-          "type": "string",
-          "description": "SHA-256 hash of the delivered payload."
+        deliverableSha256: {
+          type: "string",
+          description: "SHA-256 hash of the delivered payload."
         },
-        "clientRatingOutOf5": {
-          "type": "number",
-          "description": "Verified buyer rating (1.0 to 5.0) for the seller."
+        clientRatingOutOf5: {
+          type: "number",
+          description: "Verified buyer rating (1.0 to 5.0) for the seller."
         },
-        "clientReviewComment": {
-          "type": "string",
-          "description": "Short post-delivery review note."
+        clientReviewComment: {
+          type: "string",
+          description: "Short post-delivery review note."
         },
-        "targetSectorOrKeyword": {
-          "type": "string",
-          "description": "Single sector or keyword to unlock when serviceId is 'x402-radar-single-sector-intel'."
+        targetSectorOrKeyword: {
+          type: "string",
+          description: "Single sector or keyword to unlock when serviceId is 'x402-radar-single-sector-intel'."
         },
-        "paymentTxHash": {
-          "type": "string",
-          "description": "Base Mainnet USDC transfer transaction hash (0x...)."
+        paymentTxHash: {
+          type: "string",
+          description: "Base Mainnet USDC transfer transaction hash (0x...)."
         }
       }
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
-    "name": "match_verified_buyers_by_intent",
-    "description": "[Opt-in buyers only] Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
-    "annotations": {
-      "title": "Find buyers for your store",
-      "readOnlyHint": false,
-      "destructiveHint": false,
-      "idempotentHint": false,
-      "openWorldHint": false
-    },
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "sellerStoreId": {
-          "type": "string",
-          "description": "Registered seller store ID holding a 2★ or 3★ VERITAS-8183 Seal.",
-          "examples": [
+    name: "match_verified_buyers_by_intent",
+    description: "[Opt-in buyers only] Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        sellerStoreId: {
+          type: "string",
+          description: "Registered seller store ID holding a 2★ or 3★ VERITAS-8183 Seal.",
+          examples: [
             "quantalpha-institutional-node"
           ]
         },
-        "minAvailableBudgetUsdc": {
-          "type": "number",
-          "description": "Minimum verified remaining daily USDC budget required."
+        minAvailableBudgetUsdc: {
+          type: "number",
+          description: "Minimum verified remaining daily USDC budget required."
         },
-        "targetVertical": {
-          "type": "string",
-          "enum": [
+        targetVertical: {
+          type: "string",
+          enum: [
             "ALL",
             "VERTICAL_1_DATASET",
             "VERTICAL_2_QUANT_ALPHA",
@@ -1074,29 +947,30 @@ export const MCP_TOOLS = [
             "VERTICAL_7_VERIFIED_INFERENCE",
             "VERTICAL_8_DEPIN_GPU"
           ],
-          "description": "Vertical category to match buyer intent."
+          description: "Vertical category to match buyer intent."
         },
-        "minPaymentReliabilityPct": {
-          "type": "number",
-          "description": "Minimum historical payment completion percentage (0 to 100)."
+        minPaymentReliabilityPct: {
+          type: "number",
+          description: "Minimum historical payment completion percentage (0 to 100)."
         },
-        "connectAndCloseDealWithBuyerId": {
-          "type": "string",
-          "description": "Optional buyer ID to send a direct pitch and close a matched order."
+        connectAndCloseDealWithBuyerId: {
+          type: "string",
+          description: "Optional buyer ID to send a direct pitch and close a matched order."
         },
-        "dealAmountUsdc": {
-          "type": "number",
-          "description": "Proposed order amount in USDC when closing a matched deal."
+        dealAmountUsdc: {
+          type: "number",
+          description: "Proposed order amount in USDC when closing a matched deal."
         },
-        "directOfferPitch": {
-          "type": "string",
-          "description": "Short offer message sent to the matched buyer."
+        directOfferPitch: {
+          type: "string",
+          description: "Short offer message sent to the matched buyer."
         }
       },
-      "required": [
+      required: [
         "sellerStoreId"
       ]
-    }
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   }
 ];
 

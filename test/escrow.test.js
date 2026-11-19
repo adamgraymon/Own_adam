@@ -1369,6 +1369,9 @@ test("17. Cobertura 23/23: check_mcp_server_trust, review_agent_skill_free, get_
     ledger
   ).result.structuredContent;
   assert.equal(dossierSampleCall.ok, true);
+  const sampleTools = dossierSampleCall.example.answers.q2_whatToolsDoesItUse.tools.map((t) => t.name);
+  assert.ok(sampleTools.includes("lookup_item"));
+  assert.ok(sampleTools.includes("lookup_supplier"));
 
   const opened = handleMcpJsonRpc(
     {

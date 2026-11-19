@@ -15,7 +15,7 @@ export function getTrustDossierSample() {
         properties: { sku: { type: "string" } },
         required: ["sku"],
       },
-      annotations: { readOnlyHint: true, destructiveHint: false },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
   ];
   const probe = {
@@ -34,7 +34,12 @@ export function getTrustDossierSample() {
   // A second fixture illustrates both version drift and a metadata finding.
   const currentTools = [
     ...tools,
-    { name: "lookup_supplier", annotations: { readOnlyHint: true, destructiveHint: false } },
+    {
+      name: "lookup_supplier",
+      description: "Look up a supplier record in the public inventory.",
+      inputSchema: { type: "object", properties: { supplierId: { type: "string" } } },
+      annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
   ];
   const example = buildMcpTrustReport({
     ledger,

@@ -1,7 +1,9 @@
 {
   "name": "trustgate-erc8183-mcp",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "license": "MIT",
+  "author": "adamgraymon",
+  "homepage": "https://github.com/adamgraymon/Own_adam",
   "repository": {
     "type": "git",
     "url": "https://github.com/adamgraymon/Own_adam.git"
