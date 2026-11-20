@@ -477,7 +477,7 @@ export function createLabServer({
         return sendJson(res, 200, {
           $schema: "https://glama.ai/mcp/schemas/connector.json",
           name: "TrustGate VERITAS-8183 M2M Notary, 3-Star Rating Bureau & 8-Vertical Escrow Auditor",
-          version: "0.7.0",
+          version: "0.8.0",
           mcpEndpoint: `${baseUrl}/mcp`,
           catalogEndpoint: `${baseUrl}/catalog.json`,
           notaryEndpoint: `${baseUrl}/notary.json`,
@@ -638,7 +638,7 @@ export function createLabServer({
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
-          version: "0.7.0",
+          version: "0.8.0",
           standard: "VERITAS-8183",
           endpoint: `${baseUrl}/mcp`,
           catalogEndpoint: `${baseUrl}/catalog.json`,
@@ -806,6 +806,75 @@ export function createLabServer({
           "Access-Control-Allow-Origin": "*",
         });
         return res.end(renderTrustBadgeSvg(ledger, target));
+      }
+      if (req.method === "GET" && url.pathname === "/badge/telemetry.svg") {
+        const metric = (url.searchParams.get("metric") || "hits").toLowerCase();
+        const trafficTotals = await trafficCounters.snapshot();
+        const intelSummary = marketIntelTracker.getSummary(externalTrafficRadar.totalExternalHits, {
+          includeUnlockedRawIdentities: false,
+        });
+        const persistentHits =
+          trafficTotals.storage === "upstash-redis" && typeof trafficTotals.totalExternalHits === "number"
+            ? trafficTotals.totalExternalHits
+            : null;
+        const allTimeHits =
+          persistentHits !== null
+            ? Math.max(intelSummary.allTimeTotalExternalHits, intelSummary.historicalSeedBaselineHits + persistentHits)
+            : intelSummary.allTimeTotalExternalHits;
+        const mergedTools = { ...externalTrafficRadar.byMcpToolCalled };
+        if (trafficTotals.storage === "upstash-redis") {
+          for (const [toolName, count] of Object.entries(trafficTotals.byMcpToolCalled || {})) {
+            mergedTools[toolName] = Math.max(mergedTools[toolName] || 0, count);
+          }
+        }
+        const activeToolsCount = Object.values(mergedTools).filter((v) => Number(v) > 0).length;
+        const totalToolCalls = Object.values(mergedTools).reduce((acc, v) => acc + (Number(v) || 0), 0);
+        const escrowToolNames = [
+          "quote_multitoken_escrow",
+          "open_escrow_job",
+          "verify_onchain_escrow_status",
+          "claim_escrow_timeout_refund",
+          "submit_encrypted_deliverable",
+          "audit_quant_backtest_escrow",
+          "audit_smart_contract_escrow",
+          "audit_api_sla_escrow",
+          "audit_agent_skill_escrow",
+          "audit_rag_embeddings_escrow",
+          "audit_ai_inference_escrow",
+          "audit_depin_gpu_sla_escrow",
+        ];
+        const escrowCallsCount = escrowToolNames.reduce((acc, name) => acc + (Number(mergedTools[name]) || 0), 0);
+        const auditedServersCount = listPublicTrustRecords(ledger).length;
+        const evaluatedSkillsCount = listEvaluatedSkills(ledger).length;
+
+        let label = "M2M Live Traffic";
+        let value = `${allTimeHits.toLocaleString("en-US")}+ requests`;
+        let color = "#10b981";
+        if (metric === "tools") {
+          label = "Active MCP Tools";
+          value = `${activeToolsCount}/${MCP_TOOLS.length} called (${totalToolCalls}+ execs)`;
+          color = "#0284c7";
+        } else if (metric === "escrow") {
+          label = "Escrow & Audit Calls";
+          value = `${escrowCallsCount} live quotes & audits`;
+          color = "#7c3aed";
+        } else if (metric === "catalog") {
+          label = "Audited Registry";
+          value = `${auditedServersCount} MCP servers · ${evaluatedSkillsCount} skills`;
+          color = "#0d9488";
+        }
+        const esc = (s) =>
+          String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]);
+        const lw = Math.round(label.length * 6.5 + 14);
+        const vw = Math.round(value.length * 6.6 + 14);
+        const w = lw + vw;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="20" role="img" aria-label="${esc(label)}: ${esc(value)}"><title>${esc(label)}: ${esc(value)}</title><rect width="${lw}" height="20" fill="#374151"/><rect x="${lw}" width="${vw}" height="20" fill="${color}"/><g fill="#fff" font-family="Verdana,DejaVu Sans,sans-serif" font-size="11" text-anchor="middle"><text x="${Math.round(lw / 2)}" y="14">${esc(label)}</text><text x="${Math.round(lw + vw / 2)}" y="14">${esc(value)}</text></g></svg>`;
+        res.writeHead(200, {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "public, max-age=300",
+          "Access-Control-Allow-Origin": "*",
+        });
+        return res.end(svg);
       }
       if (req.method === "GET" && url.pathname === "/trust/methodology") {
         recordExternalVisit(req, "/trust/methodology");

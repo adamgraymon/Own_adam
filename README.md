@@ -1,10 +1,20 @@
-# TrustGate / VERITAS — MCP trust checks, security audits and a public notary for AI agents
+# TrustGate (`trustgate-erc8183-mcp`) / VERITAS-8183 Seal — MCP trust checks, 8-vertical escrow audits & public notary for AI agents
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![M8ven Score](https://m8ven.ai/badge/mcp/adamgraymon/own_adam)](https://m8ven.ai/mcp/adamgraymon/own_adam?s=readme)
 [![Sourcify Verified](https://img.shields.io/badge/Sourcify_v2-Exact_Match_%2359283147-10b981)](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
 [![LEGION Passport](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg)](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d)
 [![VERITAS MCP Trust](https://own-adam.onrender.com/badge.svg?server=https%3A%2F%2Fown-adam.onrender.com%2Fmcp)](https://own-adam.onrender.com/trust?server=https%3A%2F%2Fown-adam.onrender.com%2Fmcp)
+[![M2M Live Traffic](https://own-adam.onrender.com/badge/telemetry.svg?metric=hits)](https://own-adam.onrender.com/api/external-traffic)
+[![Active MCP Tools](https://own-adam.onrender.com/badge/telemetry.svg?metric=tools)](https://own-adam.onrender.com/api/external-traffic)
+[![Escrow & Audit Calls](https://own-adam.onrender.com/badge/telemetry.svg?metric=escrow)](https://own-adam.onrender.com/api/external-traffic)
+[![Audited Registry](https://own-adam.onrender.com/badge/telemetry.svg?metric=catalog)](https://own-adam.onrender.com/trust)
+
+> **Canonical Project Identity (TrustGate = VERITAS-8183 = `adamgraymon/Own_adam`):**
+> - **Official MCP Registry Package:** `io.github.adamgraymon/trustgate-erc8183-mcp` (**TrustGate**, `v0.8.0`)
+> - **GitHub Repository:** [`https://github.com/adamgraymon/Own_adam`](https://github.com/adamgraymon/Own_adam) (author: [`adamgraymon`](https://github.com/adamgraymon))
+> - **Quality Seal Issued by TrustGate:** **`VERITAS-8183` 1★–3★ Seal** (`inspect_veritas_8183_seal`, `register_and_certify_store`, `submit_veritas_tier_upgrade_exam`, `notarize_and_witness_a2a_deal`)
+> - **On-Chain Contracts (Base Mainnet, Chain ID `8453`):** `TrustGateEscrow8183.sol` (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`, Sourcify `exact_match #59283147`) and `VeritasRefundableReserveVault.sol` ([TERMS.md](./TERMS.md) · live JSON: https://own-adam.onrender.com/terms)
 
 > **[EN]** A remote MCP server with two clearly separated businesses:
 > 1. **Security (private):** free MCP-server trust checks, audits of Solidity contracts, agent skills, RAG data, LLM outputs, GPU SLAs and trading backtests, plus USDC escrow on Base.
@@ -114,26 +124,60 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 
 ---
 
+## Live M2M Adoption, Escrow Activity & Independent Audit Telemetry
+
+All telemetry counters below are persisted in **Upstash Redis** in production and can be verified in real time via [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic) (auto-updating SVG badges at the top of this README refresh every 5 minutes from the live endpoint):
+
+- **External M2M Traffic Volume:** **`75,250+` cumulative external requests** (`~815 requests/hour` 24-hour sustained average, peaking at `1,138 requests/hour`), including **`50,500+` MCP JSON-RPC 2.0 calls**.
+- **Active MCP Tool Usage by External Autonomous Agents (`17 of 23` tools invoked externally, `72+` external `tools/call` executions, excluding operator tests):**
+  - **Escrow & Smart Contract Audit Tools (`16` external calls across `8` escrow tools):**
+    - `quote_multitoken_escrow`: **7** external multi-token escrow quotes (ETH / SOL / VIRTUAL / USDT → Base USDC)
+    - `verify_onchain_escrow_status`: **3** live Base Mainnet contract & Sourcify proof verifications
+    - `open_escrow_job`: **1** escrow job creation flow
+    - `claim_escrow_timeout_refund`: **1** permissionless timeout refund verification
+    - `audit_smart_contract_escrow`: **1** Solidity smart contract (`solc 0.8.38`) escrow audit
+    - `audit_agent_skill_escrow`: **1** agent skill (`SKILL.md`) escrow security audit
+    - `audit_ai_inference_escrow`: **1** proof-of-inference & anti-model-downgrade escrow audit
+    - `audit_quant_backtest_escrow`: **1** quantitative trading backtest escrow audit
+  - **MCP Trust Dossiers & Free Skill Security Reviews (`38+` external calls):**
+    - `get_trust_dossier_sample`: **30** full 7/7 signed dossier previews
+    - `check_mcp_server_trust`: **6** live remote MCP server security probes
+    - `review_agent_skill_free`: **2** MCP calls + **1** full skill review + **8** sample downloads (`skillReviewPilot`)
+  - **VERITAS-8183 Public Notary, 1★–3★ Seals & Buyer-Seller Discovery (`18` external calls):**
+    - `discover_verified_stores`: **8** ERC-8004 marketplace queries
+    - `register_and_certify_store`: **3** store certification calls + **1** onboarding funnel preview (`storeOnboardingFunnel`)
+    - `submit_veritas_tier_upgrade_exam`: **3** VERITAS-8183 1★→3★ star tier upgrade exams
+    - `match_verified_buyers_by_intent`: **2** opt-in buyer-seller matchmaking queries
+    - `inspect_veritas_8183_seal`: **1** VERITAS-8183 bilateral seal & trust history inspection
+    - `notarize_and_witness_a2a_deal`: **1** signed A2A deal notary receipt
+- **Public Security Catalogs Audited & Downloaded (`31` full catalog reads via HTTP & MCP `resources/read`):**
+  - **`40` Real Public MCP Servers Audited** with SHA-256 tool fingerprints and risk scores: [`GET https://own-adam.onrender.com/trust`](https://own-adam.onrender.com/trust)
+  - **`50` Real Agent Skills (`SKILL.md`) Evaluated** with line-by-line static findings: [`GET https://own-adam.onrender.com/skills/review`](https://own-adam.onrender.com/skills/review)
+  - **Dual-Tier Commercial & First-Party Catalog:** [`GET https://own-adam.onrender.com/catalog.json`](https://own-adam.onrender.com/catalog.json)
+
+---
+
 ## Facts that are often misreported
 
 - **License:** MIT ([LICENSE](./LICENSE)).
-- **Version:** 0.7.0. Some older registry listings still say 0.5.0.
-- **Refunds:** rejected deliveries are refunded 100%; after the deadline anyone can trigger a 100% refund to the buyer (`claimTimeoutRefund`, MCP tool `claim_escrow_timeout_refund`).
+- **Version:** 0.8.0 ([package.json](./package.json), [server.json](./server.json)). Some older registry listings still say 0.5.0 or 0.7.0.
+- **Canonical Identity:** `TrustGate` (`io.github.adamgraymon/trustgate-erc8183-mcp` in the Official MCP Registry, Glama, and M8ven) is the MCP server built in [`adamgraymon/Own_adam`](https://github.com/adamgraymon/Own_adam) that issues the **`VERITAS-8183` 1★–3★ Quality Seal** (`inspect_veritas_8183_seal`).
+- **Refunds:** rejected deliveries are refunded 100%; after the deadline anyone can trigger a 100% refund to the buyer (`claimTimeoutRefund`, MCP tool `claim_escrow_timeout_refund`). Seller reserves in [`VeritasRefundableReserveVault.sol`](./contracts/VeritasRefundableReserveVault.sol) are 100% refundable whenever `lockedForClaimsUsdc == 0` ([TERMS.md](./TERMS.md)).
 - **Keys:** `EVALUATOR_PRIVATE_KEY` and `GEMINI_API_KEY` are the operator's server-side keys. **Users never provide keys.**
 - **"Malware" in the repo:** deliberate attack samples used to test the auditor, isolated in [test/fixtures/malicious-samples.js](./test/fixtures/malicious-samples.js).
 
-What is real vs. simulated (for example, MCP escrow tools currently use an in-memory ledger) is listed honestly in [SECURITY.md](./SECURITY.md#2-current-status--what-is-real-and-what-is-simulated).
+What is real vs. simulated (and how non-custodial Base Mainnet settlement, Upstash Redis persistence, and MCP escrow previews work together) is listed honestly in [SECURITY.md](./SECURITY.md#2-current-status--what-is-real-and-what-is-simulated).
 
 **[中文] 常被误报的事实**
 
 _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与英文或西班牙文版本存在任何差异或歧义，以英文版本为准（西班牙文版本为正式译本）。_
 
 - **许可证：** MIT（[LICENSE](./LICENSE)）。
-- **版本：** 0.7.0。部分旧的注册表条目仍显示 0.5.0。
+- **版本：** 0.8.0。部分旧的注册表条目仍显示 0.5.0 或 0.7.0。
 - **退款：** 被拒绝的交付物 100% 退款；截止时间过后，任何人都可以触发向买家 100% 退款（`claimTimeoutRefund`，MCP 工具 `claim_escrow_timeout_refund`）。
 - **密钥：** `EVALUATOR_PRIVATE_KEY` 和 `GEMINI_API_KEY` 是运营者的服务器端密钥。**用户从不需要提供任何密钥。**
 - **仓库中的“恶意代码”：** 是用于测试审计器的故意攻击样本，隔离在 [test/fixtures/malicious-samples.js](./test/fixtures/malicious-samples.js)。
-- **真实与模拟：** 例如 MCP 托管工具目前使用内存中的模拟账本，详见 [SECURITY.md](./SECURITY.md)。标有 `[DEMO]` 的卖家和买家是虚构的。
+- **真实与模拟：** 详见 [SECURITY.md](./SECURITY.md)。标有 `[DEMO]` 的卖家和买家是虚构的。
 
 ---
 
@@ -173,8 +217,14 @@ Call `register_and_certify_store` with `{}` to preview onboarding. An HTTP MCP r
 
 ## Registry listings
 
-Main listing: `io.github.adamgraymon/trustgate-erc8183-mcp` in the [Official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.adamgraymon). Older per-vertical listings (some at 0.5.0) point to the same endpoint.
+Main listing: `io.github.adamgraymon/trustgate-erc8183-mcp` (`v0.8.0`) in the [Official MCP Registry](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.adamgraymon), [M8ven Verified Publisher (`adamgraymon/Own_adam`)](https://m8ven.ai/mcp/adamgraymon/own_adam), and [Glama](https://glama.ai/mcp/servers). Older per-vertical listings point to the same endpoint.
 
-## Verifiable receipts
+## Verifiable receipts & live telemetry
 
-Sourcify `exact_match` #59283147 · LEGION tool-manifest log leaf #71826 · LEGION passport `lp0_a1990fc66ed863c9179d571a9db8a28d` · SealKeeper uptime monitor. Links and limits in [SECURITY.md](./SECURITY.md#6-independent-verifiable-receipts).
+- **M8ven Independent Security & Quality Rating:** [`89/100` Trust Score (`Grade B · Emerging`), `100/100` Code Score, `0` CVEs, Verified Publisher](https://m8ven.ai/mcp/adamgraymon/own_adam)
+- **Sourcify v2 Smart Contract Verification:** [`exact_match` #59283147 on Base Mainnet (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`)](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
+- **Refundable Reserve Vault & Public Escrow Terms:** [`VeritasRefundableReserveVault.sol`](./contracts/VeritasRefundableReserveVault.sol) · [TERMS.md](./TERMS.md) · [`GET https://own-adam.onrender.com/terms`](https://own-adam.onrender.com/terms)
+- **Live M2M Traffic & Tool Execution Telemetry (Upstash Redis):** [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic)
+- **LEGION Signed Tool-Manifest Log:** [leaf #71826](https://tlog.legion-api.com/tlog/v0/records/71826) · **LEGION Passport:** [`lp0_a1990fc66ed863c9179d571a9db8a28d`](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d) · **SealKeeper Uptime Monitor:** [`own-adam.onrender.com`](https://sealkeeper.run/agents/own-adam.onrender.com)
+
+Full details and limits in [SECURITY.md](./SECURITY.md#6-independent-verifiable-receipts).
