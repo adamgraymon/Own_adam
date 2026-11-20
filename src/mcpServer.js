@@ -36,6 +36,7 @@ import {
   FULL_DOSSIER_SAMPLE,
 } from "./freeTrustCheck.js";
 import { runPaidTrustCheck } from "./paidTrustCheck.js";
+import { runGoldMonthlyTrustCheck } from "./goldMonthlyTrustCheck.js";
 import { getTrustDossierSample } from "./trustDossierSample.js";
 import { getTrustReportPublicKeyHex, getTrustReportSigningMetadata, sealFinalTrustReport } from "./reportSignature.js";
 import { consumeLaunchDossierQuota, getLaunchDossierPromo } from "./launchDossierPromo.js";
@@ -50,6 +51,14 @@ import {
 } from "./skillReview.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
 import { getStoreOnboardingPreview } from "./storeOnboardingFunnel.js";
+import {
+  getFirstPartyCatalogPreview,
+  getTierUpgradeExamPreview,
+  getBuyerRadarPreview,
+  getMultiTokenQuotePreview,
+  getEscrowLifecyclePreview,
+  getVerticalAuditSamplePreview,
+} from "./toolSamplePreviews.js";
 
 /**
  * Pre-procesa herramientas que necesitan trabajo asíncrono (red / blockchain) antes del
@@ -59,8 +68,17 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
   if (rpcPayload?.method !== "tools/call" || rpcPayload?.params?.name !== "check_mcp_server_trust") return;
   const args = (rpcPayload.params.arguments = rpcPayload.params.arguments || {});
   delete args._trustCheckResult;
-  const { paymentRecoveryToken } = args;
+  const { goldCredit, paymentRecoveryToken } = args;
+  delete args.goldCredit;
   delete args.paymentRecoveryToken;
+
+  if (goldCredit !== undefined) {
+    args._trustCheckResult = args.paymentTxHash !== undefined || paymentRecoveryToken !== undefined ? {
+      ok: false, tool: "check_mcp_server_trust", httpStatus: 400,
+      status: "GOLD_CREDIT_INVALID_REQUEST", reason: "Send Gold authorization on its own call without payment fields.",
+    } : await runGoldMonthlyTrustCheck({ ledger, serverUrl: args.serverUrl, authorization: goldCredit });
+    return;
+  }
 
   if (args.paymentTxHash) {
     args._trustCheckResult = await runPaidTrustCheck({
@@ -129,7 +147,7 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
 export const MCP_TOOLS = [
   {
     name: "check_mcp_server_trust",
-    description: "[Private query, public score] Check a public MCP URL for risky tools, permissions and changes, or call with {} for the full dossier sample and current offers. During an active launch promotion, send only serverUrl for the signed 7-question dossier at 0 USDC within quota. Example: serverUrl='https://example.com/mcp'.",
+    description: "[Private query, public score] Check a public MCP URL for risky tools, permissions and changes, or call with {} for the full dossier sample and current offers. During an active launch promotion, send only serverUrl for the signed 7-question dossier at 0 USDC within quota. Verified Gold stores can use signed goldCredit authorization for their monthly dossier allowance.",
     inputSchema: {
       type: "object",
       properties: {
@@ -148,14 +166,56 @@ export const MCP_TOOLS = [
           type: "string",
           pattern: "^[a-fA-F0-9]{64}$",
           description: "Required with paymentTxHash. Generate a private random 32-byte token as 64 hex characters before the first paid request. Reuse it with the same transaction and server URL to retry or retrieve the report without paying again."
+        },
+        goldCredit: {
+          type: "object",
+          additionalProperties: false,
+          description: "Verified Gold store only. Sign the authorization message described in get_trust_dossier_sample with the store's wallet. Reuse the request ID to recover the same result.",
+          properties: {
+            action: {
+              type: "string",
+              enum: [
+                "balance",
+                "redeem"
+              ]
+            },
+            storeId: {
+              type: "string",
+              pattern: "^[a-z0-9][a-z0-9_-]{0,95}$"
+            },
+            requestId: {
+              type: "string",
+              format: "uuid"
+            },
+            expiresAt: {
+              type: "string",
+              format: "date-time"
+            },
+            signature: {
+              type: "string",
+              pattern: "^0x[0-9a-fA-F]{130}$",
+              description: "EIP-191 message signature, never a private key."
+            }
+          },
+          required: [
+            "action",
+            "storeId",
+            "requestId",
+            "expiresAt",
+            "signature"
+          ]
         }
       },
       dependentRequired: {
+        goldCredit: [
+          "serverUrl"
+        ],
         paymentTxHash: [
           "serverUrl",
           "paymentRecoveryToken"
         ]
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
@@ -193,23 +253,25 @@ export const MCP_TOOLS = [
             }
           }
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "get_trust_dossier_sample",
-    description: "View a fictional example of the full TrustGate dossier and its 0.25 USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure.",
+    description: "View a fictional example of the full TrustGate dossier and its 0.25 USDC price on Base. The free preview includes all seven report sections and the delivered JSON structure. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {},
-      additionalProperties: false
+      additionalProperties: false,
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "discover_verified_stores",
-    description: "[Public registry] Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'.",
+    description: "[Public registry] Find AI data, code and model sellers that already passed an audit, filtered by trust score, category or max price. Example: minReputation=85, vertical='VERTICAL_3_SOLIDITY_SECURITY'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -252,13 +314,14 @@ export const MCP_TOOLS = [
           type: "boolean",
           description: "Return only official TrustGate curated packages."
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "quote_multitoken_escrow",
-    description: "[Private] Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5.",
+    description: "[Private] Read-only price quote: how much USDC a seller receives, with fees, if the buyer uses SOL, ETH, VIRTUAL, USDT or USDC. Does not move funds. Example: tokenSymbol='SOL', tokenAmount=0.5. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -281,16 +344,13 @@ export const MCP_TOOLS = [
           ]
         }
       },
-      required: [
-        "tokenSymbol",
-        "tokenAmount"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "open_escrow_job",
-    description: "[Private] Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10.",
+    description: "[Private] Buying from another agent? Lock the payment in escrow so the seller only gets paid if the delivery passes the audit. Example: storeId='dataforge-ai', tokenSymbol='USDC', tokenAmount=10. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -325,17 +385,13 @@ export const MCP_TOOLS = [
           description: "Minimum dataset rows required for settlement."
         }
       },
-      required: [
-        "storeId",
-        "tokenSymbol",
-        "tokenAmount"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "submit_encrypted_deliverable",
-    description: "[Private] Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'.",
+    description: "[Private] Seller: submit the dataset you delivered. We check it for malware, prompt injection and row count, then release or refund the escrow. Example: jobId='JOB-1001'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -348,16 +404,13 @@ export const MCP_TOOLS = [
           description: "Serialized JSON array of dataset rows to encrypt and audit."
         }
       },
-      required: [
-        "jobId",
-        "rawDatasetJsonString"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "claim_escrow_timeout_refund",
-    description: "[Private] Buyer: the seller did not deliver before the deadline? Get 100% of your locked USDC back. No evaluator needed. Example: jobId='JOB-1001'.",
+    description: "[Private] Buyer: the seller did not deliver before the deadline? Get 100% of your locked USDC back. No evaluator needed. Example: jobId='JOB-1001'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -369,15 +422,13 @@ export const MCP_TOOLS = [
           ]
         }
       },
-      required: [
-        "jobId"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_quant_backtest_escrow",
-    description: "[Private] Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25.",
+    description: "[Private] Bought a trading strategy? Check its backtest for look-ahead bias, wrong PnL math, low profit factor or hidden drawdown before you pay. Example: minTrades=20, minProfitFactor=1.25. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -401,15 +452,13 @@ export const MCP_TOOLS = [
           description: "Maximum allowed peak-to-trough equity drawdown percentage."
         }
       },
-      required: [
-        "trades"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_smart_contract_escrow",
-    description: "[Private] Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'.",
+    description: "[Private] Is this Solidity contract safe? Compiles it and flags selfdestruct, unsafe delegatecall, tx.origin phishing and missing functions. Example: contractName='VaultToken'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -432,15 +481,13 @@ export const MCP_TOOLS = [
           description: "Function names that must exist in the compiled ABI."
         }
       },
-      required: [
-        "soliditySourceCode"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_api_sla_escrow",
-    description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200.",
+    description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -464,9 +511,7 @@ export const MCP_TOOLS = [
           description: "Mandatory top-level JSON keys required by the SLA."
         }
       },
-      required: [
-        "apiResponsePayload"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
@@ -500,15 +545,13 @@ export const MCP_TOOLS = [
           description: "Semantic version string (e.g. '1.0.0') for behavioral drift comparison."
         }
       },
-      required: [
-        "skillMarkdown"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_rag_embeddings_escrow",
-    description: "[Private] Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5.",
+    description: "[Private] Are these RAG chunks and embeddings usable and clean? Checks dimensions, norms, duplicates and hidden prompt injection. Example: expectedDimension=4, minChunks=5. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -528,15 +571,13 @@ export const MCP_TOOLS = [
           description: "Minimum required number of valid knowledge chunks."
         }
       },
-      required: [
-        "chunks"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_ai_inference_escrow",
-    description: "[Private] Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32.",
+    description: "[Private] Were you overbilled or served a cheaper model? Checks LLM output for token inflation, repetition collapse and missing required terms. Example: billedOutputTokens=32. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -567,15 +608,13 @@ export const MCP_TOOLS = [
           description: "Minimum lexical diversity ratio (0 to 1) to detect model downgrade."
         }
       },
-      required: [
-        "responseText"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_depin_gpu_sla_escrow",
-    description: "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80.",
+    description: "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -600,9 +639,7 @@ export const MCP_TOOLS = [
           description: "Maximum safe GPU operating temperature in Celsius."
         }
       },
-      required: [
-        "benchmarkReport"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
@@ -619,13 +656,14 @@ export const MCP_TOOLS = [
             true
           ]
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "purchase_firstparty_catalog_item",
-    description: "[Private] Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'.",
+    description: "[Private] Buy an official dataset, security scanner or tutorial pack, paid in USDC on Base and delivered decrypted. Example: itemId='retail-anti-rugpull-scanner-pack-v06'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -662,9 +700,7 @@ export const MCP_TOOLS = [
           description: "Base Mainnet USDC transaction hash (0x...) paying the package price."
         }
       },
-      required: [
-        "itemId"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
@@ -731,7 +767,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "inspect_veritas_8183_seal",
-    description: "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'.",
+    description: "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -779,13 +815,14 @@ export const MCP_TOOLS = [
           type: "object",
           description: "Optional tool call payload to evaluate in the pre-execution firewall."
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "submit_veritas_tier_upgrade_exam",
-    description: "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'.",
+    description: "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -836,15 +873,13 @@ export const MCP_TOOLS = [
           description: "Deliverable sample to audit during the exam."
         }
       },
-      required: [
-        "storeId"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "manage_buyer_finops_spend_passport",
-    description: "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'.",
+    description: "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -894,13 +929,14 @@ export const MCP_TOOLS = [
           type: "number",
           description: "Token count to benchmark LLM inference cost across providers."
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "notarize_and_witness_a2a_deal",
-    description: "[Public record, private content] Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'.",
+    description: "[Public record, private content] Get a signed receipt that proves a deal between two agents happened, or buy a small paid service (0.10-1.00 USDC). Example: serviceId='x402-veritas-deal-witness-acta'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -948,13 +984,14 @@ export const MCP_TOOLS = [
           type: "string",
           description: "Base Mainnet USDC transfer transaction hash (0x...)."
         }
-      }
+      },
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
   },
   {
     name: "match_verified_buyers_by_intent",
-    description: "[Opt-in buyers only] Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'.",
+    description: "[Opt-in buyers only] Seller: find buyers who have budget for what you sell in your category; your first 3 matches have no extra fee. Example: sellerStoreId='quantalpha-institutional-node'. Call with {} for a free read-only sample preview.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1001,9 +1038,7 @@ export const MCP_TOOLS = [
           description: "Short offer message sent to the matched buyer."
         }
       },
-      required: [
-        "sellerStoreId"
-      ]
+      required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   }
@@ -1230,6 +1265,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
       let pendingCompletion;
       switch (toolName) {
         case "claim_escrow_timeout_refund":
+          if (!args.jobId) {
+            output = getEscrowLifecyclePreview("claim_escrow_timeout_refund");
+            break;
+          }
           try {
             output = ledger.claimTimeoutRefund({ jobId: args.jobId });
             if (output.ok) {
@@ -1295,6 +1334,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           };
           break;
         case "quote_multitoken_escrow":
+          if (!args.tokenSymbol && args.tokenAmount === undefined) {
+            output = getMultiTokenQuotePreview();
+            break;
+          }
           if (args.buyerId) {
             autoCaptureBuyerLeadInDatabase({
               ledger,
@@ -1310,6 +1353,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "open_escrow_job":
+          if (!args.storeId && !args.tokenSymbol && args.tokenAmount === undefined) {
+            output = getEscrowLifecyclePreview("open_escrow_job");
+            break;
+          }
           output = ledger.createAndFundJob({
             buyerId: args.buyerId,
             storeId: args.storeId,
@@ -1319,12 +1366,20 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "submit_encrypted_deliverable":
+          if (!args.jobId && !args.rawDatasetJsonString) {
+            output = getEscrowLifecyclePreview("submit_encrypted_deliverable");
+            break;
+          }
           output = ledger.submitAndAuditDeliverable({
             jobId: args.jobId,
             rawDatasetJsonString: args.rawDatasetJsonString,
           });
           break;
         case "audit_quant_backtest_escrow":
+          if (!args.trades) {
+            output = getVerticalAuditSamplePreview("audit_quant_backtest_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditQuantStrategyBacktest({
               trades: args.trades,
@@ -1344,6 +1399,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "audit_smart_contract_escrow":
+          if (!args.soliditySourceCode) {
+            output = getVerticalAuditSamplePreview("audit_smart_contract_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditSmartContractDeliverable({
               soliditySourceCode: args.soliditySourceCode,
@@ -1360,6 +1419,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "audit_api_sla_escrow":
+          if (!args.apiResponsePayload) {
+            output = getVerticalAuditSamplePreview("audit_api_sla_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditApiOracleSla({
               apiResponsePayload: args.apiResponsePayload,
@@ -1382,6 +1445,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           output = reviewAgentSkillFree(params.arguments);
           break;
         case "audit_agent_skill_escrow":
+          if (!args.skillMarkdown) {
+            output = getVerticalAuditSamplePreview("audit_agent_skill_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditAgentSkillDeliverable({
               skillMarkdown: args.skillMarkdown,
@@ -1398,6 +1465,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "audit_rag_embeddings_escrow":
+          if (!args.chunks) {
+            output = getVerticalAuditSamplePreview("audit_rag_embeddings_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditRagEmbeddingsDeliverable({
               chunks: args.chunks,
@@ -1414,6 +1485,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "audit_ai_inference_escrow":
+          if (!args.responseText) {
+            output = getVerticalAuditSamplePreview("audit_ai_inference_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditAiInferenceDeliverable({
               responseText: args.responseText,
@@ -1432,6 +1507,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "audit_depin_gpu_sla_escrow":
+          if (!args.benchmarkReport) {
+            output = getVerticalAuditSamplePreview("audit_depin_gpu_sla_escrow");
+            break;
+          }
           output = attachVeritasForensicGateAndAutoCaptureBuyer({
             auditResult: auditDepinGpuComputeSla({
               benchmarkReport: args.benchmarkReport,
@@ -1518,6 +1597,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           };
           break;
         case "purchase_firstparty_catalog_item":
+          if (!args.itemId) {
+            output = getFirstPartyCatalogPreview();
+            break;
+          }
           output = ledger.purchaseFirstPartyCatalogItem({
             itemId: args.itemId,
             buyerId: args.buyerId || "alphaquant-agent",
@@ -1637,6 +1720,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "submit_veritas_tier_upgrade_exam":
+          if (!args.storeId && !args.sampleDeliverable) {
+            output = getTierUpgradeExamPreview();
+            break;
+          }
           output = ledger.submitVeritasTierExam({
             storeId: args.storeId,
             storeName: args.storeName,
@@ -1679,6 +1766,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "match_verified_buyers_by_intent":
+          if (!args.sellerStoreId) {
+            output = getBuyerRadarPreview();
+            break;
+          }
           output = ledger.matchVerifiedBuyers({
             sellerStoreId: args.sellerStoreId,
             minAvailableBudgetUsdc: args.minAvailableBudgetUsdc ?? 0,

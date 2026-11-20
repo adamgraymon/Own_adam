@@ -9,7 +9,7 @@ import {
   encryptFileStreamToDisk,
   auditLargeDatasetStream,
 } from "../src/auditorEngine.js";
-import { handleMcpJsonRpc } from "../src/mcpServer.js";
+import { handleMcpJsonRpc, MCP_TOOLS } from "../src/mcpServer.js";
 import { executeAutonomousM2MCycle } from "../src/m2mSwarmEngine.js";
 import { TROJAN_SKILL_SCRIPT_EVIL_IO, TROJAN_SKILL_SCRIPT_STEAL_IO } from "./fixtures/malicious-samples.js"; // muestras maliciosas SOLO como datos de prueba
 
@@ -1453,4 +1453,20 @@ test("17. Cobertura 23/23: check_mcp_server_trust, review_agent_skill_free, get_
   assert.equal(reserveVaultAudit.approved, true);
   assert.equal(onboardingPreview.refundableReserveVaultContract, "contracts/VeritasRefundableReserveVault.sol");
   assert.equal(onboardingPreview.escrowAndReserveTermsUrl, "https://own-adam.onrender.com/terms");
+
+  assert.equal(MCP_TOOLS.length, 23);
+  for (const tool of MCP_TOOLS) {
+    assert.deepEqual(tool.inputSchema.required, [], `${tool.name} should accept {} without required fields`);
+    const res = handleMcpJsonRpc(
+      {
+        jsonrpc: "2.0",
+        id: 1800,
+        method: "tools/call",
+        params: { name: tool.name, arguments: {} },
+      },
+      ledger
+    );
+    assert.equal(res.result.isError, false, `${tool.name} called with {} should succeed`);
+    assert.notEqual(res.result.structuredContent.ok, false, `${tool.name} called with {} should return ok !== false`);
+  }
 });
