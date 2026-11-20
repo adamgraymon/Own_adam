@@ -4,6 +4,7 @@ import http from "node:http";
 import { once } from "node:events";
 import { createSkillPilotCounters } from "../src/skillPilotCounters.js";
 import { createCatalogReadCounters } from "../src/catalogReadCounters.js";
+import { createTrafficCounters } from "../src/trafficCounters.js";
 
 const fields = ["httpSamples", "mcpSamples", "skillReviews", "tests"];
 const pilotKey = "veritas:skill-review-pilot:v1";
@@ -152,5 +153,69 @@ test("pilot and catalog counters store separate fixed aggregates in Redis and su
   for (const key of hashes.keys()) {
     assert.equal(requests.filter(({ command }) => command[0] === "HINCRBY" && command[1] === key).length, 7);
   }
+});
+
+test("traffic counters coalesce high-volume visit bursts into a single atomic Redis EVAL batch", async t => {
+  const trafficKey = "veritas:traffic-totals:v1";
+  const hash = new Map();
+  const evalCalls = [];
+  const hmgetCalls = [];
+  const redis = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const command = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    const [operation, ...rest] = command;
+    let result;
+    if (operation === "EVAL") {
+      const [_script, numKeys, key, ...args] = rest;
+      assert.equal(numKeys, 1);
+      assert.equal(key, trafficKey);
+      evalCalls.push(args);
+      for (let i = 0; i < args.length; i += 2) {
+        const field = args[i];
+        const delta = Number(args[i + 1]);
+        hash.set(field, (hash.get(field) || 0) + delta);
+      }
+      result = 1;
+    } else if (operation === "HMGET") {
+      const [key, ...fieldsToGet] = rest;
+      assert.equal(key, trafficKey);
+      hmgetCalls.push(fieldsToGet.length);
+      result = fieldsToGet.map(f => (hash.has(f) ? String(hash.get(f)) : null));
+    } else {
+      res.writeHead(400);
+      return res.end();
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ result }));
+  });
+  redis.listen(0, "127.0.0.1");
+  t.after(() => new Promise((resolve, reject) => redis.close(err => (err ? reject(err) : resolve()))));
+  await once(redis, "listening");
+  process.env.UPSTASH_REDIS_REST_URL = "http://127.0.0.1:" + redis.address().port;
+  process.env.UPSTASH_REDIS_REST_TOKEN = fakeToken;
+  t.after(() => {
+    delete process.env.UPSTASH_REDIS_REST_URL;
+    delete process.env.UPSTASH_REDIS_REST_TOKEN;
+  });
+
+  const traffic = createTrafficCounters({ useUpstash: true, flushIntervalMs: 60_000 });
+  for (let i = 0; i < 250; i += 1) {
+    await traffic.recordVisit({ isMcp: true });
+  }
+  await traffic.recordVisit({ isMcp: true, mcpTool: "get_trust_dossier_sample" });
+  await traffic.recordVisit({ isTest: true });
+
+  assert.equal(evalCalls.length, 0, "no Redis writes before the batch flush window fires");
+
+  const snap = await traffic.snapshot();
+  assert.equal(evalCalls.length, 1, "all 252 visits flushed in a single atomic EVAL command");
+  assert.equal(hmgetCalls.length, 1);
+  assert.equal(snap.totalExternalHits, 251);
+  assert.equal(snap.mcpRequests, 251);
+  assert.equal(snap.mcpToolsCall, 1);
+  assert.equal(snap.tests, 1);
+  assert.deepEqual(snap.byMcpToolCalled, { get_trust_dossier_sample: 1 });
+  assert.equal(snap.writeErrors, 0);
 });
 

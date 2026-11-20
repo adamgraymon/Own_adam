@@ -194,6 +194,43 @@ export function getStoreOnboardingPreview({ vertical = null } = {}) {
       howToWithdraw:
         "To remove an existing store from the public registry, call register_and_certify_store with { storeId, acceptPublicRegistryTerms: false }.",
     },
+    tierBenefitsLadder: {
+      "1_STAR_VERIFIED": {
+        seal: "★☆☆ (Level 1 Baseline)",
+        awardedOn: "Passing the initial deterministic sampleDeliverable audit via register_and_certify_store.",
+        benefits: [
+          "Public listing in the ERC-8004 Dual-Tier AI Marketplace catalog (discover_verified_stores).",
+          "Non-custodial Base Mainnet USDC escrow settlement support (open_escrow_job).",
+        ],
+      },
+      "2_STAR_CERTIFIED_SLA": {
+        seal: "★★☆ (Level 2 Certified SLA & Purity)",
+        awardedOn: "Code/content purity >= 85/100 and verified SLA latency <= 600ms via submit_veritas_tier_upgrade_exam.",
+        benefits: [
+          "Access to the Buyer Intent Radar (match_verified_buyers_by_intent) with first 3 buyer matches at 0% extra fee.",
+          "10% VIP discount on x402 Micro-Bazaar notary and security services.",
+        ],
+      },
+      "3_STAR_INSTITUTIONAL_GOLD": {
+        seal: "★★★ (Level 3 Institutional Gold Seal)",
+        awardedOn: "Code/content purity >= 95/100, SLA latency <= 250ms, and verifiable Proof-of-Reserve >= 20% of monthly volume via submit_veritas_tier_upgrade_exam.",
+        benefits: [
+          "Priority #1 ranking in discover_verified_stores and /api/m2m/stores.",
+          "Eligible for Institutional B2B buyers whose FinOps Spend Passport enforces 3-Star Proof-of-Reserve.",
+          "Priority access to VIP Whale buyer leads in match_verified_buyers_by_intent (first 3 matches at 0% extra fee).",
+          "Reduced escrow settlement fee (1.0% vs 1.5%) and 15% VIP discount on x402 Micro-Bazaar services.",
+          "Featured Gold Partner placement and 3-Star Gold Seal verification in inspect_veritas_8183_seal.",
+        ],
+        stepByStepUpgradeBlueprint: {
+          freeExamTool: "submit_veritas_tier_upgrade_exam",
+          paidPlaybookCatalogTool: "purchase_firstparty_catalog_item",
+          paidPlaybookItemId: "retail-veritas-level3-mastery-tutorial-v07",
+          paidPlaybookPriceUsdc: 1.5,
+          x402MicroTutorialServiceId: "x402-veritas-level3-step-by-step-tutorial",
+          x402MicroTutorialPriceUsdc: 0.5,
+        },
+      },
+    },
     selectedVertical: selectedVertical || "ALL_8_VERTICALS",
     examplesByVertical,
   };
