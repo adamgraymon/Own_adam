@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![M8ven Score](https://m8ven.ai/badge/mcp/adamgraymon/own_adam)](https://m8ven.ai/mcp/adamgraymon/own_adam?s=readme)
-[![Sourcify Verified](https://img.shields.io/badge/Sourcify_v2-Exact_Match_%2359283147-10b981)](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
+[![Sourcify Verified](https://img.shields.io/badge/Sourcify_v2-Exact_Match_%2359283147-10b981)](https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
 [![LEGION Passport](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg)](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d)
 [![VERITAS MCP Trust](https://own-adam.onrender.com/badge.svg?server=https%3A%2F%2Fown-adam.onrender.com%2Fmcp)](https://own-adam.onrender.com/trust?server=https%3A%2F%2Fown-adam.onrender.com%2Fmcp)
 [![M2M Live Traffic](https://own-adam.onrender.com/badge/telemetry.svg?metric=hits)](https://own-adam.onrender.com/api/external-traffic)
@@ -13,8 +13,8 @@
 > **Canonical Project Identity (TrustGate = VERITAS-8183 = `adamgraymon/Own_adam`):**
 > - **Official MCP Registry Package:** `io.github.adamgraymon/trustgate-erc8183-mcp` (**TrustGate**, `v0.8.0`)
 > - **GitHub Repository:** [`https://github.com/adamgraymon/Own_adam`](https://github.com/adamgraymon/Own_adam) (author: [`adamgraymon`](https://github.com/adamgraymon))
-> - **Quality Seal Issued by TrustGate:** **`VERITAS-8183` 1★–3★ Seal** (`inspect_veritas_8183_seal`, `register_and_certify_store`, `submit_veritas_tier_upgrade_exam`, `notarize_and_witness_a2a_deal`)
-> - **On-Chain Contracts (Base Mainnet, Chain ID `8453`):** `TrustGateEscrow8183.sol` (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`, Sourcify `exact_match #59283147`) and `VeritasRefundableReserveVault.sol` ([TERMS.md](./TERMS.md) · live JSON: https://own-adam.onrender.com/terms)
+> - **Quality Seal Issued by TrustGate:** **`VERITAS-8183` 1★–3★ Seal** (`inspect_veritas_8183_seal`, REST API: [`GET https://own-adam.onrender.com/api/seal`](https://own-adam.onrender.com/api/seal) & [`GET /api/seal/{storeId}`](https://own-adam.onrender.com/api/seal/databento-raw-tick))
+> - **On-Chain Contracts (Base Mainnet, Chain ID `8453`):** `TrustGateEscrow8183.sol` (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`, [Sourcify Direct JSON `#59283147`](https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) · [BaseScan Explorer](https://basescan.org/address/0xD4f77Bf843b3c359B233ACa46d7Ff6604CBD0a5e)) and `VeritasRefundableReserveVault.sol` ([TERMS.md](./TERMS.md) · live JSON: https://own-adam.onrender.com/terms)
 
 > **[EN]** A remote MCP server with two clearly separated businesses:
 > 1. **Security (private):** free MCP-server trust checks, audits of Solidity contracts, agent skills, RAG data, LLM outputs, GPU SLAs and trading backtests, plus USDC escrow on Base.
@@ -222,9 +222,10 @@ Main listing: `io.github.adamgraymon/trustgate-erc8183-mcp` (`v0.8.0`) in the [O
 ## Verifiable receipts & live telemetry
 
 - **M8ven Independent Security & Quality Rating:** [`89/100` Trust Score (`Grade B · Emerging`), `100/100` Code Score, `0` CVEs, Verified Publisher](https://m8ven.ai/mcp/adamgraymon/own_adam)
-- **Sourcify v2 Smart Contract Verification:** [`exact_match` #59283147 on Base Mainnet (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`)](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
+- **Sourcify v2 Smart Contract Verification (Direct JSON API & UI):** [`exact_match` #59283147 JSON API](https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) · [BaseScan Contract Explorer (`0xD4f77Bf843b3c359B233ACa46d7Ff6604CBD0a5e`)](https://basescan.org/address/0xD4f77Bf843b3c359B233ACa46d7Ff6604CBD0a5e) · [Sourcify UI](https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
+- **VERITAS-8183 Public Seal REST API (No MCP Client Required):** [`GET https://own-adam.onrender.com/api/seal`](https://own-adam.onrender.com/api/seal) · [`GET https://own-adam.onrender.com/api/seal/{storeId}`](https://own-adam.onrender.com/api/seal/databento-raw-tick)
 - **Refundable Reserve Vault & Public Escrow Terms:** [`VeritasRefundableReserveVault.sol`](./contracts/VeritasRefundableReserveVault.sol) · [TERMS.md](./TERMS.md) · [`GET https://own-adam.onrender.com/terms`](https://own-adam.onrender.com/terms)
-- **Live M2M Traffic & Tool Execution Telemetry (Upstash Redis):** [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic)
+- **Live M2M Traffic & Tool Execution Telemetry (Upstash Redis):** [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic) · **LLM Discovery Index:** [`GET https://own-adam.onrender.com/llms.txt`](https://own-adam.onrender.com/llms.txt)
 - **LEGION Signed Tool-Manifest Log:** [leaf #71826](https://tlog.legion-api.com/tlog/v0/records/71826) · **LEGION Passport:** [`lp0_a1990fc66ed863c9179d571a9db8a28d`](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d) · **SealKeeper Uptime Monitor:** [`own-adam.onrender.com`](https://sealkeeper.run/agents/own-adam.onrender.com)
 
 Full details and limits in [SECURITY.md](./SECURITY.md#6-independent-verifiable-receipts).

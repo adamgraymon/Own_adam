@@ -67,7 +67,8 @@ Clients connect over HTTPS (`https://own-adam.onrender.com/mcp`). The server run
 | Receipt / Live Telemetry Source | Verified Value & Link |
 | :--- | :--- |
 | **M8ven Independent Security & Quality Rating** | **`89/100` Trust Score (`Grade B · Emerging`), `100/100` Code Score, `0` CVEs, `0` Warnings, Verified Publisher** — https://m8ven.ai/mcp/adamgraymon/own_adam |
-| **Sourcify v2 Smart Contract Verification** | **`exact_match` (#59283147) on Base Mainnet** — https://sourcify.dev/#/lookup/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e |
+| **Sourcify v2 Smart Contract Verification & BaseScan** | **`exact_match` (#59283147) on Base Mainnet** — Direct JSON API: https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e · BaseScan: https://basescan.org/address/0xD4f77Bf843b3c359B233ACa46d7Ff6604CBD0a5e |
+| **VERITAS-8183 Public Seal REST API** | **No MCP client required:** https://own-adam.onrender.com/api/seal · by store ID: https://own-adam.onrender.com/api/seal/databento-raw-tick |
 | **Refundable Seller Reserve Vault & Escrow Terms** | [`VeritasRefundableReserveVault.sol`](./contracts/VeritasRefundableReserveVault.sol) (`solc 0.8.38`) & [TERMS.md](./TERMS.md) — https://own-adam.onrender.com/terms |
 | **Live External M2M Traffic & Tool Executions (Upstash Redis)** | **`75,250+` external M2M requests (`~815/hr` 24h avg), `50,500+` MCP JSON-RPC calls, `17/23` MCP tools called externally (`72+` external `tools/call` executions including `16` escrow & contract audit calls: `7` `quote_multitoken_escrow`, `3` `verify_onchain_escrow_status`, `open_escrow_job`, `claim_escrow_timeout_refund`, `audit_smart_contract_escrow`, etc.)** — https://own-adam.onrender.com/api/external-traffic |
 | **Public Audited MCP Servers & Agent Skills Catalogs** | **`40` real public MCP servers audited** (`https://own-adam.onrender.com/trust`) · **`50` real agent skills evaluated** (`https://own-adam.onrender.com/skills/review`) |
