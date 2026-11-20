@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { AgenticEscrowLedger } from "../src/escrowContract.js";
 import { generateScenarioDataset } from "../src/scenarios.js";
 import {
@@ -1421,4 +1422,35 @@ test("17. Cobertura 23/23: check_mcp_server_trust, review_agent_skill_free, get_
     ledger
   ).result.structuredContent;
   assert.equal(refunded.ok, true);
+
+  const reserveVaultSource = fs.readFileSync(
+    new URL("../contracts/VeritasRefundableReserveVault.sol", import.meta.url),
+    "utf8"
+  );
+  const reserveVaultAudit = handleMcpJsonRpc(
+    {
+      jsonrpc: "2.0",
+      id: 176,
+      method: "tools/call",
+      params: {
+        name: "audit_smart_contract_escrow",
+        arguments: {
+          soliditySourceCode: reserveVaultSource,
+          contractName: "VeritasRefundableReserveVault",
+          requiredFunctions: [
+            "depositReserve",
+            "withdrawReserve",
+            "lockReserveForClaim",
+            "resolveReserveClaim",
+            "unlockExpiredClaim",
+            "getSellerReserveStatus",
+          ],
+        },
+      },
+    },
+    ledger
+  ).result.structuredContent;
+  assert.equal(reserveVaultAudit.approved, true);
+  assert.equal(onboardingPreview.refundableReserveVaultContract, "contracts/VeritasRefundableReserveVault.sol");
+  assert.equal(onboardingPreview.escrowAndReserveTermsUrl, "https://own-adam.onrender.com/terms");
 });

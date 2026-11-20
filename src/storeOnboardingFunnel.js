@@ -178,6 +178,8 @@ export function getStoreOnboardingPreview({ vertical = null } = {}) {
     publicRegistryTermsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
     publicRegistryTerms: PUBLIC_REGISTRY_TERMS,
     privacyPolicy: "https://own-adam.onrender.com/privacy",
+    escrowAndReserveTermsUrl: "https://own-adam.onrender.com/terms",
+    refundableReserveVaultContract: "contracts/VeritasRefundableReserveVault.sol",
     howToSubmit: {
       requiredFieldsForSubmission: ["storeId", "acceptPublicRegistryTerms"],
       recommendedFields: [

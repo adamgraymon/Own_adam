@@ -41,7 +41,12 @@ import {
   X402_TRUST_DOSSIER_PATH,
   X402_BAZAAR_DISCOVERY_PATH,
 } from "./x402TrustCheckout.js";
-import { DATA_POLICY, renderPrivacyMarkdown } from "./dataPolicy.js";
+import {
+  DATA_POLICY,
+  ESCROW_AND_RESERVE_TERMS,
+  renderPrivacyMarkdown,
+  renderTermsMarkdown,
+} from "./dataPolicy.js";
 import { executeAutonomousM2MCycle } from "./m2mSwarmEngine.js";
 import {
   CURATED_FIRST_PARTY_CATALOG,
@@ -780,6 +785,13 @@ export function createLabServer({
       if (req.method === "GET" && url.pathname === "/privacy.md") {
         res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Access-Control-Allow-Origin": "*" });
         return res.end(renderPrivacyMarkdown());
+      }
+      if (req.method === "GET" && (url.pathname === "/terms" || url.pathname === "/.well-known/terms.json")) {
+        return sendJson(res, 200, ESCROW_AND_RESERVE_TERMS, { "Access-Control-Allow-Origin": "*" });
+      }
+      if (req.method === "GET" && url.pathname === "/terms.md") {
+        res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+        return res.end(renderTermsMarkdown());
       }
 
       // =====================================================================
