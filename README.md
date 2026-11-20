@@ -50,6 +50,12 @@ The promotional quota is five requests per client and 100 total per UTC day. Ups
 
 For a local rehearsal with a shared Upstash instance, set `SELLER_REGISTRY_REDIS_KEY` and `TRUST_DOSSIER_PROMO_REDIS_KEY` to separate test namespaces before starting the server. Call `register_and_certify_store` with `{}` for a sample and the registry terms. An HTTP MCP submission confirms the public listing after Upstash acknowledges the write. Use fictional data in the isolated registry.
 
+### Gold monthly allowance
+
+For the monthly Gold allowance, call `check_mcp_server_trust` with the approved endpoint as `serverUrl` and `goldCredit` as shown in the dossier sample. The current eligible service is the signed 7/7 dossier. Each verified Gold shop has five uses per UTC calendar month. Use the registered wallet to sign the EIP-191 authorization shown in the sample. This is a message signature. Use a fresh authorization expiry within ten minutes and keep the same request UUID when repeating a completed request. The `balance` action returns the remaining uses and reset time. The `redeem` action returns the saved report and balance. Upstash commits the report and deduction together. Retries work across restarts and UTC months while the wallet, endpoint and Gold grant remain valid.
+
+An operator records Gold eligibility by setting the `grant` field on `veritas:gold-monthly-credits:v1:<storeId>` in Upstash after independently verifying the shop. The JSON grant has `starLevel: 3`, `storeId`, `walletAddress`, `serverUrl`, `verifiedAt` and `expiresAt` (ISO timestamps). The wallet and endpoint must match an active consenting seller in the persistent registry. Remove the grant to revoke eligibility. The simulated tier exam does not grant credits. Use separate `GOLD_MONTHLY_CREDITS_REDIS_PREFIX` and `SELLER_REGISTRY_REDIS_KEY` test namespaces for local rehearsals. Papers and Blueprints use their standard purchase flow.
+
 ### Local paid-order recovery
 
 Run `npm run start:local` from the project root. The server loads the existing `.env` and binds to `127.0.0.1`. With `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, local paid orders use the Redis prefix `veritas:trust-orders:local:v1` and local history uses a separate key. Without Redis credentials, orders use the Git-ignored `data/trust-orders/` directory.

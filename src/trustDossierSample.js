@@ -2,9 +2,12 @@ import {
   buildMcpTrustReport,
   EXTRA_CHECK_PRICE_USDC,
   FULL_DOSSIER_PRICE_USDC,
+  PUBLIC_BASE_URL,
 } from "./freeTrustCheck.js";
 import { getTrustReportPublicKeyHex, prepareTrustReportSeal } from "./reportSignature.js";
 import { getLaunchDossierPromo } from "./launchDossierPromo.js";
+import { GOLD_MONTHLY_LIMIT } from "./goldMonthlyCreditStore.js";
+import { buildGoldCreditAuthorizationMessage } from "./goldSellerEligibility.js";
 
 export function getTrustDossierSample() {
   const ledger = { evaluatorSecretKey: "synthetic-trust-dossier-sample" };
@@ -78,6 +81,12 @@ export function getTrustDossierSample() {
       params: { name: "check_mcp_server_trust", arguments: { serverUrl: "https://inventory.example/mcp" } },
     },
   } : null;
+  const goldAuthorizationExample = {
+    action: "redeem",
+    storeId: "example-gold-store",
+    requestId: "00000000-0000-4000-8000-000000000001",
+    expiresAt: "2026-01-16T10:05:00.000Z",
+  };
 
   return {
     ok: true,
@@ -85,6 +94,23 @@ export function getTrustDossierSample() {
     description: "Fictional preview. The server, order, transaction and seal fields are illustrative. Viewing this sample is free.",
     price: launchPromotion ? { amount: launchPromotion.priceUsdc, currency: "USDC" } : standardPrice,
     ...(launchPromotion && { launchPromotion, standardPrice }),
+    goldMonthlyCredit: {
+      limit: GOLD_MONTHLY_LIMIT,
+      period: "UTC calendar month",
+      appliesTo: "Full signed dossier for the approved endpoint of a verified Gold store.",
+      actions: {
+        balance: "Check remaining uses and the UTC reset time.",
+        redeem: "Use one credit for a new dossier. Retain the request ID to recover the same report.",
+      },
+      signatureScheme: "EIP-191",
+      audience: PUBLIC_BASE_URL,
+      exampleServerUrl: probe.serverUrl,
+      exampleAuthorization: goldAuthorizationExample,
+      exampleMessageToSign: buildGoldCreditAuthorizationMessage({
+        ...goldAuthorizationExample, audience: PUBLIC_BASE_URL, serverUrl: probe.serverUrl,
+      }),
+      instructions: "Replace the fictional fields and sign with the approved store wallet. Use an expiry up to 10 minutes ahead. Pass serverUrl and goldCredit with the signed fields and signature. After expiry, sign again with the same request ID to recover a completed report.",
+    },
     delivery: {
       mcpTool: "check_mcp_server_trust",
       resultPath: "result.structuredContent",

@@ -438,7 +438,7 @@ function ensureStore(ledger) {
     ledger.freeTrustCheck = {
       snapshots: new Map(), // url -> { fingerprint, toolHashes, firstSeenAt, lastSeenAt, checks }
       quota: new Map(), // callerKey|day -> count
-      stats: { totalChecks: 0, freeChecks: 0, paidChecks: 0, promoChecks: 0, quotaBlocked: 0 },
+      stats: { totalChecks: 0, freeChecks: 0, paidChecks: 0, promoChecks: 0, goldCreditChecks: 0, quotaBlocked: 0 },
       persist: null, // función (url, snap, map) => Promise; se activa con enableTrustPersistence()
     };
   }
@@ -593,7 +593,8 @@ export function buildMcpTrustReport({
 }) {
   const store = ensureStore(ledger);
   store.stats.totalChecks += 1;
-  if (issuance) store.stats.promoChecks += 1;
+  if (issuance?.type === "GOLD_MONTHLY_CREDIT") store.stats.goldCreditChecks += 1;
+  else if (issuance?.type === "LAUNCH_PROMO_FREE") store.stats.promoChecks += 1;
   else if (mode === "FULL") store.stats.paidChecks += 1;
   else store.stats.freeChecks += 1;
 
