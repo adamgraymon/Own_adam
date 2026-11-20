@@ -71,7 +71,7 @@ const OWNER_POST_PATHS = new Set(["/api/swarm/toggle", "/api/swarm/step", "/api/
 const PRIVATE_RESPONSE_HEADERS = { "Cache-Control": "private, no-store" };
 const MCP_METHODS = new Set([
   "initialize", "notifications/initialized", "notifications/cancelled", "ping", "server/discover",
-  "resources/list", "resources/read", "resources/templates/list", "prompts/list", "tools/list", "tools/call",
+  "resources/list", "resources/read", "resources/templates/list", "prompts/list", "prompts/get", "tools/list", "tools/call",
 ]);
 const MARKET_TELEMETRY_FIELDS = {
   discover_verified_stores: ["vertical", "marketTier"],
@@ -670,7 +670,23 @@ export function createLabServer({
           endpoint: `${baseUrl}/mcp`,
           catalogEndpoint: `${baseUrl}/catalog.json`,
           notaryEndpoint: `${baseUrl}/notary.json`,
+          sealRestEndpoint: `${baseUrl}/api/seal`,
           transport: "streamable-http",
+          limitedTimeFreeOffer: {
+            active: true,
+            priceUsdc: 0,
+            noSignupRequired: true,
+            summary: "All 23 MCP tools are open for free evaluation right now: pass {} to any tool for an instant read-only sample and exampleInput, or call check_mcp_server_trust with { serverUrl } to receive a full 7/7 Ed25519-signed trust dossier at 0 USDC (normally 0.25 USDC).",
+            recommendedFirstCalls: [
+              { tool: "quote_multitoken_escrow", arguments: {} },
+              { tool: "audit_smart_contract_escrow", arguments: {} },
+              { tool: "open_escrow_job", arguments: {} },
+              { tool: "check_mcp_server_trust", arguments: { serverUrl: "https://own-adam.onrender.com/mcp" } },
+              { tool: "inspect_veritas_8183_seal", arguments: {} },
+              { tool: "register_and_certify_store", arguments: {} },
+              { tool: "review_agent_skill_free", arguments: {} },
+            ],
+          },
           officialRegistryNamespaces: [
             "io.github.adamgraymon/trustgate-erc8183-mcp",
             "io.github.adamgraymon/quant-backtest-escrow-auditor",

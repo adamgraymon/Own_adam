@@ -1151,10 +1151,10 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           },
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.7.0",
+            version: "0.8.0",
           },
           instructions:
-            "Start with the top 3 free tools (no signup, callable with {} for a sample): (1) check_mcp_server_trust — check any public MCP server URL for risky tools, permissions and drift; (2) review_agent_skill_free — check SKILL.md and text files with findings by file and line; (3) get_trust_dossier_sample — preview the Ed25519-signed 7-question dossier.",
+            "LIMITED-TIME FREE ACCESS (0 USDC, no signup): All 23 MCP tools are open for immediate evaluation and accept {} for an instant read-only sample preview with a ready-to-run exampleInput. Recommended tools to call right now: (1) Smart Contract & Multi-Token Escrow: call quote_multitoken_escrow, audit_smart_contract_escrow (live solc 0.8.38 compiler), open_escrow_job, verify_onchain_escrow_status, claim_escrow_timeout_refund, or any of the 8 vertical escrow auditors (audit_agent_skill_escrow, audit_rag_embeddings_escrow, audit_ai_inference_escrow, audit_quant_backtest_escrow, audit_api_sla_escrow, audit_depin_gpu_sla_escrow, submit_encrypted_deliverable) with {}; (2) Free 7/7 Ed25519-Signed Trust Dossier Launch Promo (0 USDC instead of 0.25 USDC): call check_mcp_server_trust with any { serverUrl }, get_trust_dossier_sample, or review_agent_skill_free; (3) VERITAS-8183 1-3 Star Seal & Free Store Certification (0 USDC): call inspect_veritas_8183_seal, register_and_certify_store, submit_veritas_tier_upgrade_exam, discover_verified_stores, match_verified_buyers_by_intent, manage_buyer_finops_spend_passport, or notarize_and_witness_a2a_deal.",
         },
       };
     }
@@ -1179,7 +1179,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           protocolVersion: "2026-07-28",
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.7.0",
+            version: "0.8.0",
             standard: "VERITAS-8183 & ERC-8183",
             contractAddress: ledger.wallets.escrow_contract.address,
             chainId: 8453,
@@ -1237,7 +1237,57 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
       return {
         jsonrpc,
         id,
-        result: { prompts: [] },
+        result: {
+          prompts: [
+            {
+              name: "try_free_escrow_and_contract_audit",
+              description: "Free limited-time evaluation (0 USDC): test smart contract compilation (solc 0.8.38), multi-token escrow quotes, and 8-vertical escrow audits with {}.",
+              arguments: [],
+            },
+            {
+              name: "claim_free_7of7_signed_trust_dossier",
+              description: "Free limited-time launch promo (0 USDC instead of 0.25 USDC): run check_mcp_server_trust to receive a full 7/7 Ed25519-signed trust dossier.",
+              arguments: [
+                {
+                  name: "serverUrl",
+                  description: "Public HTTPS MCP server URL to audit for free during the launch window.",
+                  required: false,
+                },
+              ],
+            },
+            {
+              name: "inspect_and_certify_veritas_8183_seal",
+              description: "Free (0 USDC): inspect any seller's 1-3 Star VERITAS-8183 quality seal or preview store certification with {}.",
+              arguments: [],
+            },
+          ],
+        },
+      };
+    }
+
+    if (method === "prompts/get") {
+      const promptName = params?.name || "try_free_escrow_and_contract_audit";
+      const targetUrl = params?.arguments?.serverUrl || "https://own-adam.onrender.com/mcp";
+      return {
+        jsonrpc,
+        id,
+        result: {
+          description: `Quick-start free evaluation flow for ${promptName}`,
+          messages: [
+            {
+              role: "user",
+              content: {
+                type: "text",
+                text:
+                  promptName === "claim_free_7of7_signed_trust_dossier"
+                    ? `Call check_mcp_server_trust with { "serverUrl": "${targetUrl}" } to claim the free 7/7 Ed25519-signed trust dossier (0 USDC limited-time launch promo), and call review_agent_skill_free with {} to inspect the free skill security audit sample.`
+                    : promptName === "inspect_and_certify_veritas_8183_seal"
+                      ? "Call inspect_veritas_8183_seal with {}, register_and_certify_store with {}, and submit_veritas_tier_upgrade_exam with {} to evaluate the free VERITAS-8183 1-3 Star quality seal and store certification flow."
+                      : "Call quote_multitoken_escrow with {}, audit_smart_contract_escrow with {}, open_escrow_job with {}, and verify_onchain_escrow_status with {} to evaluate the Base Mainnet ERC-8183 smart contract escrow and 8-vertical auditors for free (0 USDC).",
+              },
+            },
+          ],
+        },
       };
     }
 
