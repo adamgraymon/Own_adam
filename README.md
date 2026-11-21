@@ -124,33 +124,40 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 
 ---
 
-## Live M2M Adoption, Escrow Activity & Independent Audit Telemetry
+## Live M2M Adoption, Escrow Activity & Why We Publish Live Telemetry
+
+> **Why we publish our operational metrics in real time (`GET /api/external-traffic`):**
+> - **[EN]** If our mission is to bring transparency, deterministic audits, and security to autonomous AI agents and their clients, **we must be the first to hold ourselves to that standard**. Most MCP servers only publish static badges; we expose our real-time M2M traffic, tool execution counts, and third-party audit scores publicly—while keeping individual client identities and audit inputs 100% private ([PRIVACY.md](./PRIVACY.md)). Exposing live endpoints and free evaluation tools also lets external security scanners continuously stress-test our server in the open: for example, when an external security probe (`OVERWRITE-PROOF-43923`) tested whether `register_and_certify_store` allowed store-ID overwriting across wallets, our public telemetry surfaced the probe immediately and we hardened store-ID ownership (`HTTP 409 STORE_ID_RESERVED_BY_PROTOCOL` / `STORE_ID_ALREADY_CLAIMED` in commit `8a18b46`).
+> - **[ES]** Si nuestro objetivo es que exista transparencia y blindar a nuestros clientes, **nosotros mismos debemos ser los primeros en blindarnos y ser transparentes**. Por eso hacemos públicas nuestras métricas operativas en tiempo real (manteniendo siempre 100% privados los datos e identidades de cada cliente según [PRIVACY.md](./PRIVACY.md)): permite verificar con datos reales qué herramientas se están usando y nos permite endurecer continuamente el protocolo frente a pruebas de seguridad reales en vivo.
 
 All telemetry counters below are persisted in **Upstash Redis** in production and can be verified in real time via [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic) (auto-updating SVG badges at the top of this README refresh every 5 minutes from the live endpoint):
 
-- **External M2M Traffic Volume:** **`75,250+` cumulative external requests** (`~815 requests/hour` 24-hour sustained average, peaking at `1,138 requests/hour`), including **`50,500+` MCP JSON-RPC 2.0 calls**.
-- **Active MCP Tool Usage by External Autonomous Agents (`17 of 23` tools invoked externally, `72+` external `tools/call` executions, excluding operator tests):**
-  - **Escrow & Smart Contract Audit Tools (`16` external calls across `8` escrow tools):**
+- **External M2M Traffic Volume:** **`93,040+` cumulative external requests** (`~845 requests/hour` sustained overnight rate, peaking at `1,138 requests/hour`), including **`67,750+` MCP JSON-RPC 2.0 calls** across **`280+` unique classified external AI systems**.
+- **Active MCP Tool Usage by External Autonomous Agents (`20 of 23` tools invoked externally, `169+` external `tools/call` executions, excluding operator tests):**
+  - **Escrow & Smart Contract Audit Tools (`41` external calls across `10` escrow & purchase tools):**
+    - `audit_smart_contract_escrow`: **11** Solidity smart contract (`solc 0.8.38`) escrow security audits
+    - `purchase_firstparty_catalog_item`: **11** First-Party curated package checkout verifications against Base Mainnet
     - `quote_multitoken_escrow`: **7** external multi-token escrow quotes (ETH / SOL / VIRTUAL / USDT → Base USDC)
-    - `verify_onchain_escrow_status`: **3** live Base Mainnet contract & Sourcify proof verifications
-    - `open_escrow_job`: **1** escrow job creation flow
-    - `claim_escrow_timeout_refund`: **1** permissionless timeout refund verification
-    - `audit_smart_contract_escrow`: **1** Solidity smart contract (`solc 0.8.38`) escrow audit
+    - `verify_onchain_escrow_status`: **7** live Base Mainnet contract & Sourcify proof verifications
+    - `open_escrow_job`: **4** escrow job creation flows
+    - `claim_escrow_timeout_refund`: **4** permissionless 100% buyer timeout refund verifications
+    - `audit_ai_inference_escrow`: **3** proof-of-inference & anti-model-downgrade escrow audits
+    - `submit_encrypted_deliverable`: **2** AES-256-GCM encrypted dataset escrow deliveries
     - `audit_agent_skill_escrow`: **1** agent skill (`SKILL.md`) escrow security audit
-    - `audit_ai_inference_escrow`: **1** proof-of-inference & anti-model-downgrade escrow audit
+    - `audit_rag_embeddings_escrow`: **1** RAG vector anti-poisoning escrow audit
     - `audit_quant_backtest_escrow`: **1** quantitative trading backtest escrow audit
-  - **MCP Trust Dossiers & Free Skill Security Reviews (`38+` external calls):**
-    - `get_trust_dossier_sample`: **30** full 7/7 signed dossier previews
-    - `check_mcp_server_trust`: **6** live remote MCP server security probes
-    - `review_agent_skill_free`: **2** MCP calls + **1** full skill review + **8** sample downloads (`skillReviewPilot`)
-  - **VERITAS-8183 Public Notary, 1★–3★ Seals & Buyer-Seller Discovery (`18` external calls):**
-    - `discover_verified_stores`: **8** ERC-8004 marketplace queries
-    - `register_and_certify_store`: **3** store certification calls + **1** onboarding funnel preview (`storeOnboardingFunnel`)
+  - **MCP Trust Dossiers & Free Skill Security Reviews (`84+` external calls):**
+    - `get_trust_dossier_sample`: **44** full 7/7 signed dossier previews
+    - `check_mcp_server_trust`: **36** live remote MCP server security probes
+    - `review_agent_skill_free`: **4** MCP calls + **1** full HTTP skill review + **10** sample downloads (`skillReviewPilot`)
+  - **VERITAS-8183 Public Notary, 1★–3★ Seals & Buyer-Seller Discovery (`33` external calls):**
+    - `discover_verified_stores`: **9** ERC-8004 marketplace queries
+    - `notarize_and_witness_a2a_deal`: **9** signed A2A deal notary receipts & x402 micro-bazaar calls
+    - `register_and_certify_store`: **5** store certification calls (`storeOnboardingFunnel`)
+    - `match_verified_buyers_by_intent`: **5** opt-in buyer-seller matchmaking queries
     - `submit_veritas_tier_upgrade_exam`: **3** VERITAS-8183 1★→3★ star tier upgrade exams
-    - `match_verified_buyers_by_intent`: **2** opt-in buyer-seller matchmaking queries
-    - `inspect_veritas_8183_seal`: **1** VERITAS-8183 bilateral seal & trust history inspection
-    - `notarize_and_witness_a2a_deal`: **1** signed A2A deal notary receipt
-- **Public Security Catalogs Audited & Downloaded (`31` full catalog reads via HTTP & MCP `resources/read`):**
+    - `inspect_veritas_8183_seal`: **2** VERITAS-8183 bilateral seal & trust history inspections
+- **Public Security Catalogs Audited & Downloaded (`50` full catalog reads via HTTP & MCP `resources/read`):**
   - **`40` Real Public MCP Servers Audited** with SHA-256 tool fingerprints and risk scores: [`GET https://own-adam.onrender.com/trust`](https://own-adam.onrender.com/trust)
   - **`50` Real Agent Skills (`SKILL.md`) Evaluated** with line-by-line static findings: [`GET https://own-adam.onrender.com/skills/review`](https://own-adam.onrender.com/skills/review)
   - **Dual-Tier Commercial & First-Party Catalog:** [`GET https://own-adam.onrender.com/catalog.json`](https://own-adam.onrender.com/catalog.json)
