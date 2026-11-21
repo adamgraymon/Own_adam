@@ -71,11 +71,27 @@ export function saveSellerRegistryEntry(storeId, record, allEntriesMap = null) {
   return Promise.resolve(null);
 }
 
+const SCANNER_PROBE_STORE_IDS = new Set(["probe-43923-store"]);
+
 export async function enableSellerRegistryPersistence(ledger) {
   if (!ledger.persistedSellerEntries) ledger.persistedSellerEntries = new Map();
   const entries = await loadSellerRegistryEntries();
   for (const [storeId, record] of entries) {
     if (!record || typeof record !== "object") continue;
+    const existing = ledger.stores?.[storeId];
+    const isReservedSystemStore =
+      existing &&
+      (existing.isFirstParty === true || existing.isCoreSimStore === true || existing.isDemo === true);
+    const isScannerProbe =
+      SCANNER_PROBE_STORE_IDS.has(storeId) ||
+      String(record.name || "").startsWith("OVERWRITE-PROOF-") ||
+      String(record.endpoint || "").includes("attacker.example");
+    if (isReservedSystemStore || isScannerProbe) {
+      if (activeBackend() === "upstash-redis") {
+        void executeUpstashCommand(["HDEL", redisKey(), storeId]).catch(() => {});
+      }
+      continue;
+    }
     ledger.persistedSellerEntries.set(storeId, record);
     if (record.withdrawn) {
       delete ledger.stores[storeId];

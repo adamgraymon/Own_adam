@@ -732,6 +732,31 @@ export function registerAndCertifyExternalStore({
     .toLowerCase()
     .replace(/[^a-z0-9-_]/g, "-");
 
+  const existingStore = ledger?.stores?.[normalizedId];
+  if (existingStore) {
+    const isReservedSystemStore =
+      existingStore.isFirstParty === true ||
+      existingStore.isCoreSimStore === true ||
+      existingStore.isDemo === true ||
+      !existingStore.publicRegistryConsent;
+    const sameOwnerWallet =
+      !isReservedSystemStore &&
+      existingStore.address &&
+      String(existingStore.address).trim().toLowerCase() === String(effectiveWalletAddress).trim().toLowerCase();
+    if (isReservedSystemStore || !sameOwnerWallet) {
+      return {
+        ok: false,
+        status: 409,
+        error: isReservedSystemStore ? "STORE_ID_RESERVED_BY_PROTOCOL" : "STORE_ID_ALREADY_CLAIMED",
+        certificationStatus: "REJECTED_STORE_ID_ALREADY_CLAIMED",
+        storeId: normalizedId,
+        reason: isReservedSystemStore
+          ? `Store ID '${normalizedId}' is reserved by a built-in protocol or simulation entry and cannot be overwritten.`
+          : `Store ID '${normalizedId}' is already registered to another wallet address and cannot be overwritten.`,
+      };
+    }
+  }
+
   // Ejecutar Auditoría Determinista en Vivo según la vertical solicitada (con plantilla segura por defecto si el agente hace 1-Click Auto-Onboarding)
   let auditResult;
   if (vertical === "VERTICAL_2_QUANT_ALPHA") {
