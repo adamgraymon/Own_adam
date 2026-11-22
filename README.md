@@ -52,9 +52,13 @@ The full dossier costs **0.25 USDC on Base Mainnet**. See the delivered JSON for
 
 For signed dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedicated Ed25519 PKCS#8 private PEM outside the repository and restart the server. `GET /trust/methodology` and `GET /.well-known/agent.json` publish the matching `reportSigning` descriptor. Use that public key as the expected key when verifying a dossier. When the key is absent, new full dossiers and x402 checkout are unavailable. Saved dossiers are returned as originally issued.
 
-### Local launch promotion
+### Local launch promotion & 100,000+ M2M Requests Milestone Extension (+3 Extra Days Free)
 
-Set `TRUST_DOSSIER_PROMO_START_AT` to the intended UTC start time in ISO 8601 format and configure the dedicated signer. The offer lasts 72 hours from that timestamp. Restarting the process keeps the original window. The offer is off by default. During the window, call `check_mcp_server_trust` with only `serverUrl` for a signed 7/7 dossier at 0 USDC. See the current offer, expiration and an example call in `get_trust_dossier_sample` or `/trust/sample.json`.
+> **🎉 100,000+ M2M Requests in 7 Days — Extended 3 More Days Free (until `2026-11-25T23:26:31.261Z`):**
+> - **[EN]** In gratitude to the autonomous agent and developer community for passing **100,000+ external M2M requests (`109,020+`)** in our first 7 days, we have extended our free evaluation window and the **0 USDC Ed25519-Signed 7/7 Trust Dossier Promotion** for **3 additional days (72 extra hours, through November 25, 2026)**. All 23 MCP tools accept `{}` for instant free evaluation.
+> - **[ES]** Como celebración por haber superado las **100,000+ visitas externas M2M (`109,020+`)** en apenas 7 días y en agradecimiento por la acogida recibida, hemos extendido **3 días más (hasta el 25 de noviembre de 2026)** el acceso gratuito al **Dossier Completo 7/7 firmado con Ed25519 (`0 USDC`)** y a las muestras interactivas `{}` en las 23 herramientas.
+
+Set `TRUST_DOSSIER_PROMO_START_AT` to the intended UTC start time in ISO 8601 format and configure the dedicated signer. The offer lasts 72 hours from that timestamp (extended by +72 hours in production until `2026-11-25T23:26:31.261Z` for the 100k M2M milestone celebration). Restarting the process keeps the original window. The offer is off by default. During the window, call `check_mcp_server_trust` with only `serverUrl` for a signed 7/7 dossier at 0 USDC. See the current offer, expiration and an example call in `get_trust_dossier_sample` or `/trust/sample.json`.
 
 The promotional quota is five requests per client and 100 total per UTC day. Upstash enforces the quota across processes when configured. The `MCP_TRUST_V1` digest appends `issuance`, when present, after `answers` in the JSON fields being hashed. Promotional reports have `issuance.type` set to `LAUNCH_PROMO_FREE` and omit paid order and transaction identifiers. Use the original credentials to recover an existing paid report. Papers and other First-Party purchases keep their existing payment flow.
 
@@ -132,13 +136,13 @@ _【语言说明】中文版本仅为便于阅读的参考翻译。如中文与�
 
 All telemetry counters below are persisted in **Upstash Redis** in production and can be verified in real time via [`GET https://own-adam.onrender.com/api/external-traffic`](https://own-adam.onrender.com/api/external-traffic) (auto-updating SVG badges at the top of this README refresh every 5 minutes from the live endpoint):
 
-- **External M2M Traffic Volume:** **`93,040+` cumulative external requests** (`~845 requests/hour` sustained overnight rate, peaking at `1,138 requests/hour`), including **`67,750+` MCP JSON-RPC 2.0 calls** across **`280+` unique classified external AI systems**.
-- **Active MCP Tool Usage by External Autonomous Agents (`20 of 23` tools invoked externally, `169+` external `tools/call` executions, excluding operator tests):**
-  - **Escrow & Smart Contract Audit Tools (`41` external calls across `10` escrow & purchase tools):**
+- **External M2M Traffic Volume (100k+ Milestone Reached in 7 Days):** **`109,020+` cumulative external requests** (`~891 requests/hour` sustained overnight rate, peaking at `1,138 requests/hour`), including **`82,980+` MCP JSON-RPC 2.0 calls** across **`280+` unique classified external AI systems**.
+- **Active MCP Tool Usage by External Autonomous Agents (`20 of 23` tools invoked externally, `185+` external `tools/call` executions, `254+` total tool & catalog interactions excluding operator tests):**
+  - **Escrow & Smart Contract Audit Tools (`54` external calls across `11` escrow & purchase tools):**
     - `audit_smart_contract_escrow`: **11** Solidity smart contract (`solc 0.8.38`) escrow security audits
     - `purchase_firstparty_catalog_item`: **11** First-Party curated package checkout verifications against Base Mainnet
-    - `quote_multitoken_escrow`: **7** external multi-token escrow quotes (ETH / SOL / VIRTUAL / USDT → Base USDC)
-    - `verify_onchain_escrow_status`: **7** live Base Mainnet contract & Sourcify proof verifications
+    - `verify_onchain_escrow_status`: **9** live Base Mainnet contract & Sourcify proof verifications
+    - `quote_multitoken_escrow`: **8** external multi-token escrow quotes (ETH / SOL / VIRTUAL / USDT → Base USDC)
     - `open_escrow_job`: **4** escrow job creation flows
     - `claim_escrow_timeout_refund`: **4** permissionless 100% buyer timeout refund verifications
     - `audit_ai_inference_escrow`: **3** proof-of-inference & anti-model-downgrade escrow audits
@@ -146,18 +150,18 @@ All telemetry counters below are persisted in **Upstash Redis** in production an
     - `audit_agent_skill_escrow`: **1** agent skill (`SKILL.md`) escrow security audit
     - `audit_rag_embeddings_escrow`: **1** RAG vector anti-poisoning escrow audit
     - `audit_quant_backtest_escrow`: **1** quantitative trading backtest escrow audit
-  - **MCP Trust Dossiers & Free Skill Security Reviews (`84+` external calls):**
-    - `get_trust_dossier_sample`: **44** full 7/7 signed dossier previews
-    - `check_mcp_server_trust`: **36** live remote MCP server security probes
-    - `review_agent_skill_free`: **4** MCP calls + **1** full HTTP skill review + **10** sample downloads (`skillReviewPilot`)
-  - **VERITAS-8183 Public Notary, 1★–3★ Seals & Buyer-Seller Discovery (`33` external calls):**
-    - `discover_verified_stores`: **9** ERC-8004 marketplace queries
+  - **MCP Trust Dossiers & Free Skill Security Reviews (`94+` external calls):**
+    - `get_trust_dossier_sample`: **53** full 7/7 signed dossier previews
+    - `check_mcp_server_trust`: **37** live remote MCP server security probes
+    - `review_agent_skill_free`: **4** MCP calls + **1** full HTTP skill review + **11** sample downloads (`skillReviewPilot`)
+  - **VERITAS-8183 Public Notary, 1★–3★ Seals & Buyer-Seller Discovery (`36` external calls):**
+    - `discover_verified_stores`: **10** ERC-8004 marketplace queries
     - `notarize_and_witness_a2a_deal`: **9** signed A2A deal notary receipts & x402 micro-bazaar calls
     - `register_and_certify_store`: **5** store certification calls (`storeOnboardingFunnel`)
     - `match_verified_buyers_by_intent`: **5** opt-in buyer-seller matchmaking queries
-    - `submit_veritas_tier_upgrade_exam`: **3** VERITAS-8183 1★→3★ star tier upgrade exams
-    - `inspect_veritas_8183_seal`: **2** VERITAS-8183 bilateral seal & trust history inspections
-- **Public Security Catalogs Audited & Downloaded (`50` full catalog reads via HTTP & MCP `resources/read`):**
+    - `submit_veritas_tier_upgrade_exam`: **4** VERITAS-8183 1★→3★ star tier upgrade exams
+    - `inspect_veritas_8183_seal`: **3** VERITAS-8183 bilateral seal & trust history inspections
+- **Public Security Catalogs Audited & Downloaded (`56` full catalog reads via HTTP & MCP `resources/read`):**
   - **`40` Real Public MCP Servers Audited** with SHA-256 tool fingerprints and risk scores: [`GET https://own-adam.onrender.com/trust`](https://own-adam.onrender.com/trust)
   - **`50` Real Agent Skills (`SKILL.md`) Evaluated** with line-by-line static findings: [`GET https://own-adam.onrender.com/skills/review`](https://own-adam.onrender.com/skills/review)
   - **Dual-Tier Commercial & First-Party Catalog:** [`GET https://own-adam.onrender.com/catalog.json`](https://own-adam.onrender.com/catalog.json)

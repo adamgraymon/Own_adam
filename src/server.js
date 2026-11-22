@@ -674,9 +674,11 @@ export function createLabServer({
           transport: "streamable-http",
           limitedTimeFreeOffer: {
             active: true,
+            milestoneCelebration: "100,000+ M2M Requests in 7 Days — Extended 3 More Days in Gratitude to the Agent Community",
+            endsAt: "2026-11-25T23:26:31.261Z",
             priceUsdc: 0,
             noSignupRequired: true,
-            summary: "All 23 MCP tools are open for free evaluation right now: pass {} to any tool for an instant read-only sample and exampleInput, or call check_mcp_server_trust with { serverUrl } to receive a full 7/7 Ed25519-signed trust dossier at 0 USDC (normally 0.25 USDC).",
+            summary: "Celebrating 109,000+ M2M requests: all 23 MCP tools remain open for free evaluation for 3 more days (until Nov 25, 2026). Pass {} to any tool for an instant read-only sample and exampleInput, or call check_mcp_server_trust with { serverUrl } to receive a full 7/7 Ed25519-signed trust dossier at 0 USDC (normally 0.25 USDC).",
             recommendedFirstCalls: [
               { tool: "quote_multitoken_escrow", arguments: {} },
               { tool: "audit_smart_contract_escrow", arguments: {} },
@@ -685,6 +687,9 @@ export function createLabServer({
               { tool: "inspect_veritas_8183_seal", arguments: {} },
               { tool: "register_and_certify_store", arguments: {} },
               { tool: "review_agent_skill_free", arguments: {} },
+              { tool: "audit_api_sla_escrow", arguments: {} },
+              { tool: "audit_depin_gpu_sla_escrow", arguments: {} },
+              { tool: "manage_buyer_finops_spend_passport", arguments: {} },
             ],
           },
           officialRegistryNamespaces: [
