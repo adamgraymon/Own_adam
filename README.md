@@ -9,6 +9,7 @@
 [![Active MCP Tools](https://own-adam.onrender.com/badge/telemetry.svg?metric=tools)](https://own-adam.onrender.com/api/external-traffic)
 [![Escrow & Audit Calls](https://own-adam.onrender.com/badge/telemetry.svg?metric=escrow)](https://own-adam.onrender.com/api/external-traffic)
 [![Audited Registry](https://own-adam.onrender.com/badge/telemetry.svg?metric=catalog)](https://own-adam.onrender.com/trust)
+[![500K 5-Day Goal](https://own-adam.onrender.com/badge/telemetry.svg?metric=challenge)](https://own-adam.onrender.com/api/external-traffic)
 
 > **Canonical Project Identity (TrustGate = VERITAS-8183 = `adamgraymon/Own_adam`):**
 > - **Official MCP Registry Package:** `io.github.adamgraymon/trustgate-erc8183-mcp` (**TrustGate**, `v0.8.0`)
@@ -54,9 +55,9 @@ For signed dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedica
 
 ### Local launch promotion & 100,000+ M2M Requests Milestone Extension (+3 Extra Days Free)
 
-> **🎉 100,000+ M2M Requests in 7 Days — Extended 3 More Days Free (until `2026-11-25T23:26:31.261Z`):**
-> - **[EN]** In gratitude to the autonomous agent and developer community for passing **100,000+ external M2M requests (`109,020+`)** in our first 7 days, we have extended our free evaluation window and the **0 USDC Ed25519-Signed 7/7 Trust Dossier Promotion** for **3 additional days (72 extra hours, through November 25, 2026)**. All 23 MCP tools accept `{}` for instant free evaluation.
-> - **[ES]** Como celebración por haber superado las **100,000+ visitas externas M2M (`109,020+`)** en apenas 7 días y en agradecimiento por la acogida recibida, hemos extendido **3 días más (hasta el 25 de noviembre de 2026)** el acceso gratuito al **Dossier Completo 7/7 firmado con Ed25519 (`0 USDC`)** y a las muestras interactivas `{}` en las 23 herramientas.
+> **🎉 100,000+ M2M Requests in 7 Days — Extended 3 More Days Free (until `2026-11-25T23:26:31.261Z`) + 🎯 500,000 Requests 5-Day Challenge (+1 Extra Week Free!):**
+> - **[EN]** In gratitude to the autonomous agent and developer community for passing **100,000+ external M2M requests (`109,020+`)** in our first 7 days, we have extended our free evaluation window and the **0 USDC Ed25519-Signed 7/7 Trust Dossier Promotion** for **3 additional days (through November 25, 2026)**. **Community Challenge:** If we reach **`500,000` external M2M requests within 5 days (by November 27, 2026)**, we will unlock **an entire extra week (+7 additional days) of 100% FREE (`0 USDC`) access** across the tools and signed 7/7 dossiers!
+> - **[ES]** Como celebración por haber superado las **100,000+ visitas externas M2M (`109,020+`)** en apenas 7 días y en agradecimiento por la acogida recibida, hemos extendido **3 días más (hasta el 25 de noviembre de 2026)** el acceso gratuito al **Dossier Completo 7/7 firmado con Ed25519 (`0 USDC`)** y a las 23 herramientas. **🎯 Reto de las 500,000 Visitas:** ¡Si llegamos a las **`500,000` visitas en 5 días (antes del 27 de noviembre de 2026)**, dejamos las herramientas y el Dossier 7/7 firmado **gratis otra semana completa (+7 días adicionales a `0 USDC`)**!
 
 Set `TRUST_DOSSIER_PROMO_START_AT` to the intended UTC start time in ISO 8601 format and configure the dedicated signer. The offer lasts 72 hours from that timestamp (extended by +72 hours in production until `2026-11-25T23:26:31.261Z` for the 100k M2M milestone celebration). Restarting the process keeps the original window. The offer is off by default. During the window, call `check_mcp_server_trust` with only `serverUrl` for a signed 7/7 dossier at 0 USDC. See the current offer, expiration and an example call in `get_trust_dossier_sample` or `/trust/sample.json`.
 

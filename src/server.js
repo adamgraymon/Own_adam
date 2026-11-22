@@ -674,11 +674,17 @@ export function createLabServer({
           transport: "streamable-http",
           limitedTimeFreeOffer: {
             active: true,
-            milestoneCelebration: "100,000+ M2M Requests in 7 Days — Extended 3 More Days in Gratitude to the Agent Community",
+            milestoneCelebration: "100,000+ M2M Requests in 7 Days — Extended 3 More Days Free + 500K 5-Day Challenge",
             endsAt: "2026-11-25T23:26:31.261Z",
+            communityChallenge500k: {
+              goalRequests: 500000,
+              deadlineUtc: "2026-11-27T23:26:31.261Z",
+              reward: "If we reach 500,000 external M2M requests within 5 days (by Nov 27, 2026), all 23 MCP tools & 7/7 Ed25519-signed trust dossiers remain 100% FREE (0 USDC) for an ENTIRE EXTRA WEEK (+7 days)!",
+              liveProgressBadgeUrl: `${baseUrl}/badge/telemetry.svg?metric=challenge`,
+            },
             priceUsdc: 0,
             noSignupRequired: true,
-            summary: "Celebrating 109,000+ M2M requests: all 23 MCP tools remain open for free evaluation for 3 more days (until Nov 25, 2026). Pass {} to any tool for an instant read-only sample and exampleInput, or call check_mcp_server_trust with { serverUrl } to receive a full 7/7 Ed25519-signed trust dossier at 0 USDC (normally 0.25 USDC).",
+            summary: "Celebrating 109,000+ M2M requests: all 23 MCP tools remain open for free evaluation for 3 more days (until Nov 25, 2026) — and if we hit 500,000 requests in 5 days, we unlock +1 extra full week free! Pass {} to any tool for an instant read-only sample and exampleInput, or call check_mcp_server_trust with { serverUrl } to receive a full 7/7 Ed25519-signed trust dossier at 0 USDC (normally 0.25 USDC).",
             recommendedFirstCalls: [
               { tool: "quote_multitoken_escrow", arguments: {} },
               { tool: "audit_smart_contract_escrow", arguments: {} },
@@ -932,6 +938,15 @@ export function createLabServer({
           label = "Audited Registry";
           value = `${auditedServersCount} MCP servers · ${evaluatedSkillsCount} skills`;
           color = "#0d9488";
+        } else if (metric === "challenge") {
+          const goal = 500000;
+          const pct = Math.min(100, Number(((allTimeHits / goal) * 100).toFixed(1)));
+          label = "500K 5-Day Goal (+7d Free)";
+          value =
+            allTimeHits >= goal
+              ? `UNLOCKED: +1 WEEK FREE (${allTimeHits.toLocaleString("en-US")})`
+              : `${allTimeHits.toLocaleString("en-US")} / 500,000 (${pct}%)`;
+          color = allTimeHits >= goal ? "#10b981" : "#d97706";
         }
         const esc = (s) =>
           String(s).replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" })[c]);
