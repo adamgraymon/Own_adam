@@ -125,8 +125,21 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
   }
 
   const probe = await probeMcpServerLive(valid.url.toString());
+  const nextStepBridge = {
+    description:
+      "Claim your server in the VERITAS-8183 Public Notary for FREE (0 USDC) to unlock 3 Native Cloud Integrations (Claude Cloud mcp_servers, OpenAI Responses API, Gemini/DeepSeek) + Base Mainnet Escrow Gateway, or call manage_buyer_finops_spend_passport with {} for the FREE Cross-AI Tool Converter & Token Arbitrage Engine.",
+    name: "register_and_certify_store",
+    arguments: {},
+    alsoTryFreeMultiAiOrchestratorAndAuditors: [
+      { name: "manage_buyer_finops_spend_passport", arguments: {} },
+      { name: "audit_api_sla_escrow", arguments: {} },
+      { name: "audit_depin_gpu_sla_escrow", arguments: {} },
+    ],
+  };
   if (!promo || !probe.ok) {
-    args._trustCheckResult = buildMcpTrustReport({ ledger, probe, quota });
+    const basicReport = buildMcpTrustReport({ ledger, probe, quota });
+    basicReport.nextStep = nextStepBridge;
+    args._trustCheckResult = basicReport;
     return;
   }
 
@@ -137,11 +150,7 @@ export async function prepareAsyncToolCall(rpcPayload, ledger, { callerKey = "an
   sealFinalTrustReport(report, { secretMaterial: ledger.evaluatorSecretKey });
   report.freeChecksRemainingToday = quota.remaining;
   report.quotaResetsAt = quota.resetsAt;
-  report.nextStep = {
-    description: "Preview free store registration and the public registry terms.",
-    name: "register_and_certify_store",
-    arguments: {},
-  };
+  report.nextStep = nextStepBridge;
   args._trustCheckResult = report;
 }
 
@@ -266,6 +275,132 @@ export const MCP_TOOLS = [
       type: "object",
       properties: {},
       additionalProperties: false,
+      required: []
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "manage_buyer_finops_spend_passport",
+    description: "[Multi-AI Orchestrator Hub — FREE & Private by default] Free Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP with 60-80% token compression), Cross-AI Token/Escrow Arbitrage Engine, and FinOps USDC Spend Passport for Multi-AI Orchestrators & Builders. Free signup includes 1 unlock. Call with {} for a free read-only sample preview and instant Cross-AI migration.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        toolOrSkillToMigrate: {
+          type: "object",
+          description: "Optional Claude tool (input_schema), OpenAI function tool, Gemini functionDeclaration, or MCP tool to convert across all 5 AI platforms with Token-Slim compression."
+        },
+        skillMarkdownToMigrate: {
+          type: "string",
+          description: "Optional SKILL.md markdown string to convert into Claude Cloud, OpenAI Strict Function, Gemini, DeepSeek, and MCP tool formats."
+        },
+        listMeInBuyerDirectory: {
+          type: "boolean",
+          description: "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
+        },
+        buyerId: {
+          type: "string",
+          description: "Unique buyer agent identifier.",
+          examples: [
+            "alphaquant-agent"
+          ]
+        },
+        buyerName: {
+          type: "string",
+          description: "Human-readable name of the buyer agent."
+        },
+        walletAddress: {
+          type: "string",
+          description: "Buyer wallet address."
+        },
+        maxSpendPerTxUsdc: {
+          type: "number",
+          description: "Maximum authorized spend per transaction in USDC."
+        },
+        dailySpendCapUsdc: {
+          type: "number",
+          description: "Maximum authorized daily spend cap in USDC."
+        },
+        lookingToBuyVerticals: {
+          type: "array",
+          items: {
+            type: "string"
+          },
+          description: "Verticals this buyer is actively purchasing."
+        },
+        activeRfqDescription: {
+          type: "string",
+          description: "Brief procurement requirement description for 2★/3★ sellers."
+        },
+        proposedPurchaseUsdc: {
+          type: "number",
+          description: "Optional purchase amount to test against FinOps caps and VIP discounts."
+        },
+        estimatedPromptTokens: {
+          type: "number",
+          description: "Token count to benchmark LLM inference cost across providers."
+        }
+      },
+      required: []
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
+  {
+    name: "audit_api_sla_escrow",
+    description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200. Call with {} for a free read-only sample preview.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apiResponsePayload: {
+          type: "object",
+          description: "Parsed JSON payload returned by the oracle or API."
+        },
+        observedLatencyMs: {
+          type: "number",
+          description: "Measured round-trip response latency in milliseconds."
+        },
+        maxLatencyMs: {
+          type: "number",
+          description: "Maximum allowed SLA latency in milliseconds."
+        },
+        requiredKeys: {
+          type: "array",
+          items: {
+            type: "string"
+          },
+          description: "Mandatory top-level JSON keys required by the SLA."
+        }
+      },
+      required: []
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "audit_depin_gpu_sla_escrow",
+    description: "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80. Call with {} for a free read-only sample preview.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        benchmarkReport: {
+          type: "object",
+          description: "Hardware telemetry object with measuredTflopsFp16, availableVramGb, and gpuTempCelsius."
+        },
+        minTflopsFp16: {
+          type: "number",
+          description: "Minimum required FP16 compute throughput in TFLOPS."
+        },
+        minVramGb: {
+          type: "number",
+          description: "Minimum required GPU VRAM in gigabytes."
+        },
+        minMemoryBandwidthGbs: {
+          type: "number",
+          description: "Minimum memory bandwidth in GB/s."
+        },
+        maxTempCelsius: {
+          type: "number",
+          description: "Maximum safe GPU operating temperature in Celsius."
+        }
+      },
       required: []
     },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -487,36 +622,6 @@ export const MCP_TOOLS = [
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
-    name: "audit_api_sla_escrow",
-    description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200. Call with {} for a free read-only sample preview.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        apiResponsePayload: {
-          type: "object",
-          description: "Parsed JSON payload returned by the oracle or API."
-        },
-        observedLatencyMs: {
-          type: "number",
-          description: "Measured round-trip response latency in milliseconds."
-        },
-        maxLatencyMs: {
-          type: "number",
-          description: "Maximum allowed SLA latency in milliseconds."
-        },
-        requiredKeys: {
-          type: "array",
-          items: {
-            type: "string"
-          },
-          description: "Mandatory top-level JSON keys required by the SLA."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-  },
-  {
     name: "audit_agent_skill_escrow",
     description: "[Private] Is this agent skill safe to install? Scans SKILL.md and scripts for credential theft, remote code execution and hidden Unicode instructions. For a free preview with findings by file, call review_agent_skill_free with {}.",
     inputSchema: {
@@ -607,37 +712,6 @@ export const MCP_TOOLS = [
         minUniqueWordRatio: {
           type: "number",
           description: "Minimum lexical diversity ratio (0 to 1) to detect model downgrade."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-  },
-  {
-    name: "audit_depin_gpu_sla_escrow",
-    description: "[Private] Is the rented GPU really what you paid for? Checks TFLOPS, VRAM, bandwidth and temperature against the contract. Example: minTflopsFp16=250, minVramGb=80. Call with {} for a free read-only sample preview.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        benchmarkReport: {
-          type: "object",
-          description: "Hardware telemetry object with measuredTflopsFp16, availableVramGb, and gpuTempCelsius."
-        },
-        minTflopsFp16: {
-          type: "number",
-          description: "Minimum required FP16 compute throughput in TFLOPS."
-        },
-        minVramGb: {
-          type: "number",
-          description: "Minimum required GPU VRAM in gigabytes."
-        },
-        minMemoryBandwidthGbs: {
-          type: "number",
-          description: "Minimum memory bandwidth in GB/s."
-        },
-        maxTempCelsius: {
-          type: "number",
-          description: "Maximum safe GPU operating temperature in Celsius."
         }
       },
       required: []
@@ -872,71 +946,6 @@ export const MCP_TOOLS = [
         sampleDeliverable: {
           type: "object",
           description: "Deliverable sample to audit during the exam."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  },
-  {
-    name: "manage_buyer_finops_spend_passport",
-    description: "[Multi-AI Orchestrator Hub — FREE & Private by default] Free Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP with 60-80% token compression), Cross-AI Token/Escrow Arbitrage Engine, and FinOps USDC Spend Passport for Multi-AI Orchestrators & Builders. Free signup includes 1 unlock. Call with {} for a free read-only sample preview and instant Cross-AI migration.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        toolOrSkillToMigrate: {
-          type: "object",
-          description: "Optional Claude tool (input_schema), OpenAI function tool, Gemini functionDeclaration, or MCP tool to convert across all 5 AI platforms with Token-Slim compression."
-        },
-        skillMarkdownToMigrate: {
-          type: "string",
-          description: "Optional SKILL.md markdown string to convert into Claude Cloud, OpenAI Strict Function, Gemini, DeepSeek, and MCP tool formats."
-        },
-        listMeInBuyerDirectory: {
-          type: "boolean",
-          description: "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
-        },
-        buyerId: {
-          type: "string",
-          description: "Unique buyer agent identifier.",
-          examples: [
-            "alphaquant-agent"
-          ]
-        },
-        buyerName: {
-          type: "string",
-          description: "Human-readable name of the buyer agent."
-        },
-        walletAddress: {
-          type: "string",
-          description: "Buyer wallet address."
-        },
-        maxSpendPerTxUsdc: {
-          type: "number",
-          description: "Maximum authorized spend per transaction in USDC."
-        },
-        dailySpendCapUsdc: {
-          type: "number",
-          description: "Maximum authorized daily spend cap in USDC."
-        },
-        lookingToBuyVerticals: {
-          type: "array",
-          items: {
-            type: "string"
-          },
-          description: "Verticals this buyer is actively purchasing."
-        },
-        activeRfqDescription: {
-          type: "string",
-          description: "Brief procurement requirement description for 2★/3★ sellers."
-        },
-        proposedPurchaseUsdc: {
-          type: "number",
-          description: "Optional purchase amount to test against FinOps caps and VIP discounts."
-        },
-        estimatedPromptTokens: {
-          type: "number",
-          description: "Token count to benchmark LLM inference cost across providers."
         }
       },
       required: []
