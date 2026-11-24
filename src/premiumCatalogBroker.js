@@ -13,6 +13,7 @@
 import crypto from "node:crypto";
 import { readTrustPaymentOrder } from "./trustOrderStore.js";
 import { encryptDeliverable, auditEncryptedDataset } from "./auditorEngine.js";
+import { buildStoreThreeFreeCloudIntegrationsBundle } from "./crossAiMigratorAndArbitrage.js";
 import {
   buildAuditScopeAndLiability,
   auditQuantStrategyBacktest,
@@ -941,6 +942,13 @@ export function registerAndCertifyExternalStore({
     },
     storeProfile: newStore,
     erc8004CertificateHash: certHash,
+    freeCloudIntegrationsAndEscrowBundle: buildStoreThreeFreeCloudIntegrationsBundle({
+      storeId: normalizedId,
+      storeName: effectiveStoreName,
+      endpointUrl: newStore.endpoint,
+      vertical,
+      startingPriceUsdc: newStore.startingPriceUsdc,
+    }),
     nextStepsToUnlock3StarsAndBuyerRadar: {
       step1_viewMatchedBuyersFreemium: {
         mcpTool: "match_verified_buyers_by_intent",

@@ -63,6 +63,10 @@ import {
   getStoreOnboardingPreview,
   STORE_ONBOARDING_SAMPLE_PATH,
 } from "./storeOnboardingFunnel.js";
+import {
+  buildStoreThreeFreeCloudIntegrationsBundle,
+  migrateAndCompressToolCrossAi,
+} from "./crossAiMigratorAndArbitrage.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -452,6 +456,54 @@ export function createLabServer({
             endpoint: `${baseUrl}/api/seal/${encodeURIComponent(targetId || "ALL")}`,
             mcpToolEquivalent: "inspect_veritas_8183_seal",
             ...sealReport,
+          },
+          { "Access-Control-Allow-Origin": "*" }
+        );
+      }
+
+      if (
+        (req.method === "GET" || req.method === "POST") &&
+        (url.pathname === "/api/orchestrator/migrate" || url.pathname === "/api/orchestrator/arbitrage")
+      ) {
+        const body = req.method === "POST" ? await readJsonBody(req).catch(() => ({})) : {};
+        const report = migrateAndCompressToolCrossAi({
+          toolOrSkill: body.toolOrSkill || body.skillMarkdown || null,
+          serverUrl: body.serverUrl || `${baseUrl}/mcp`,
+          storeId: body.storeId || "trustgate-veritas",
+          callsPerDay: Number(body.callsPerDay || url.searchParams.get("callsPerDay")) || 250,
+          dealAmountUsdc: Number(body.dealAmountUsdc || url.searchParams.get("dealAmountUsdc")) || 10,
+          paymentToken: body.paymentToken || url.searchParams.get("paymentToken") || "USDC",
+        });
+        return sendJson(res, 200, report, { "Access-Control-Allow-Origin": "*" });
+      }
+
+      if (
+        req.method === "GET" &&
+        (url.pathname === "/api/bridge" || url.pathname === "/api/bridge/" || url.pathname.startsWith("/api/bridge/"))
+      ) {
+        const pathTail = url.pathname.replace(/^\/api\/bridge\/?/, "").trim();
+        const storeId = decodeURIComponent(pathTail || url.searchParams.get("storeId") || "trustgate-official-institutional");
+        const store = ledger.stores?.[storeId] || {
+          id: storeId,
+          name: `Certified Store (${storeId})`,
+          endpoint: `${baseUrl}/mcp`,
+          vertical: "VERTICAL_3_SOLIDITY_SECURITY",
+          startingPriceUsdc: 5,
+        };
+        return sendJson(
+          res,
+          200,
+          {
+            ok: true,
+            storeId: store.id || storeId,
+            storeName: store.name,
+            ...buildStoreThreeFreeCloudIntegrationsBundle({
+              storeId: store.id || storeId,
+              storeName: store.name,
+              endpointUrl: store.endpoint || `${baseUrl}/mcp`,
+              vertical: store.vertical || "VERTICAL_3_SOLIDITY_SECURITY",
+              startingPriceUsdc: store.startingPriceUsdc || 5,
+            }),
           },
           { "Access-Control-Allow-Origin": "*" }
         );

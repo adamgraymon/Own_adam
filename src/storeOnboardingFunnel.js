@@ -1,5 +1,6 @@
 import { createAnonymousCounters } from "./anonymousCounters.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION } from "./dataPolicy.js";
+import { buildStoreThreeFreeCloudIntegrationsBundle } from "./crossAiMigratorAndArbitrage.js";
 
 export const STORE_ONBOARDING_SAMPLE_PATH = "/stores/onboarding/sample.json";
 
@@ -175,6 +176,13 @@ export function getStoreOnboardingPreview({ vertical = null } = {}) {
       brokerReferralFeePct: 2.0,
       escrowSettlementFeePctRange: "1.0% - 1.5%",
     },
+    freeCloudIntegrationsIncludedOnRegistration: buildStoreThreeFreeCloudIntegrationsBundle({
+      storeId: "your-certified-store-id",
+      storeName: "Your Certified AI Store",
+      endpointUrl: "https://your-store.example/mcp",
+      vertical: selectedVertical || "VERTICAL_3_SOLIDITY_SECURITY",
+      startingPriceUsdc: 10,
+    }),
     publicRegistryTermsVersion: PUBLIC_REGISTRY_TERMS_VERSION,
     publicRegistryTerms: PUBLIC_REGISTRY_TERMS,
     privacyPolicy: "https://own-adam.onrender.com/privacy",

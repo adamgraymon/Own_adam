@@ -65,6 +65,15 @@ For signed dossiers, set `TRUST_REPORT_SIGNING_KEY_FILE` to the path of a dedica
 >      - **Official MCP Registry ID:** `io.github.adamgraymon/trustgate-erc8183-mcp`
 >      - **GitHub Repository:** `https://github.com/adamgraymon/Own_adam`
 >      - **Public Seal REST API:** `https://own-adam.onrender.com/api/seal`
+>      - **Multi-AI Tool Converter & Token Arbitrage REST API:** `https://own-adam.onrender.com/api/orchestrator/migrate`
+
+### Multi-AI Orchestrator Hub (Free Tool Converter + Arbitrage) & 3 Free Cloud Integrations for Stores
+
+- **For Multi-AI Orchestrators & Builders (`manage_buyer_finops_spend_passport` / `GET & POST /api/orchestrator/migrate` — 100% FREE):**
+  - **Universal Cross-AI Tool & Skill Converter:** Pass any Claude tool (`input_schema`), `SKILL.md` file, OpenAI function tool, Gemini `functionDeclaration`, or MCP tool schema, and receive instant, security-scanned conversions ready for **1) Anthropic Claude Cloud MCP (`mcp_servers`)**, **2) OpenAI Strict Function Calling (`strict: true`, `additionalProperties: false`) & Responses API (`type: "mcp"`)**, **3) Google Gemini (`functionDeclarations`)**, **4) DeepSeek V3/R1**, and **5) 100/100 M8ven-compliant MCP (`inputSchema` + boolean annotations)**.
+  - **Context Token-Slim & Cost Arbitrage Engine:** Compresses tool schemas by **60%–80%** to prevent context token bloat and benchmarks per-million-token execution costs across Claude, OpenAI, Gemini, and DeepSeek alongside off-context deterministic verification (`~70-token` signed receipts instead of `18,500+` in-context audit tokens).
+- **For Certified Stores (`register_and_certify_store` / `GET /api/bridge/{storeId}` — 0 USDC Upfront):**
+  - Every store that registers in the VERITAS-8183 Public Notary receives **3 FREE Native Cloud Integrations** (Claude Cloud `mcp_servers`, OpenAI Cloud `Responses API`, and Gemini/DeepSeek) plus automatic integration into the **Base Mainnet ERC-8183 Smart Contract Escrow & Multi-Token Conversion Gateway** (`SOL / ETH / VIRTUAL / USDT → Base USDC`), paying `0 USDC` upfront and only a small `%` (`1.0%–1.5%` escrow + `2.0%` marketplace conversion/referral) on settled sales.
 
 Set `TRUST_DOSSIER_PROMO_START_AT` to the intended UTC start time in ISO 8601 format and configure the dedicated signer. The offer lasts 72 hours from that timestamp (extended by +72 hours in production until `2026-11-25T23:26:31.261Z` for the 100k M2M milestone celebration). Restarting the process keeps the original window. The offer is off by default. During the window, call `check_mcp_server_trust` with only `serverUrl` for a signed 7/7 dossier at 0 USDC. See the current offer, expiration and an example call in `get_trust_dossier_sample` or `/trust/sample.json`.
 

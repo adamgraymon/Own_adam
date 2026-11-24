@@ -51,6 +51,7 @@ import {
 } from "./skillReview.js";
 import { PUBLIC_REGISTRY_TERMS, PUBLIC_REGISTRY_TERMS_VERSION, BUYER_DIRECTORY_TERMS } from "./dataPolicy.js";
 import { getStoreOnboardingPreview } from "./storeOnboardingFunnel.js";
+import { migrateAndCompressToolCrossAi } from "./crossAiMigratorAndArbitrage.js";
 import {
   getFirstPartyCatalogPreview,
   getTierUpgradeExamPreview,
@@ -879,10 +880,18 @@ export const MCP_TOOLS = [
   },
   {
     name: "manage_buyer_finops_spend_passport",
-    description: "[Private by default] Protect your budget: set per-payment and daily USDC limits for your agent and compare LLM costs. Free signup includes 1 unlock. Example: buyerId='alphaquant-agent'. Call with {} for a free read-only sample preview.",
+    description: "[Multi-AI Orchestrator Hub — FREE & Private by default] Free Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP with 60-80% token compression), Cross-AI Token/Escrow Arbitrage Engine, and FinOps USDC Spend Passport for Multi-AI Orchestrators & Builders. Free signup includes 1 unlock. Call with {} for a free read-only sample preview and instant Cross-AI migration.",
     inputSchema: {
       type: "object",
       properties: {
+        toolOrSkillToMigrate: {
+          type: "object",
+          description: "Optional Claude tool (input_schema), OpenAI function tool, Gemini functionDeclaration, or MCP tool to convert across all 5 AI platforms with Token-Slim compression."
+        },
+        skillMarkdownToMigrate: {
+          type: "string",
+          description: "Optional SKILL.md markdown string to convert into Claude Cloud, OpenAI Strict Function, Gemini, DeepSeek, and MCP tool formats."
+        },
         listMeInBuyerDirectory: {
           type: "boolean",
           description: "Optional, default private. true = 2-3 star sellers can see your budget and interests and send offers; false = remove yourself."
@@ -1786,8 +1795,8 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
             sampleDeliverable: args.sampleDeliverable || {},
           });
           break;
-        case "manage_buyer_finops_spend_passport":
-          output = ledger.manageBuyerSpendPassport({
+        case "manage_buyer_finops_spend_passport": {
+          const basePassport = ledger.manageBuyerSpendPassport({
             listMeInBuyerDirectory: typeof args.listMeInBuyerDirectory === "boolean" ? args.listMeInBuyerDirectory : null,
             buyerId: args.buyerId || "alphaquant-agent",
             buyerName: args.buyerName,
@@ -1799,7 +1808,16 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
             proposedPurchaseUsdc: args.proposedPurchaseUsdc,
             estimatedPromptTokens: args.estimatedPromptTokens,
           });
+          output = {
+            ...basePassport,
+            orchestratorHubRole: "Multi-AI Orchestrator & Builder Passport (Free Tool Converter + Arbitrage Engine)",
+            crossAiToolMigratorAndArbitrage: migrateAndCompressToolCrossAi({
+              toolOrSkill: args.toolOrSkillToMigrate || args.skillMarkdownToMigrate || null,
+              dealAmountUsdc: args.proposedPurchaseUsdc ?? 10,
+            }),
+          };
           break;
+        }
         case "notarize_and_witness_a2a_deal":
           output = ledger.notarizeA2ADeal({
             serviceId: args.serviceId || "x402-veritas-deal-witness-acta",
