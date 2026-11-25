@@ -5,7 +5,7 @@ import { activeBackend, executeUpstashCommand } from "./trustStore.js";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PROMO_DURATION_MS = 3 * DAY_MS;
 const PRODUCTION_100K_MILESTONE_PROMO_START = "2026-11-19T23:26:31.261Z";
-const PRODUCTION_100K_MILESTONE_EXTRA_MS = 3 * DAY_MS; // +3 extra days celebrating 100,000+ M2M requests (ends 2026-11-25T23:26:31.261Z)
+const PRODUCTION_100K_MILESTONE_EXTRA_MS = 5 * DAY_MS; // +5 extra days aligned with 500K Challenge (ends 2026-11-27T23:26:31.261Z)
 const DAILY_TOTAL = 100;
 const DEFAULT_REDIS_PREFIX = "veritas:launch-dossier-promo:v1";
 const ISO_TIMESTAMP = /^(\d{4}-\d{2}-\d{2})T(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
