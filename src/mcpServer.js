@@ -281,7 +281,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "manage_buyer_finops_spend_passport",
-    description: "[Multi-AI Orchestrator Hub — FREE & Private by default] Free Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP with 60-80% token compression), Cross-AI Token/Escrow Arbitrage Engine, and FinOps USDC Spend Passport for Multi-AI Orchestrators & Builders. Free signup includes 1 unlock. Call with {} for a free read-only sample preview and instant Cross-AI migration.",
+    description: "[Multi-AI Orchestrator Hub — FREE & Private by default] Free Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP with 60-80% token compression), Cross-AI Token/Escrow Arbitrage Engine, and FinOps Spend Cap Calculator for Multi-AI Orchestrators & Builders. Does not move funds. Call with {} for a free read-only sample preview and instant Cross-AI migration.",
     inputSchema: {
       type: "object",
       properties: {
@@ -342,7 +342,7 @@ export const MCP_TOOLS = [
       },
       required: []
     },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
     name: "audit_api_sla_escrow",
