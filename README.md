@@ -1,6 +1,8 @@
 # TrustGate (`trustgate-erc8183-mcp`) / VERITAS-8183 Seal — MCP trust checks, 8-vertical escrow audits & public notary for AI agents
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Security Policy & Sandbox](https://img.shields.io/badge/SECURITY.md-Zero--Execution_RAM_Sandbox-0ea5e9)](./SECURITY.md)
+[![ProtocolProbe](https://protocolprobe.com/api/v1/badge/io.github.adamgraymon/trustgate-erc8183-mcp)](https://protocolprobe.com/mcp/servers/io.github.adamgraymon/trustgate-erc8183-mcp)
 [![M8ven Score](https://m8ven.ai/badge/mcp/adamgraymon/own_adam)](https://m8ven.ai/mcp/adamgraymon/own_adam?s=readme)
 [![Sourcify Verified](https://img.shields.io/badge/Sourcify_v2-Exact_Match_%2359283147-10b981)](https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e)
 [![LEGION Passport](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d/badge.svg)](https://passport.legion-api.com/passport/lp0_a1990fc66ed863c9179d571a9db8a28d)
@@ -11,9 +13,11 @@
 [![Audited Registry](https://own-adam.onrender.com/badge/telemetry.svg?metric=catalog)](https://own-adam.onrender.com/trust)
 [![500K 5-Day Goal](https://own-adam.onrender.com/badge/telemetry.svg?metric=challenge)](https://own-adam.onrender.com/api/external-traffic)
 
-> **Canonical Project Identity (TrustGate = VERITAS-8183 = `adamgraymon/Own_adam`):**
-> - **Official MCP Registry Package:** `io.github.adamgraymon/trustgate-erc8183-mcp` (**TrustGate**, `v0.8.0`)
-> - **GitHub Repository:** [`https://github.com/adamgraymon/Own_adam`](https://github.com/adamgraymon/Own_adam) (author: [`adamgraymon`](https://github.com/adamgraymon))
+> **Canonical Project Identity & Security Policy (`TrustGate = VERITAS-8183 = adamgraymon/Own_adam`):**
+> - **Official Security Policy & Sandbox Architecture (`SECURITY.md`):** [**Read `SECURITY.md` (Repo)**](./SECURITY.md) · [**Live `https://own-adam.onrender.com/SECURITY.md`**](https://own-adam.onrender.com/SECURITY.md) · [**`PRIVACY.md`**](./PRIVACY.md) · [**`TERMS.md`**](./TERMS.md)
+> - **Zero-Execution Ephemeral RAM Sandbox:** Unlike local CLI scanners that spawn untrusted MCP processes on your computer (risking arbitrary shell command execution), TrustGate runs in an unprivileged cloud container (`USER node`), **never executes untrusted code (`0 eval`, `0 child_process`, `0 shell`)**, processes audit inputs **100% in ephemeral per-request RAM (zero disk retention)**, compiles Solidity in-memory (`solc 0.8.38`), and isolates remote MCP probes behind a strict SSRF firewall (`isPrivateIp`, `0` redirects, `512 KiB` cap, `7s` timeout).
+> - **Official MCP Registry Package:** `io.github.adamgraymon/trustgate-erc8183-mcp` (**TrustGate**, `v0.8.1`). *(Note: the 12 `io.github.adamgraymon/*` entries in the Official MCP Registry are Vertical Discovery Gateways that route to this same unified `v0.8.1` endpoint).*
+> - **GitHub Repository & Reproducible Benchmark:** [`https://github.com/adamgraymon/Own_adam`](https://github.com/adamgraymon/Own_adam) (author: [`adamgraymon`](https://github.com/adamgraymon)). Reproduce all adversarial tests locally with `node --test test/freeTrustCheck.test.js test/escrow.test.js` ([malicious fixtures](./test/fixtures/malicious-samples.js)).
 > - **Quality Seal Issued by TrustGate:** **`VERITAS-8183` 1★–3★ Seal** (`inspect_veritas_8183_seal`, REST API: [`GET https://own-adam.onrender.com/api/seal`](https://own-adam.onrender.com/api/seal) & [`GET /api/seal/{storeId}`](https://own-adam.onrender.com/api/seal/databento-raw-tick))
 > - **On-Chain Contracts (Base Mainnet, Chain ID `8453`):** `TrustGateEscrow8183.sol` (`0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e`, [Sourcify Direct JSON `#59283147`](https://sourcify.dev/server/v2/contract/8453/0xd4f77bf843b3c359b233aca46d7ff6604cbd0a5e) · [BaseScan Explorer](https://basescan.org/address/0xD4f77Bf843b3c359B233ACa46d7Ff6604CBD0a5e)) and `VeritasRefundableReserveVault.sol` ([TERMS.md](./TERMS.md) · live JSON: https://own-adam.onrender.com/terms)
 

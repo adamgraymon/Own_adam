@@ -11,11 +11,39 @@ This page explains, in plain language, what this server can and cannot do, which
 | Claim seen in third-party reviews | Fact (verifiable) |
 | :--- | :--- |
 | "No license" | **MIT** — see [LICENSE](./LICENSE) and `"license": "MIT"` in [package.json](./package.json). |
-| "Version 0.5.0 / 0.7.0" | Current server version is **0.8.0** ([server.json](./server.json), [package.json](./package.json), `serverInfo.version` in `initialize`). Older per-vertical registry entries point to the same v0.8.0 endpoint. |
+| "Version 0.5.0 / 0.7.0 / 0.8.0" | Current server version is **0.8.1** ([server.json](./server.json), [package.json](./package.json), `serverInfo.version` in `initialize`). Older per-vertical registry entries point to the same v0.8.1 endpoint. |
+| "Why do 12 `io.github.adamgraymon/*` registry entries share tools?" | Those 12 entries in the Official MCP Registry are **Vertical Discovery Gateways (Aliases)** that all route to the same unified, audited `v0.8.1` server (`https://own-adam.onrender.com/mcp`, listed transparently under `officialRegistryNamespaces` in `GET /.well-known/mcp.json`) so agents searching for a specific vertical (Solidity, Quant, Skills, RAG, GPU, Notary) discover the unified node. |
 | "Does TrustGate emit the VERITAS-8183 seal?" | **Yes.** `TrustGate` (`io.github.adamgraymon/trustgate-erc8183-mcp`, repo `adamgraymon/Own_adam`) is the official issuer and verifier of the **VERITAS-8183 1★–3★ Seal** via `inspect_veritas_8183_seal`, `register_and_certify_store`, `submit_veritas_tier_upgrade_exam`, and `notarize_and_witness_a2a_deal`. |
 | "No refunds" | The escrow contract has `claimTimeoutRefund(jobId)`: after the deadline **anyone** can trigger a **100% refund to the buyer**, no evaluator needed ([contract](./contracts/TrustGateEscrow8183.sol), MCP tool `claim_escrow_timeout_refund`). Rejected deliveries also refund 100% (`submitVerdict(approved=false)`). Seller reserves in [`VeritasRefundableReserveVault.sol`](./contracts/VeritasRefundableReserveVault.sol) are 100% refundable whenever `lockedForClaimsUsdc == 0` ([TERMS.md](./TERMS.md)). |
 | "It reads your private keys" | **No.** `EVALUATOR_PRIVATE_KEY` and `GEMINI_API_KEY` are the **operator's own** keys, set in the server environment. Users never provide keys, and no tool asks for private keys or seed phrases. See section 3. |
 | "Contains malware" | The strings in [test/fixtures/malicious-samples.js](./test/fixtures/malicious-samples.js) are **deliberate attack samples** used as input data to prove the auditor rejects trojans. They are never imported by the server or executed. |
+
+---
+
+## 1.B. Zero-Execution RAM Sandbox & Isolation Architecture (How Untrusted Code & MCPs Are Contained)
+
+Unlike local CLI scanners (which spawn untrusted MCP processes on the user's machine and risk local shell execution), TrustGate / VERITAS-8183 enforces a **5-layer Zero-Execution Ephemeral RAM Sandbox**:
+
+1. **Zero Arbitrary Code Execution (`No eval / No child_process / No shell`):**
+   - Untrusted inputs (`SKILL.md`, bundled scripts, Solidity contracts, CSV/JSON datasets, RAG vectors, and remote MCP `tools/list` responses) are **never executed or spawned**.
+   - Skills and scripts are analyzed via deterministic AST/regex/line-by-line static inspection ([src/skillReview.js](./src/skillReview.js), [src/multiVerticalAuditors.js](./src/multiVerticalAuditors.js)).
+   - Solidity smart contracts are compiled in an isolated in-memory WebAssembly compiler (`solc 0.8.38`) with zero filesystem imports or OS access.
+2. **Ephemeral Per-Request RAM Processing (Zero Disk Retention of Audit Inputs):**
+   - All files and payloads sent to `review_agent_skill_free`, `audit_*`, and `manage_buyer_finops_spend_passport` are processed **100% in ephemeral per-request memory** and garbage-collected immediately after the HTTP response is returned ([PRIVACY.md](./PRIVACY.md)). No user audit payload is written to disk or shared across tenants.
+3. **SSRF & Network Isolation Guard for Remote MCP Probes ([src/freeTrustCheck.js](./src/freeTrustCheck.js)):**
+   - When `check_mcp_server_trust` probes a remote MCP URL, it enforces:
+     - `HTTPS`-only transport (rejects `http://`, `file://`, embedded credentials, `localhost`, `.local`, `.internal`).
+     - Pre-connect DNS resolution + IPv4/IPv6 private-range firewall (`isPrivateIp` blocks `127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16` cloud metadata, `100.64.0.0/10`, `::1`, `fc00::/7`, `fe80::/10`).
+     - Zero HTTP redirects allowed (`redirect: "error"`), strict `512 KiB` response cap, `7,000 ms` timeout, and dual-probe anti-cloaking comparison.
+4. **Unprivileged Container Runtime ([Dockerfile](./Dockerfile)):**
+   - Runs as unprivileged non-root `USER node` inside an isolated cloud container with only **1 production dependency (`solc`)**.
+5. **Reproducible Adversarial Benchmark Corpus & Runtime Build Provenance:**
+   - Anyone can reproduce our adversarial detection tests locally in 3 seconds:
+     ```bash
+     node --test test/freeTrustCheck.test.js test/escrow.test.js test/privacy.test.js
+     ```
+   - Attack fixtures: [test/fixtures/malicious-samples.js](./test/fixtures/malicious-samples.js). Live public audit results: [`GET https://own-adam.onrender.com/trust`](https://own-adam.onrender.com/trust) (`40` MCP servers) & [`GET https://own-adam.onrender.com/skills/review`](https://own-adam.onrender.com/skills/review) (`50` agent skills).
+   - **Verifiable GitHub ↔ Running Server Correspondence:** `GET https://own-adam.onrender.com/healthz` and `GET https://own-adam.onrender.com/mcp/server-card` publish the active `gitCommitSha` (`RENDER_GIT_COMMIT`) and live `toolManifestSha256` matching this repository.
 
 ---
 

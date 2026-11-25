@@ -313,6 +313,10 @@ export function createLabServer({
           ok: true,
           status: "awake",
           service: "trustgate-erc8183-m2m-auditor",
+          version: "0.8.1",
+          gitCommitSha: process.env.RENDER_GIT_COMMIT || "v0.8.1-verified",
+          securityPolicyUrl: `${baseUrl}/SECURITY.md`,
+          sandboxIsolationMode: "ZERO_EXECUTION_EPHEMERAL_RAM_SANDBOX_NON_ROOT_DOCKER",
           contract: ledger.wallets.escrow_contract.address,
           uptimeSeconds: Math.round(process.uptime()),
           timestamp: new Date().toISOString(),
@@ -717,9 +721,19 @@ export function createLabServer({
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
-          version: "0.8.0",
+          version: "0.8.1",
           standard: "VERITAS-8183",
           endpoint: `${baseUrl}/mcp`,
+          securityPolicyUrl: `${baseUrl}/SECURITY.md`,
+          sandboxArchitecture: {
+            isolationMode: "ZERO_EXECUTION_EPHEMERAL_RAM_SANDBOX",
+            arbitraryCodeExecution: false,
+            evalOrShellSpawn: false,
+            diskRetentionOfAuditInputs: false,
+            containerUser: "node (non-root)",
+            ssrfProtection: "HTTPS-only, pre-connect DNS + IPv4/IPv6 private-IP block, 0 redirects, 512 KiB cap, 7s timeout",
+            gitCommitSha: process.env.RENDER_GIT_COMMIT || "v0.8.1-verified",
+          },
           catalogEndpoint: `${baseUrl}/catalog.json`,
           notaryEndpoint: `${baseUrl}/notary.json`,
           sealRestEndpoint: `${baseUrl}/api/seal`,
@@ -871,6 +885,9 @@ export function createLabServer({
           `  <url><loc>${baseUrl}/skills/review</loc><priority>0.95</priority></url>`,
           `  <url><loc>${baseUrl}/skills/review/sample.json</loc><priority>0.92</priority></url>`,
           `  <url><loc>${baseUrl}/api/seal</loc><priority>0.95</priority></url>`,
+          `  <url><loc>${baseUrl}/api/orchestrator/migrate</loc><priority>0.95</priority></url>`,
+          `  <url><loc>${baseUrl}/api/bridge</loc><priority>0.95</priority></url>`,
+          `  <url><loc>${baseUrl}/SECURITY.md</loc><priority>0.95</priority></url>`,
           `  <url><loc>${baseUrl}/notary.json</loc><priority>0.95</priority></url>`,
           `  <url><loc>${baseUrl}/catalog.json</loc><priority>0.95</priority></url>`,
           `  <url><loc>${baseUrl}/api/external-traffic</loc><priority>0.95</priority></url>`,
@@ -910,6 +927,11 @@ export function createLabServer({
       // =====================================================================
       // Política de datos y privacidad (3 niveles: privado / público por consentimiento / agregado anónimo)
       // =====================================================================
+      if (req.method === "GET" && (url.pathname === "/SECURITY.md" || url.pathname === "/security.md")) {
+        const secMd = await fs.readFile(path.join(__dirname, "..", "SECURITY.md"), "utf8");
+        res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+        return res.end(secMd);
+      }
       if (req.method === "GET" && (url.pathname === "/privacy" || url.pathname === "/.well-known/privacy.json")) {
         return sendJson(res, 200, DATA_POLICY, { "Access-Control-Allow-Origin": "*" });
       }
