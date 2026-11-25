@@ -9,6 +9,7 @@ RUN npm install --omit=dev
 
 COPY contracts ./contracts
 RUN mkdir -p ./artifacts && chown -R node:node /app
+COPY --chown=node:node SECURITY.md README.md server.json ./
 COPY --chown=node:node public ./public
 COPY --chown=node:node src ./src
 

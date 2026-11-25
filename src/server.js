@@ -928,9 +928,32 @@ export function createLabServer({
       // Política de datos y privacidad (3 niveles: privado / público por consentimiento / agregado anónimo)
       // =====================================================================
       if (req.method === "GET" && (url.pathname === "/SECURITY.md" || url.pathname === "/security.md")) {
-        const secMd = await fs.readFile(path.join(__dirname, "..", "SECURITY.md"), "utf8");
+        let secMd;
+        try {
+          secMd = await fs.readFile(path.join(__dirname, "..", "SECURITY.md"), "utf8");
+        } catch {
+          secMd = [
+            "# Security Policy (VERITAS-8183 / TrustGate)",
+            "",
+            "- **Zero-Execution RAM Sandbox**: All `review_agent_skill` and `migrate_and_compress_tool_cross_ai` evaluations run in pure in-memory AST & pattern scanners (`<5ms`) with zero `eval()`, zero `child_process`, and zero disk persistence.",
+            "- **Full Policy**: https://github.com/adamgraymon/Own_adam/blob/main/SECURITY.md",
+            "- **Vulnerability Reporting**: https://github.com/adamgraymon/Own_adam/security/advisories/new",
+          ].join("\n");
+        }
         res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8", "Access-Control-Allow-Origin": "*" });
         return res.end(secMd);
+      }
+      if (req.method === "GET" && (url.pathname === "/.well-known/security.txt" || url.pathname === "/security.txt")) {
+        const secTxt = [
+          "Contact: https://github.com/adamgraymon/Own_adam/security/advisories/new",
+          "Contact: mailto:adamgraymon@users.noreply.github.com",
+          `Policy: ${baseUrl}/SECURITY.md`,
+          `Canonical: ${baseUrl}/.well-known/security.txt`,
+          "Preferred-Languages: en, es",
+          "Expires: 2027-12-31T23:59:59.000Z",
+        ].join("\n");
+        res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Access-Control-Allow-Origin": "*" });
+        return res.end(secTxt);
       }
       if (req.method === "GET" && (url.pathname === "/privacy" || url.pathname === "/.well-known/privacy.json")) {
         return sendJson(res, 200, DATA_POLICY, { "Access-Control-Allow-Origin": "*" });
