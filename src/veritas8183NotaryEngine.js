@@ -250,6 +250,26 @@ export function computeSellerVeritasSeal(store, ledger) {
       lastWitnessedTxHash: telemetry.lastWitnessedTxHash,
       verifiedAtMs: Date.now(),
     },
+    howToUpgradeStarLevel:
+      starLevel >= 3
+        ? null
+        : {
+            currentStarLevel: starLevel,
+            targetStarLevel: 3,
+            dynamicReserveRequirement:
+              "Maintain >=20% dynamic Proof-of-Reserve (lockedOrPublicReserveUsdc / activeOperationalVolumeUsdc >= 20%) for 3 Stars (⭐⭐⭐), or >=5% for 2 Stars (⭐⭐).",
+            oneCallUpgradeExam: {
+              tool: "submit_veritas_tier_upgrade_exam",
+              arguments: {
+                storeId: store.id,
+                storeName: store.name,
+                vertical: store.vertical || "VERTICAL_5_CERTIFIED_SKILLS",
+                declaredPublicReserveUsdc: 100,
+                declaredMonthlyVolumeUsdc: 400,
+                observedLatencyMs: Math.min(95, telemetry.responseTimeP95Ms || 42),
+              },
+            },
+          },
   };
 }
 
@@ -794,14 +814,35 @@ export function inspectVeritas8183QuickPanorama({
       chainId: 8453,
       sourcifyMatchId: 59283147,
     },
-    summaryCounts: {
-      totalCertifiedSellers: allSellerSeals.filter((s) => s.starLevel >= 1).length,
-      threeStarInstitutionalGoldCount: threeStarEliteProviders.length,
-      twoStarCommercialSilverCount: twoStarCommercialProviders.length,
-      oneStarSandboxBronzeCount: allSellerSeals.filter((s) => s.starLevel === 1).length,
-      slashedBlacklistedCount: allSellerSeals.filter((s) => s.starLevel === 0).length,
-      registeredBuyerPassportsCount: allBuyerPassports.length,
-    },
+    summaryCounts: (() => {
+      const isExternalSeal = (s) => {
+        if (s.certificationOrigin === "AUTO_CERTIFIED_FROM_LIVE_MCP_AUDIT") return true;
+        const st = ledger.stores?.[s.entityId];
+        return Boolean(st && !st.isFirstParty && !st.isCoreSimStore && !st.isDemo && st.publicRegistryConsent?.accepted);
+      };
+      const extSeals = allSellerSeals.filter((s) => s.starLevel >= 1 && isExternalSeal(s));
+      const seedSeals = allSellerSeals.filter((s) => s.starLevel >= 1 && !isExternalSeal(s));
+      return {
+        totalCertifiedSellers: allSellerSeals.filter((s) => s.starLevel >= 1).length,
+        threeStarInstitutionalGoldCount: threeStarEliteProviders.length,
+        twoStarCommercialSilverCount: twoStarCommercialProviders.length,
+        oneStarSandboxBronzeCount: allSellerSeals.filter((s) => s.starLevel === 1).length,
+        slashedBlacklistedCount: allSellerSeals.filter((s) => s.starLevel === 0).length,
+        registeredBuyerPassportsCount: allBuyerPassports.length,
+        realExternalThirdPartySellers: {
+          total: extSeals.length,
+          oneStar: extSeals.filter((s) => s.starLevel === 1).length,
+          twoStar: extSeals.filter((s) => s.starLevel === 2).length,
+          threeStar: extSeals.filter((s) => s.starLevel === 3).length,
+        },
+        firstPartyAndDemoNodes: {
+          total: seedSeals.length,
+          oneStar: seedSeals.filter((s) => s.starLevel === 1).length,
+          twoStar: seedSeals.filter((s) => s.starLevel === 2).length,
+          threeStar: seedSeals.filter((s) => s.starLevel === 3).length,
+        },
+      };
+    })(),
     officialTwoAndThreeStarEliteLeaderboard: {
       totalTwoAndThreeStarProviders: threeStarEliteProviders.length + twoStarCommercialProviders.length,
       vipBuyerRegistrationGateStatus: trialCheck.allowed
