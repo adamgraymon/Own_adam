@@ -895,6 +895,17 @@ export function submitVeritasSellerTierExam({
   }
 
   ledger.stores[normalizedId] = existingStore;
+  const isReservedSystemStore =
+    existingStore.isFirstParty === true || existingStore.isCoreSimStore === true || existingStore.isDemo === true;
+  if (!isReservedSystemStore) {
+    existingStore.publicRegistryConsent = existingStore.publicRegistryConsent || {
+      accepted: true,
+      termsVersion: "2026-07-28",
+      acceptedAt: new Date().toISOString(),
+      source: "submit_veritas_tier_upgrade_exam",
+    };
+    ledger.persistSellerRecord?.(normalizedId, existingStore);
+  }
   const seal = computeSellerVeritasSeal(existingStore, ledger);
 
   return {
@@ -1012,6 +1023,18 @@ export function manageBuyerFinopsSpendPassport({
   }
 
   ledger.veritasBuyerPassports[cleanBuyerId] = current;
+  if (listMeInBuyerDirectory === true && !ledger.buyerAgents[cleanBuyerId]?.isDemo) {
+    ledger.persistBuyerPassport?.(cleanBuyerId, {
+      buyerRecord: ledger.buyerAgents[cleanBuyerId],
+      passportConfig: current,
+      consent: ledger.buyerDirectoryConsent?.[cleanBuyerId] || { accepted: true, acceptedAt: new Date().toISOString() },
+    });
+  } else if (listMeInBuyerDirectory === false) {
+    ledger.persistBuyerPassport?.(cleanBuyerId, {
+      withdrawn: true,
+      withdrawnAt: new Date().toISOString(),
+    });
+  }
 
   const passport = computeBuyerVeritasPassport(cleanBuyerId, ledger, current);
   const singleUseUnlockToken = issueBuyerForensicUnlockToken(cleanBuyerId, ledger);
@@ -1279,6 +1302,7 @@ export function notarizeAndWitnessA2ADealOrBazaarCall({
   if (ledger.veritasNotaryRegistry.length > 50) {
     ledger.veritasNotaryRegistry.pop();
   }
+  ledger.persistNotaryActa?.(actaRecord);
 
   ledger.logWirePacket({
     protocol: "VERITAS-8183",

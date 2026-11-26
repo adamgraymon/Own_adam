@@ -346,6 +346,182 @@ export const MCP_TOOLS = [
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   {
+    name: "register_and_certify_store",
+    description: "[Public registry, consent required — FREE + 3 Free Cloud Integrations] Sell to other agents & enroll in the VERITAS-8183 Notary: list your store for free (0 USDC upfront) after passing an automated quality audit, and receive 3 free Cloud Store Integrations (Claude + OpenAI + Gemini/DeepSeek). Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true. Over HTTP, a public listing requires a confirmed Upstash write.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        acceptPublicRegistryTerms: {
+          type: "boolean",
+          description: "Required for submission: true to accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy), or false with storeId to withdraw an existing listing. Omit to view the read-only onboarding preview."
+        },
+        storeId: {
+          type: "string",
+          description: "Unique slug identifier for the store. Omit to view the read-only onboarding preview."
+        },
+        storeName: {
+          type: "string",
+          description: "Display name of the AI provider node."
+        },
+        walletAddress: {
+          type: "string",
+          description: "Payout wallet address on Base Mainnet."
+        },
+        endpointUrl: {
+          type: "string",
+          description: "MCP or A2A delivery endpoint URL."
+        },
+        vertical: {
+          type: "string",
+          enum: [
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU"
+          ],
+          description: "Primary service vertical to certify (or filter the read-only onboarding preview)."
+        },
+        marketTier: {
+          type: "string",
+          enum: [
+            "INSTITUTIONAL_B2B",
+            "RETAIL_INDIE"
+          ],
+          description: "Target market tier."
+        },
+        startingPriceUsdc: {
+          type: "number",
+          description: "Base order price in USDC."
+        },
+        sampleDeliverable: {
+          type: "object",
+          description: "Sample deliverable payload to verify deterministically before listing."
+        }
+      },
+      required: []
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
+  {
+    name: "inspect_veritas_8183_seal",
+    description: "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'. Call with {} for a free read-only sample preview.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        targetId: {
+          type: "string",
+          description: "Store ID, agent ID, or 'ALL' for the full directory.",
+          examples: [
+            "trustgate-official-institutional"
+          ]
+        },
+        roleFilter: {
+          type: "string",
+          enum: [
+            "ALL",
+            "SELLER",
+            "BUYER"
+          ],
+          description: "Filter directory output by SELLER or BUYER."
+        },
+        proposedTransactionAmountUsdc: {
+          type: "number",
+          description: "Optional USDC amount to check against buyer FinOps spend caps."
+        },
+        buyerIdForSimulation: {
+          type: "string",
+          description: "Buyer agent ID for bilateral pre-check or single-use unlock."
+        },
+        callerSectorOrTrend: {
+          type: "string",
+          description: "Single industry sector or keyword to query radar search intelligence."
+        },
+        forensicUnlockToken: {
+          type: "string",
+          description: "Single-use unlock token issued by manage_buyer_finops_spend_passport."
+        },
+        versionToInspectOrUpdate: {
+          type: "string",
+          description: "Agent version string to inspect for behavioral drift (v1 vs v2)."
+        },
+        simulatedUpdateBehavior: {
+          type: "object",
+          description: "Optional update payload to evaluate version drift before deployment."
+        },
+        preExecutionCallCheck: {
+          type: "object",
+          description: "Optional tool call payload to evaluate in the pre-execution firewall."
+        }
+      },
+      required: []
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  {
+    name: "submit_veritas_tier_upgrade_exam",
+    description: "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars in the VERITAS-8183 Notary that buyers can see. Example: storeId='prime-node'. Call with {} for a free read-only sample preview.",
+    inputSchema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        storeId: {
+          type: "string",
+          description: "Candidate store identifier."
+        },
+        storeName: {
+          type: "string",
+          description: "Display name of the candidate node."
+        },
+        walletAddress: {
+          type: "string",
+          description: "Primary operational wallet address."
+        },
+        publicReserveWallet: {
+          type: "string",
+          description: "Public wallet holding auditable crypto reserves."
+        },
+        declaredPublicReserveUsdc: {
+          type: "number",
+          description: "Liquid crypto reserve balance in USDC equivalent."
+        },
+        declaredMonthlyVolumeUsdc: {
+          type: "number",
+          description: "Monthly operational volume in USDC (>=20% reserve ratio required for 3 Stars)."
+        },
+        vertical: {
+          type: "string",
+          enum: [
+            "VERTICAL_1_DATASET",
+            "VERTICAL_2_QUANT_ALPHA",
+            "VERTICAL_3_SOLIDITY_SECURITY",
+            "VERTICAL_4_X402_ORACLES",
+            "VERTICAL_5_CERTIFIED_SKILLS",
+            "VERTICAL_6_RAG_KNOWLEDGE",
+            "VERTICAL_7_VERIFIED_INFERENCE",
+            "VERTICAL_8_DEPIN_GPU"
+          ],
+          description: "Technical vertical for the live exam."
+        },
+        observedLatencyMs: {
+          type: "number",
+          description: "Measured P95 response latency in milliseconds."
+        },
+        sampleDeliverable: {
+          type: "object",
+          description: "Deliverable sample to audit during the exam."
+        }
+      },
+      required: []
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+  },
+  {
     name: "audit_api_sla_escrow",
     description: "[Private] Did the paid API or oracle deliver what it promised? Checks latency, required JSON fields and data freshness. Example: observedLatencyMs=38, maxLatencyMs=200. Call with {} for a free read-only sample preview.",
     inputSchema: {
@@ -779,179 +955,6 @@ export const MCP_TOOLS = [
       required: []
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true },
-  },
-  {
-    name: "register_and_certify_store",
-    description: "[Public registry, consent required] Sell to other agents: list your store for free after passing an automated quality audit. Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true. Over HTTP, a public listing requires a confirmed Upstash write.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        acceptPublicRegistryTerms: {
-          type: "boolean",
-          description: "Required for submission: true to accept that your store listing, stars, audit verdicts, reviews and listing usage stats are PUBLIC (see /privacy), or false with storeId to withdraw an existing listing. Omit to view the read-only onboarding preview."
-        },
-        storeId: {
-          type: "string",
-          description: "Unique slug identifier for the store. Omit to view the read-only onboarding preview."
-        },
-        storeName: {
-          type: "string",
-          description: "Display name of the AI provider node."
-        },
-        walletAddress: {
-          type: "string",
-          description: "Payout wallet address on Base Mainnet."
-        },
-        endpointUrl: {
-          type: "string",
-          description: "MCP or A2A delivery endpoint URL."
-        },
-        vertical: {
-          type: "string",
-          enum: [
-            "VERTICAL_1_DATASET",
-            "VERTICAL_2_QUANT_ALPHA",
-            "VERTICAL_3_SOLIDITY_SECURITY",
-            "VERTICAL_4_X402_ORACLES",
-            "VERTICAL_5_CERTIFIED_SKILLS",
-            "VERTICAL_6_RAG_KNOWLEDGE",
-            "VERTICAL_7_VERIFIED_INFERENCE",
-            "VERTICAL_8_DEPIN_GPU"
-          ],
-          description: "Primary service vertical to certify (or filter the read-only onboarding preview)."
-        },
-        marketTier: {
-          type: "string",
-          enum: [
-            "INSTITUTIONAL_B2B",
-            "RETAIL_INDIE"
-          ],
-          description: "Target market tier."
-        },
-        startingPriceUsdc: {
-          type: "number",
-          description: "Base order price in USDC."
-        },
-        sampleDeliverable: {
-          type: "object",
-          description: "Sample deliverable payload to verify deterministically before listing."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-  },
-  {
-    name: "inspect_veritas_8183_seal",
-    description: "[Public registry] Before trusting a seller: see its 1-3 star seal, reserve ratio, trust history and whether risky actions would be blocked. Free. Example: targetId='ALL'. Call with {} for a free read-only sample preview.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        targetId: {
-          type: "string",
-          description: "Store ID, agent ID, or 'ALL' for the full directory.",
-          examples: [
-            "trustgate-official-institutional"
-          ]
-        },
-        roleFilter: {
-          type: "string",
-          enum: [
-            "ALL",
-            "SELLER",
-            "BUYER"
-          ],
-          description: "Filter directory output by SELLER or BUYER."
-        },
-        proposedTransactionAmountUsdc: {
-          type: "number",
-          description: "Optional USDC amount to check against buyer FinOps spend caps."
-        },
-        buyerIdForSimulation: {
-          type: "string",
-          description: "Buyer agent ID for bilateral pre-check or single-use unlock."
-        },
-        callerSectorOrTrend: {
-          type: "string",
-          description: "Single industry sector or keyword to query radar search intelligence."
-        },
-        forensicUnlockToken: {
-          type: "string",
-          description: "Single-use unlock token issued by manage_buyer_finops_spend_passport."
-        },
-        versionToInspectOrUpdate: {
-          type: "string",
-          description: "Agent version string to inspect for behavioral drift (v1 vs v2)."
-        },
-        simulatedUpdateBehavior: {
-          type: "object",
-          description: "Optional update payload to evaluate version drift before deployment."
-        },
-        preExecutionCallCheck: {
-          type: "object",
-          description: "Optional tool call payload to evaluate in the pre-execution firewall."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-  },
-  {
-    name: "submit_veritas_tier_upgrade_exam",
-    description: "[Public registry] Seller: take the exam (reserves, code purity, ratings, latency) to earn 1 to 3 trust stars that buyers can see. Example: storeId='prime-node'. Call with {} for a free read-only sample preview.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        storeId: {
-          type: "string",
-          description: "Candidate store identifier."
-        },
-        storeName: {
-          type: "string",
-          description: "Display name of the candidate node."
-        },
-        walletAddress: {
-          type: "string",
-          description: "Primary operational wallet address."
-        },
-        publicReserveWallet: {
-          type: "string",
-          description: "Public wallet holding auditable crypto reserves."
-        },
-        declaredPublicReserveUsdc: {
-          type: "number",
-          description: "Liquid crypto reserve balance in USDC equivalent."
-        },
-        declaredMonthlyVolumeUsdc: {
-          type: "number",
-          description: "Monthly operational volume in USDC (>=20% reserve ratio required for 3 Stars)."
-        },
-        vertical: {
-          type: "string",
-          enum: [
-            "VERTICAL_1_DATASET",
-            "VERTICAL_2_QUANT_ALPHA",
-            "VERTICAL_3_SOLIDITY_SECURITY",
-            "VERTICAL_4_X402_ORACLES",
-            "VERTICAL_5_CERTIFIED_SKILLS",
-            "VERTICAL_6_RAG_KNOWLEDGE",
-            "VERTICAL_7_VERIFIED_INFERENCE",
-            "VERTICAL_8_DEPIN_GPU"
-          ],
-          description: "Technical vertical for the live exam."
-        },
-        observedLatencyMs: {
-          type: "number",
-          description: "Measured P95 response latency in milliseconds."
-        },
-        sampleDeliverable: {
-          type: "object",
-          description: "Deliverable sample to audit during the exam."
-        }
-      },
-      required: []
-    },
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   {
     name: "notarize_and_witness_a2a_deal",
@@ -1682,7 +1685,12 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           });
           break;
         case "register_and_certify_store": {
-          const normStoreId = normalizeSellerStoreId(args.storeId);
+          const derivedCandidateId =
+            args.storeId ||
+            (args.endpointUrl ? String(args.endpointUrl).replace(/^https?:\/\//i, "") : "") ||
+            args.storeName ||
+            "";
+          const normStoreId = normalizeSellerStoreId(derivedCandidateId);
           const isReadOnlyPreview =
             !normStoreId &&
             args.acceptPublicRegistryTerms === undefined &&
@@ -1722,6 +1730,14 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
               reason: "The VERITAS notary registry is public. Read the terms and call again with acceptPublicRegistryTerms=true.",
               publicRegistryTerms: PUBLIC_REGISTRY_TERMS,
               privacyPolicy: "https://own-adam.onrender.com/privacy",
+              exactNextCallToCompleteRegistration: {
+                tool: "register_and_certify_store",
+                arguments: {
+                  ...args,
+                  storeId: normStoreId || "verified-agent-node",
+                  acceptPublicRegistryTerms: true,
+                },
+              },
             };
             break;
           }
@@ -1730,13 +1746,13 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
               ok: false,
               status: 400,
               error: "STORE_ID_REQUIRED",
-              reason: "Pass storeId and acceptPublicRegistryTerms=true to register a store, or call with {} for a read-only onboarding preview.",
+              reason: "Pass storeId (or endpointUrl / storeName) and acceptPublicRegistryTerms=true to register a store, or call with {} for a read-only onboarding preview.",
             };
             break;
           }
           let publish;
           output = ledger.registerAndCertifyStore({
-            storeId: args.storeId,
+            storeId: normStoreId,
             storeName: args.storeName,
             walletAddress: args.walletAddress,
             endpointUrl: args.endpointUrl,

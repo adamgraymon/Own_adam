@@ -17,6 +17,14 @@ function redisKey() {
   return process.env.SELLER_REGISTRY_REDIS_KEY || "veritas:seller-registry:v1";
 }
 
+function notaryActasRedisKey() {
+  return process.env.NOTARY_ACTAS_REDIS_KEY || "veritas:notary-actas:v1";
+}
+
+function buyerPassportsRedisKey() {
+  return process.env.BUYER_PASSPORTS_REDIS_KEY || "veritas:buyer-passports:v1";
+}
+
 function dataFilePath() {
   return path.resolve(process.env.TRUST_DATA_DIR || "data", FILE_NAME);
 }
@@ -109,5 +117,68 @@ export async function enableSellerRegistryPersistence(ledger) {
     if (confirmation) ledger.persistedSellerEntries.set(storeId, record);
     return confirmation;
   };
+
+  // Cargar y persistir Actas Notariales (notarize_and_witness_a2a_deal) y Pasaportes Opt-in (manage_buyer_finops_spend_passport)
+  if (activeBackend() === "upstash-redis") {
+    try {
+      const rawActas = (await executeUpstashCommand(["HGETALL", notaryActasRedisKey()])) || [];
+      const loadedActas = [];
+      for (let i = 0; i + 1 < rawActas.length; i += 2) {
+        try {
+          const parsed = JSON.parse(rawActas[i + 1]);
+          if (parsed && parsed.actaId) loadedActas.push(parsed);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (loadedActas.length > 0) {
+        loadedActas.sort((a, b) => String(b.timestampIso || "").localeCompare(String(a.timestampIso || "")));
+        ledger.veritasNotaryRegistry = loadedActas.slice(0, 50);
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      const rawBuyers = (await executeUpstashCommand(["HGETALL", buyerPassportsRedisKey()])) || [];
+      for (let i = 0; i + 1 < rawBuyers.length; i += 2) {
+        try {
+          const buyerId = rawBuyers[i];
+          const parsed = JSON.parse(rawBuyers[i + 1]);
+          if (!parsed || typeof parsed !== "object") continue;
+          if (parsed.withdrawn) {
+            if (ledger.buyerDirectoryConsent) delete ledger.buyerDirectoryConsent[buyerId];
+          } else if (parsed.buyerRecord && parsed.consent) {
+            if (!ledger.buyerAgents) ledger.buyerAgents = {};
+            if (!ledger.buyerAgents[buyerId]?.isDemo) {
+              ledger.buyerAgents[buyerId] = parsed.buyerRecord;
+            }
+            if (!ledger.buyerDirectoryConsent) ledger.buyerDirectoryConsent = {};
+            ledger.buyerDirectoryConsent[buyerId] = parsed.consent;
+            if (!ledger.registeredVerifiedBuyerIds) ledger.registeredVerifiedBuyerIds = new Set();
+            ledger.registeredVerifiedBuyerIds.add(buyerId);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  ledger.persistNotaryActa = (actaRecord) => {
+    if (!actaRecord?.actaId || activeBackend() !== "upstash-redis") return Promise.resolve(null);
+    return executeUpstashCommand(["HSET", notaryActasRedisKey(), actaRecord.actaId, JSON.stringify(actaRecord)]).catch(
+      () => null
+    );
+  };
+
+  ledger.persistBuyerPassport = (buyerId, payload) => {
+    if (!buyerId || activeBackend() !== "upstash-redis") return Promise.resolve(null);
+    return executeUpstashCommand(["HSET", buyerPassportsRedisKey(), buyerId, JSON.stringify(payload)]).catch(
+      () => null
+    );
+  };
+
   return { loadedSellers: entries.filter(([, r]) => r && !r.withdrawn).length };
 }
