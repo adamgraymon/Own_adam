@@ -11,7 +11,10 @@
 [![Active MCP Tools](https://own-adam.onrender.com/badge/telemetry.svg?metric=tools)](https://own-adam.onrender.com/api/external-traffic)
 [![Escrow & Audit Calls](https://own-adam.onrender.com/badge/telemetry.svg?metric=escrow)](https://own-adam.onrender.com/api/external-traffic)
 [![Audited Registry](https://own-adam.onrender.com/badge/telemetry.svg?metric=catalog)](https://own-adam.onrender.com/trust)
-[![500K 5-Day Goal](https://own-adam.onrender.com/badge/telemetry.svg?metric=challenge)](https://own-adam.onrender.com/api/external-traffic)
+[![200K Goal (+1Wk Free + Free 3★ Exam)](https://own-adam.onrender.com/badge/telemetry.svg?metric=challenge)](https://own-adam.onrender.com/api/external-traffic)
+
+> **🚀 200,000 M2M Requests Final Sprint (~94% Complete — Unlocking +1 Extra Full Week Free until Dec 4, 2026 + FREE `0 USDC` 2★/3★ Notary Upgrade Exam!):**
+> We are at **187,800+ / 200,000 requests**! As we cross **200,000 M2M requests**, all 23 MCP tools, full 7/7 Ed25519-signed trust dossiers, AND the **VERITAS-8183 2★/3★ Notary Upgrade Exam (`submit_veritas_tier_upgrade_exam`, normally `1.00 USDC`)** are **100% FREE (`0 USDC` exam fee)** for an entire extra week (until **Dec 4, 2026**). Already holding a **1★ Auto-Certified Seal** in [`/notary.json`](https://own-adam.onrender.com/notary.json)? Call `submit_veritas_tier_upgrade_exam` now at `0 USDC` to upgrade to **2★ or 3★**!
 
 > **Canonical Project Identity & Security Policy (`TrustGate = VERITAS-8183 = adamgraymon/Own_adam`):**
 > - **Official Security Policy & Sandbox Architecture (`SECURITY.md`):** [**Read `SECURITY.md` (Repo)**](./SECURITY.md) · [**Live `https://own-adam.onrender.com/SECURITY.md`**](https://own-adam.onrender.com/SECURITY.md) · [**`PRIVACY.md`**](./PRIVACY.md) · [**`TERMS.md`**](./TERMS.md)
