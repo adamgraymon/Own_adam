@@ -618,8 +618,7 @@ export function createLabServer({
 
       if (
         req.method === "GET" &&
-        (url.pathname === "/.well-known/security.txt" ||
-          url.pathname === "/.well-known/http-message-signatures-directory" ||
+        (url.pathname === "/.well-known/http-message-signatures-directory" ||
           url.pathname === "/audit-receipts.json" ||
           url.pathname === "/.well-known/security-audits.json")
       ) {

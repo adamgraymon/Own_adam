@@ -818,8 +818,27 @@ export class AgenticEscrowLedger {
     return {
       schemaVersion: "1.0.0",
       name: "TrustGate-M2M-Auditor",
+      version: "0.8.2",
+      url: `${baseUrl}/mcp`,
       description:
-        "Autonomous ERC-8183 Dataset Evaluator & Cross-Chain USDC Escrow Solver.Deterministic Antimalware + Cryptographic 30-Row Blind Sampling.",
+        "Autonomous ERC-8183 Dataset Evaluator & Cross-Chain USDC Escrow Solver. Deterministic Antimalware + Cryptographic 30-Row Blind Sampling.",
+      skills: [
+        {
+          id: "veritas-8183-notary",
+          name: "VERITAS-8183 M2M Notary & 3-Star Proof-of-Reserve Seal",
+          description: "Issues 1-to-3 Star Proof-of-Reserve seals, buyer FinOps spend passports, and cryptographic A2A deal witness actas.",
+        },
+        {
+          id: "erc8183-8vertical-escrow-auditor",
+          name: "8-Vertical Deterministic Escrow & MCP Trust Auditor",
+          description: "Zero-Execution RAM Sandbox auditing MCP servers, SKILL.md files, Solidity contracts, quant backtests, API SLAs, RAG embeddings, LLM inference, and DePIN GPUs.",
+        },
+        {
+          id: "cross-ai-tool-migrator",
+          name: "Cross-AI Tool & Skill Converter (Claude <-> OpenAI <-> Gemini <-> DeepSeek <-> MCP)",
+          description: "Instant deterministic schema migration with 65%+ context token compression and token/escrow arbitrage.",
+        },
+      ],
       identity: {
         standard: "ERC-8004",
         evaluatorAddress: this.wallets.evaluator_signer.address,
