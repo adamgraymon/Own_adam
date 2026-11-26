@@ -67,6 +67,7 @@ import {
   buildStoreThreeFreeCloudIntegrationsBundle,
   migrateAndCompressToolCrossAi,
 } from "./crossAiMigratorAndArbitrage.js";
+import { getLaunchDossierPromo } from "./launchDossierPromo.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
@@ -1180,7 +1181,9 @@ export function createLabServer({
           rpcPayload?.params?.name === "notarize_and_witness_a2a_deal"
         ) {
           rpcPayload.params.arguments = rpcPayload.params.arguments || {};
-          rpcPayload.params.arguments._requireOnChainPaymentProof = true;
+          const activePromo = getLaunchDossierPromo();
+          rpcPayload.params.arguments._requireOnChainPaymentProof =
+            !activePromo || Boolean(rpcPayload.params.arguments.paymentTxHash);
           const svcId = rpcPayload.params.arguments.serviceId || "x402-veritas-deal-witness-acta";
           const targetBazaarSvc =
             X402_MICRO_BAZAAR_SERVICES[svcId] || X402_MICRO_BAZAAR_SERVICES["x402-veritas-deal-witness-acta"];

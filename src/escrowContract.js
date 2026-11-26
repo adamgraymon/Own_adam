@@ -21,6 +21,8 @@ import {
   notarizeAndWitnessA2ADealOrBazaarCall,
   matchAndConnectVerifiedBuyers,
 } from "./veritas8183NotaryEngine.js";
+import { listPublicTrustRecords } from "./freeTrustCheck.js";
+import { listEvaluatedSkills } from "./skillReview.js";
 
 function round6(n) {
   return Math.round(n * 1e6) / 1e6;
@@ -430,6 +432,8 @@ export class AgenticEscrowLedger {
    */
   getVeritasNotaryManifest(baseUrl = "https://own-adam.onrender.com") {
     const panorama = this.inspectVeritasSeal({ targetId: "ALL" });
+    const auditedServers = listPublicTrustRecords(this);
+    const auditedSkills = listEvaluatedSkills(this);
     return {
       schemaVersion: "0.7.0",
       standard: "VERITAS-8183",
@@ -449,8 +453,14 @@ export class AgenticEscrowLedger {
         VIP_SILVER_GOOD_PAYER: "10% Fee Discount + 5% First-Party Catalog Discount (>=85% payment rate, <=10% quote abandonment)",
         STANDARD_VERIFIED_BUYER: "0% initial discount, deterministic FinOps spend cap active",
       },
-      summaryCounts: panorama.summaryCounts,
+      summaryCounts: {
+        ...panorama.summaryCounts,
+        auditedExternalMcpServersCount: auditedServers.length,
+        auditedAgentSkillsCount: auditedSkills.length,
+      },
       certifiedSellerStarRegistry: panorama.sellerStarDirectory,
+      auditedMcpServersInNotary: auditedServers,
+      auditedAgentSkillsInNotary: auditedSkills,
       verifiedBuyerPassports: panorama.buyerSolvencyDirectory,
       x402MicroBazaarServices: panorama.x402MicroBazaarCatalog,
       recentNotarizedActas: (this.veritasNotaryRegistry || []).slice(0, 15),
