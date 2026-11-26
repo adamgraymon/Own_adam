@@ -513,6 +513,71 @@ export function autoCaptureBuyerLeadInDatabase({
  * - Al registrarse, se le entrega la información POR UNA ÚNICA VEZ (1 solo sector/búsqueda, no es un beneficio eterno).
  * - Si vuelve a consultar por 2ª vez o quiere otro sector/palabra clave, debe pagar 0.25 USDC por cada sector o búsqueda individual.
  */
+function buildAutoCertifiedLiveMcpStores(ledger) {
+  const snapshots = ledger?.freeTrustCheck?.snapshots;
+  if (!snapshots || typeof snapshots.entries !== "function") return [];
+  const existingIds = new Set(Object.keys(ledger?.stores || {}));
+  const existingEndpoints = new Set(
+    Object.values(ledger?.stores || {})
+      .map((s) => String(s.endpoint || "").toLowerCase())
+      .filter(Boolean)
+  );
+  const autoStores = [];
+  for (const [serverUrl, snap] of snapshots.entries()) {
+    if (!snap || typeof snap.lastScore !== "number" || snap.lastScore < 85 || snap.lastVerdict !== "LOW_RISK") {
+      continue;
+    }
+    let parsed;
+    try {
+      parsed = new URL(serverUrl);
+    } catch {
+      continue;
+    }
+    const host = parsed.hostname.toLowerCase();
+    if (
+      host === "own-adam.onrender.com" ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "93.184.216.34" ||
+      host.endsWith(".invalid") ||
+      host.endsWith(".example") ||
+      host.endsWith("example.org") ||
+      host.endsWith("example.com") ||
+      host === "self.org" ||
+      host === "inj.org" ||
+      /^t0\.\d+\.org$/.test(host)
+    ) {
+      continue;
+    }
+    const derivedId =
+      `${host}${parsed.pathname}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 48) || host;
+    if (existingIds.has(derivedId) || existingEndpoints.has(serverUrl.toLowerCase())) continue;
+    existingIds.add(derivedId);
+    existingEndpoints.add(serverUrl.toLowerCase());
+    autoStores.push({
+      id: derivedId,
+      name: snap.serverName ? `${snap.serverName} (${host})` : `Verified Live MCP (${host})`,
+      address: "0xAutoCertifiedLiveMcpServer8183",
+      endpoint: serverUrl,
+      vertical: "VERTICAL_5_CERTIFIED_SKILLS",
+      marketTier: "RETAIL_INDIE",
+      isFirstParty: false,
+      isAutoCertifiedLiveMcp: true,
+      technicalAuditPassed: true,
+      reputationScore: snap.lastScore,
+      completedJobs: 0,
+      failedJobs: 0,
+      startingPriceUsdc: 0,
+      certifiedAt: snap.lastSeenAt || snap.firstSeenAt,
+    });
+  }
+  return autoStores;
+}
+
 export function inspectVeritas8183QuickPanorama({
   ledger,
   targetId = "ALL",
@@ -525,7 +590,16 @@ export function inspectVeritas8183QuickPanorama({
   simulatedUpdateBehavior = null,
   preExecutionCallCheck = null,
 }) {
-  const allSellerSeals = Object.values(ledger.stores).map((s) => computeSellerVeritasSeal(s, ledger));
+  const autoCertifiedStores = buildAutoCertifiedLiveMcpStores(ledger);
+  const combinedStoresList = [...Object.values(ledger.stores), ...autoCertifiedStores];
+  const allSellerSeals = combinedStoresList.map((s) => {
+    const seal = computeSellerVeritasSeal(s, ledger);
+    if (s.isAutoCertifiedLiveMcp) {
+      seal.certificationOrigin = "AUTO_CERTIFIED_FROM_LIVE_MCP_AUDIT";
+      seal.endpointUrl = s.endpoint;
+    }
+    return seal;
+  });
   allSellerSeals.sort((a, b) => b.starLevel - a.starLevel || b.erc8004ReputationScore - a.erc8004ReputationScore);
 
   // Política de datos: solo compradores que aceptaron aparecer en el directorio (listMeInBuyerDirectory=true).
@@ -657,10 +731,19 @@ export function inspectVeritas8183QuickPanorama({
 
   if (targetId && targetId !== "ALL") {
     const normalized = String(targetId).trim();
-    if (ledger.stores[normalized]) {
-      const sellerSeal = computeSellerVeritasSeal(ledger.stores[normalized], ledger);
+    const matchedStore =
+      ledger.stores[normalized] ||
+      autoCertifiedStores.find(
+        (s) => s.id === normalized.toLowerCase() || String(s.endpoint).toLowerCase() === normalized.toLowerCase()
+      );
+    if (matchedStore) {
+      const sellerSeal = computeSellerVeritasSeal(matchedStore, ledger);
+      if (matchedStore.isAutoCertifiedLiveMcp) {
+        sellerSeal.certificationOrigin = "AUTO_CERTIFIED_FROM_LIVE_MCP_AUDIT";
+        sellerSeal.endpointUrl = matchedStore.endpoint;
+      }
       const buyerPassport = computeBuyerVeritasPassport(buyerIdForSimulation, ledger);
-      const txAmount = Number(proposedTransactionAmountUsdc) || ledger.stores[normalized].startingPriceUsdc || 5.0;
+      const txAmount = Number(proposedTransactionAmountUsdc) || matchedStore.startingPriceUsdc || 5.0;
       const withinPerTxCap = txAmount <= buyerPassport.finopsDeterministicSpendGuard.maxSpendPerTxUsdc;
       const withinDailyCap = txAmount <= buyerPassport.finopsDeterministicSpendGuard.remainingDailyBudgetUsdc;
 
