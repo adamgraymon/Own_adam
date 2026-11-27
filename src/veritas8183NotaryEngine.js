@@ -162,17 +162,20 @@ export function computeSellerVeritasSeal(store, ledger) {
     institutionalVerdict =
       "HIGHEST TRUST: Auditable on-chain crypto reserve >=20% of volume, >=98% content purity, >=4.8/5 client rating, and <100ms response SLA.";
   } else if (
-    store.reputationScore >= 85 &&
-    reserveRatioPct >= 5.0 &&
-    telemetry.contentQualityScorePct >= 90.0 &&
-    telemetry.verifiedClientRating5 >= 4.2 &&
-    telemetry.responseTimeP95Ms <= 250
+    (store.reputationScore >= 85 &&
+      reserveRatioPct >= 5.0 &&
+      telemetry.contentQualityScorePct >= 90.0 &&
+      telemetry.verifiedClientRating5 >= 4.2 &&
+      telemetry.responseTimeP95Ms <= 250) ||
+    (store.isAutoCertifiedLiveMcp === true && store.reputationScore >= 95)
   ) {
     starLevel = 2;
     sealBadge = "⭐⭐ VERITAS-8183 LEVEL 2 (COMMERCIAL SILVER SEAL)";
     tierCode = "VERITAS_2_STAR_COMMERCIAL_SILVER";
     institutionalVerdict =
-      "COMMERCIAL READY: Passed deterministic vertical security exam and maintains verified client satisfaction. Eligible for Level 3 upgrade by increasing public Proof-of-Reserve to >=20%.";
+      store.isAutoCertifiedLiveMcp === true && reserveRatioPct < 5.0
+        ? "TECHNICAL EXCELLENCE (95-100/100): Passed live deterministic MCP security audit with zero high/medium risk findings. Eligible for 3-Star Institutional Gold upgrade by locking >=20% dynamic Proof-of-Reserve in USDC."
+        : "COMMERCIAL READY: Passed deterministic vertical security exam and maintains verified client satisfaction. Eligible for Level 3 upgrade by increasing public Proof-of-Reserve to >=20%.";
   } else {
     starLevel = 1;
     sealBadge = "⭐ VERITAS-8183 LEVEL 1 (SANDBOX BRONZE SEAL)";
@@ -1591,7 +1594,13 @@ export function matchAndConnectVerifiedBuyers({
   dealAmountUsdc = null,
   directOfferPitch = null,
 }) {
-  const store = ledger.stores[sellerStoreId];
+  const normLookup = String(sellerStoreId || "").trim().toLowerCase();
+  const store =
+    ledger.stores[sellerStoreId] ||
+    ledger.stores[normLookup] ||
+    buildAutoCertifiedLiveMcpStores(ledger).find(
+      (s) => s.id === normLookup || String(s.endpoint).toLowerCase() === normLookup
+    );
   if (!store) {
     return {
       ok: false,
