@@ -828,7 +828,7 @@ export class AgenticEscrowLedger {
     return {
       schemaVersion: "1.0.0",
       name: "TrustGate-M2M-Auditor",
-      version: "0.8.2",
+      version: "0.8.3",
       url: `${baseUrl}/mcp`,
       description:
         "Autonomous ERC-8183 Dataset Evaluator & Cross-Chain USDC Escrow Solver. Deterministic Antimalware + Cryptographic 30-Row Blind Sampling.",

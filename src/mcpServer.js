@@ -1173,7 +1173,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           },
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.8.2",
+            version: "0.8.3",
           },
           instructions: [
             "protocolprobe-claim=pp-nahb6phnuij3uhperusgmkvlspfed4lu",
@@ -1203,7 +1203,7 @@ export function handleMcpJsonRpc(rpcRequest, ledger, {
           protocolVersion: "2026-07-28",
           serverInfo: {
             name: "trustgate-erc8183-mcp",
-            version: "0.8.2",
+            version: "0.8.3",
             standard: "VERITAS-8183 & ERC-8183",
             contractAddress: ledger.wallets.escrow_contract.address,
             chainId: 8453,

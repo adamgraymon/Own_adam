@@ -314,8 +314,8 @@ export function createLabServer({
           ok: true,
           status: "awake",
           service: "trustgate-erc8183-m2m-auditor",
-          version: "0.8.2",
-          gitCommitSha: process.env.RENDER_GIT_COMMIT || "v0.8.2-verified",
+          version: "0.8.3",
+          gitCommitSha: process.env.RENDER_GIT_COMMIT || "v0.8.3-verified",
           securityPolicyUrl: `${baseUrl}/SECURITY.md`,
           sandboxIsolationMode: "ZERO_EXECUTION_EPHEMERAL_RAM_SANDBOX_NON_ROOT_DOCKER",
           contract: ledger.wallets.escrow_contract.address,
@@ -721,7 +721,7 @@ export function createLabServer({
         return sendJson(res, 200, {
           mcpVersion: "2025-06-18",
           name: "io.github.adamgraymon/trustgate-erc8183-mcp",
-          version: "0.8.2",
+          version: "0.8.3",
           standard: "VERITAS-8183",
           endpoint: `${baseUrl}/mcp`,
           instructions: [
