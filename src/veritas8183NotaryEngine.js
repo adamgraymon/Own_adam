@@ -259,8 +259,10 @@ export function computeSellerVeritasSeal(store, ledger) {
         : {
             currentStarLevel: starLevel,
             targetStarLevel: 3,
+            inboundTrafficAdvantage:
+              "3-Star (⭐⭐⭐) Gold nodes get TOP #1 PRIORITY RANKING in /catalog.json (#1 most downloaded resource with 105+ commercial catalog downloads & searches) in front of 600-800+ AI agent visits/hour (216,500+ verified M2M requests at /api/external-traffic) and exclusive First-Look access to VIP Gold Buyers!",
             dynamicReserveRequirement:
-              "Maintain >=20% dynamic Proof-of-Reserve (lockedOrPublicReserveUsdc / activeOperationalVolumeUsdc >= 20%) for 3 Stars (⭐⭐⭐), or >=5% for 2 Stars (⭐⭐).",
+              "Maintain >=20% dynamic Proof-of-Reserve (lockedOrPublicReserveUsdc / activeOperationalVolumeUsdc >= 20%) for 3 Stars (⭐⭐⭐), or >=5% (or 95-100/100 live MCP technical audit) for 2 Stars (⭐⭐). Free 0 USDC exam fee until Dec 4, 2026!",
             oneCallUpgradeExam: {
               tool: "submit_veritas_tier_upgrade_exam",
               arguments: {

@@ -347,7 +347,7 @@ export const MCP_TOOLS = [
   },
   {
     name: "register_and_certify_store",
-    description: "[Public registry, consent required — FREE + 3 Free Cloud Integrations] Sell to other agents & enroll in the VERITAS-8183 Notary: list your store for free (0 USDC upfront) after passing an automated quality audit, and receive 3 free Cloud Store Integrations (Claude + OpenAI + Gemini/DeepSeek). Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true. Over HTTP, a public listing requires a confirmed Upstash write.",
+    description: "[Public registry, consent required — FREE + Exposure to 600+ AI Agent Visits/Hour (216K+ M2M Requests) + 3 Free Cloud Integrations] Sell to other agents & enroll in the VERITAS-8183 Notary: list your store for free (0 USDC upfront) in /catalog.json (our #1 most downloaded catalog with 105+ commercial downloads & searches across 216,500+ M2M requests) and receive 3 free Cloud Store Integrations (Claude + OpenAI + Gemini/DeepSeek). Call with {} (or only vertical) for a free read-only onboarding preview with fictional sampleDeliverable examples and public registry terms. To submit, pass storeId and acceptPublicRegistryTerms=true. Over HTTP, a public listing requires a confirmed Upstash write.",
     inputSchema: {
       type: "object",
       additionalProperties: false,

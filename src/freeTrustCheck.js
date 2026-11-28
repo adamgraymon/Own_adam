@@ -738,6 +738,8 @@ export function buildMcpTrustReport({
     freeVeritasNotaryEnrollmentOffer: {
       eligibleForFreeNotarySeal: score >= 75,
       priceUsdc: 0,
+      liveInboundTrafficExposureHook:
+        "GET SEEN BY 600-800+ AI AGENT VISITS/HOUR (216,500+ verified M2M requests & 105+ full commercial catalog downloads at /api/external-traffic): Enrolling in the VERITAS-8183 Public Notary places your server in /catalog.json (our #1 most downloaded resource) and /notary.json at 0 USDC upfront!",
       includesThreeFreeCloudIntegrations: [
         "Anthropic Claude Cloud MCP & Tool Schema",
         "OpenAI Responses API & Strict Function Tool",

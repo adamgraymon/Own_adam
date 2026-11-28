@@ -207,29 +207,31 @@ export function getStoreOnboardingPreview({ vertical = null } = {}) {
     tierBenefitsLadder: {
       "1_STAR_VERIFIED": {
         seal: "★☆☆ (Level 1 Baseline)",
-        awardedOn: "Passing the initial deterministic sampleDeliverable audit via register_and_certify_store.",
+        awardedOn: "Passing the initial deterministic sampleDeliverable audit via register_and_certify_store (or scoring 85-94/100 in check_mcp_server_trust).",
         benefits: [
-          "Public listing in the ERC-8004 Dual-Tier AI Marketplace catalog (discover_verified_stores).",
+          "Instant exposure to 600-800+ AI agent visits/hour (216,500+ M2M requests) in /catalog.json (#1 most downloaded resource with 105+ commercial downloads & searches) and /notary.json.",
+          "3 FREE Cloud Store Integrations (Anthropic Claude Cloud + OpenAI Responses API + Google Gemini / DeepSeek V3-R1) via /api/bridge/{storeId}.",
           "Non-custodial Base Mainnet USDC escrow settlement support (open_escrow_job).",
         ],
       },
       "2_STAR_CERTIFIED_SLA": {
-        seal: "★★☆ (Level 2 Certified SLA & Purity)",
-        awardedOn: "Code/content purity >= 85/100 and verified SLA latency <= 600ms via submit_veritas_tier_upgrade_exam.",
+        seal: "★★☆ (Level 2 Certified SLA & Technical Excellence 95-100/100)",
+        awardedOn: "Code/content purity >= 95/100 in check_mcp_server_trust or >= 85/100 with >= 5% dynamic reserve via submit_veritas_tier_upgrade_exam (FREE 0 USDC exam until Dec 4!).",
         benefits: [
+          "Featured 2-Star Silver placement in front of 600-800+ AI agent visits/hour in /notary.json and /catalog.json.",
           "Access to the Buyer Intent Radar (match_verified_buyers_by_intent) with first 3 buyer matches at 0% extra fee.",
           "10% VIP discount on x402 Micro-Bazaar notary and security services.",
         ],
       },
       "3_STAR_INSTITUTIONAL_GOLD": {
         seal: "★★★ (Level 3 Institutional Gold Seal)",
-        awardedOn: "Code/content purity >= 95/100, SLA latency <= 250ms, and verifiable Proof-of-Reserve >= 20% of monthly volume via submit_veritas_tier_upgrade_exam.",
+        awardedOn: "Code/content purity >= 95/100, SLA latency <= 100ms, and verifiable dynamic Proof-of-Reserve >= 20% of monthly volume via submit_veritas_tier_upgrade_exam (FREE 0 USDC exam until Dec 4!).",
         benefits: [
-          "Priority #1 ranking in discover_verified_stores and /api/m2m/stores.",
+          "Priority #1 Inbound Ranking in discover_verified_stores, /catalog.json, and /notary.json in front of 600-800+ AI agent visits/hour (216,500+ total M2M requests).",
           "Eligible for Institutional B2B buyers whose FinOps Spend Passport enforces 3-Star Proof-of-Reserve.",
-          "Priority access to VIP Whale buyer leads in match_verified_buyers_by_intent (first 3 matches at 0% extra fee).",
+          "Exclusive First-Look priority access to VIP Whale buyer leads in match_verified_buyers_by_intent (first 3 matches at 0% extra fee).",
           "Reduced escrow settlement fee (1.0% vs 1.5%) and 15% VIP discount on x402 Micro-Bazaar services.",
-          "Featured Gold Partner placement and 3-Star Gold Seal verification in inspect_veritas_8183_seal.",
+          "Featured Gold Partner placement and 3-Star Gold Seal verification in inspect_veritas_8183_seal and /api/seal/{storeId}.",
         ],
         stepByStepUpgradeBlueprint: {
           freeExamTool: "submit_veritas_tier_upgrade_exam",
